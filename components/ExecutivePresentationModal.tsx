@@ -447,7 +447,7 @@ export default function ExecutivePresentationModal({
                           </tr>
                         </thead>
                         <tbody>
-                          {elemData.raciMatrix.map((r, i) => (
+                          {elemData.raciMatrix.map((r: { role: string; raci: string; duty: string }, i: number) => (
                             <tr
                               key={i}
                               style={{
@@ -552,7 +552,7 @@ export default function ExecutivePresentationModal({
                     Hazard Scenarios & Verified Safeguards
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {elemData.riskControls.map((rc, i) => (
+                    {elemData.riskControls.map((rc: { hazardScenario: string; safeguardMethod: string; residualRisk: string; barrierLevel: string }, i: number) => (
                       <div
                         key={i}
                         style={{
@@ -651,7 +651,7 @@ export default function ExecutivePresentationModal({
                         </tr>
                       </thead>
                       <tbody>
-                        {elemData.regulatoryClauses.map((c, i) => (
+                        {elemData.regulatoryClauses.map((c: { framework: string; clause: string; requirement: string }, i: number) => (
                           <tr
                             key={i}
                             style={{
@@ -692,7 +692,7 @@ export default function ExecutivePresentationModal({
                     Performance Metrics & Executive Benchmarks
                   </h4>
                   <div className="grid-kpi-3">
-                    {elemData.kpiMetrics.map((kpi, i) => (
+                    {elemData.kpiMetrics.map((kpi: { name: string; target: string; actualYTD: string; benchmark: string }, i: number) => (
                       <div
                         key={i}
                         style={{
@@ -761,7 +761,7 @@ export default function ExecutivePresentationModal({
                     </button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {elemData.controlledDocs.map(doc => (
+                    {elemData.controlledDocs.map((doc: { number: string; title: string; revision: string; type: string; dept: string; description?: string }) => (
                       <div
                         key={doc.number}
                         onClick={() => {
@@ -858,7 +858,7 @@ export default function ExecutivePresentationModal({
                       Key Strategic Deliverables
                     </h4>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {fundData.strategicDeliverables.map((sd, i) => (
+                      {fundData.strategicDeliverables.map((sd: string, i: number) => (
                         <div
                           key={i}
                           style={{
@@ -888,7 +888,7 @@ export default function ExecutivePresentationModal({
                     Operational Elements Governed by {fundData.name}
                   </h4>
                   <div className="grid-modal-2">
-                    {fundData.coveredElementNums.map(num => {
+                    {fundData.coveredElementNums.map((num: number) => {
                       const el = THI_PRESENTATION_ELEMENTS[num];
                       if (!el) return null;
                       return (
@@ -928,7 +928,7 @@ export default function ExecutivePresentationModal({
               {activeTab === 'compliance' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div className="grid-kpi-3">
-                    {fundData.fleetMetrics.map((m, i) => (
+                    {fundData.fleetMetrics.map((m: { label: string; value: string; note: string }, i: number) => (
                       <div
                         key={i}
                         style={{
@@ -980,7 +980,7 @@ export default function ExecutivePresentationModal({
                   </div>
 
                   <div className="grid-modal-4">
-                    {THI_MASTER_FRAMEWORK.fleetStatistics.map((stat, i) => (
+                    {THI_MASTER_FRAMEWORK.fleetStatistics.map((stat: { label: string; value: string; sub: string }, i: number) => (
                       <div
                         key={i}
                         style={{
@@ -1010,7 +1010,7 @@ export default function ExecutivePresentationModal({
                     The 4 Fundamental Pillars Architecture
                   </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {THI_MASTER_FRAMEWORK.fourPillarsOverview.map((p, i) => (
+                    {THI_MASTER_FRAMEWORK.fourPillarsOverview.map((p: { pillar: string; quadrant: string; elements: string; focus: string; governingBody: string }, i: number) => (
                       <div
                         key={i}
                         style={{
@@ -1054,7 +1054,7 @@ export default function ExecutivePresentationModal({
                     Formal Corporate Accreditations & Statutory Regimes
                   </h4>
                   <div className="grid-modal-2">
-                    {THI_MASTER_FRAMEWORK.certifiedAccreditations.map((acc, i) => (
+                    {THI_MASTER_FRAMEWORK.certifiedAccreditations.map((acc: string, i: number) => (
                       <div
                         key={i}
                         style={{
