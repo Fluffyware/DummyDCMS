@@ -1,6 +1,0 @@
-{
-  "framework": "nextjs",
-  "installCommand": "cd qhsse-dms && npm install",
-  "buildCommand": "cd qhsse-dms && npm run build",
-  "outputDirectory": "qhsse-dms/.next"
-}
