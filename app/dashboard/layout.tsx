@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { DEMO_USERS } from '@/lib/mock-data';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -99,6 +100,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setMobileOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    Object.values(ALL_NAV).forEach(item => {
+      router.prefetch(item.href);
+    });
+  }, [router]);
+
   const activeUser = user || DEMO_USERS.admin;
 
   const navKeys  = ROLE_NAV[activeUser.role] || ROLE_NAV.admin;
@@ -190,10 +197,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {items.map(item => {
                 const isActive = pathname === item.href;
                 return (
-                  <button
+                  <Link
                     key={item.href}
+                    href={item.href}
+                    prefetch={true}
                     onClick={() => {
-                      router.push(item.href);
                       if (isDrawer) setMobileOpen(false);
                     }}
                     title={item.label}
@@ -216,6 +224,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       position: 'relative',
                       outline: 'none',
                       marginBottom: 1,
+                      textDecoration: 'none',
                     }}
                   >
                     {isActive && (
@@ -282,7 +291,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         )}
                       </motion.span>
                     )}
-                  </button>
+                  </Link>
                 );
               })}
             </div>

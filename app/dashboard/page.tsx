@@ -178,6 +178,14 @@ export default function DashboardPage() {
   const [entriesPerPage, setEntriesPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
+  React.useEffect(() => {
+    router.prefetch('/dashboard/registration');
+    router.prefetch('/dashboard/distribution');
+    router.prefetch('/dashboard/masterlist');
+    router.prefetch('/dashboard/suggestions');
+    router.prefetch('/dashboard/concepts');
+  }, [router]);
+
   const activeUserName = user?.name || 'Reza Firmansyah';
 
   // Filtered entries based on search term across all columns
