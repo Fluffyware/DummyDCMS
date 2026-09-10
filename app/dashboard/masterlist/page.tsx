@@ -877,7 +877,45 @@ export default function MasterlistPage() {
                                     </span>
                                   </div>
 
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={e => {
+                                        e.stopPropagation();
+                                        setTargetParentFolder(folder);
+                                        setIsAddSubFolderOpen(true);
+                                      }}
+                                      title={`Tambah Sub-Folder baru ke ${folder.name}`}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '3px 9px',
+                                        background: '#ffffff',
+                                        border: '1px solid #f59e0b',
+                                        color: '#b45309',
+                                        borderRadius: '6px',
+                                        fontSize: '11px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        boxShadow: '0 1px 2px rgba(217, 119, 6, 0.08)',
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                      onMouseEnter={e => {
+                                        e.currentTarget.style.background = '#fef3c7';
+                                        e.currentTarget.style.borderColor = '#d97706';
+                                        e.currentTarget.style.color = '#78350f';
+                                      }}
+                                      onMouseLeave={e => {
+                                        e.currentTarget.style.background = '#ffffff';
+                                        e.currentTarget.style.borderColor = '#f59e0b';
+                                        e.currentTarget.style.color = '#b45309';
+                                      }}
+                                    >
+                                      <FolderPlus size={12} strokeWidth={2.4} color="#d97706" />
+                                      <span>+ Sub Folder</span>
+                                    </button>
+
                                     <span
                                       style={{
                                         fontSize: '11px',
