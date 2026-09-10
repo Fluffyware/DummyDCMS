@@ -47,7 +47,7 @@ const ALL_NAV: Record<string, NavItemDef> = {
 };
 
 const ROLE_NAV: Record<string, string[]> = {
-  staff: ['dashboard', 'concepts', 'masterlist', 'registration', 'suggestions'],
+  staff: ['masterlist', 'suggestions'],
   admin: ['dashboard', 'concepts', 'masterlist', 'registration', 'distribution', 'approval', 'suggestions', 'settings'],
 };
 
@@ -110,6 +110,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navKeys  = ROLE_NAV[activeUser.role] || ROLE_NAV.admin;
   const navItems = navKeys.map(k => ALL_NAV[k]).filter(Boolean);
+
+  useEffect(() => {
+    if (activeUser.role === 'staff') {
+      const allowedHrefs = ROLE_NAV.staff.map(k => ALL_NAV[k]?.href).filter(Boolean);
+      if (!allowedHrefs.includes(pathname)) {
+        router.replace('/dashboard/masterlist');
+      }
+    }
+  }, [activeUser.role, pathname, router]);
   const currentTitle = PAGE_TITLES[pathname] || 'Dashboard';
   const initials = activeUser.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
 

@@ -7,7 +7,7 @@ import { DEMO_USERS } from '@/lib/mock-data';
 
 const ROLES = [
   { key: 'admin', icon: '👑', name: 'Admin Master', desc: 'Otoritas penuh, approval manual dokumen & kontrol sistem' },
-  { key: 'staff', icon: '👤', name: 'Staff',        desc: 'Pembuatan draf, registrasi berkas baru & submit ke antrean' },
+  { key: 'staff', icon: '👤', name: 'Staff',        desc: 'Akses Masterlist Dokumen Terkontrol & Pengajuan Saran & Ide' },
 ];
 
 export default function LoginPage() {
@@ -23,7 +23,11 @@ export default function LoginPage() {
     setLoading(true);
     setTimeout(() => {
       login(user.role as any, '', '');
-      router.push('/dashboard');
+      if (user.role === 'staff') {
+        router.push('/dashboard/masterlist');
+      } else {
+        router.push('/dashboard');
+      }
     }, 600);
   };
 
