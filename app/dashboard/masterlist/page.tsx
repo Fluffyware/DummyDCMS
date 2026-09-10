@@ -56,9 +56,9 @@ export default function MasterlistPage() {
   // Active category filter tab
   const [activeTab, setActiveTab] = useState<'HEAD_OFFICE' | 'OFFSHORE' | 'PROJECT_SITE'>('HEAD_OFFICE');
 
-  // Expanded folders state (set of folder IDs)
-  const [expandedFolderIds, setExpandedFolderIds] = useState<number[]>([1, 7]); // folders 1 & 7 open by default
-  const [expandedSubFolderIds, setExpandedSubFolderIds] = useState<string[]>(['sub-1-1', 'sub-7-1']);
+  // Expanded folders state (empty by default: all folders closed initially)
+  const [expandedFolderIds, setExpandedFolderIds] = useState<number[]>([]);
+  const [expandedSubFolderIds, setExpandedSubFolderIds] = useState<string[]>([]);
 
   // Selected document for preview modal
   const [previewDoc, setPreviewDoc] = useState<MasterDocItem | null>(null);
