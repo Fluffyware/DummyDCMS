@@ -70,10 +70,6 @@ export default function MasterlistPage() {
   const [newFolderCategory, setNewFolderCategory] = useState<'HEAD_OFFICE' | 'OFFSHORE' | 'PROJECT_SITE'>('HEAD_OFFICE');
   const [newFolderDesc, setNewFolderDesc] = useState('');
 
-  // Modal Tambah Sub Folder
-  const [isAddSubFolderOpen, setIsAddSubFolderOpen] = useState(false);
-  const [targetParentFolder, setTargetParentFolder] = useState<MasterFolder | null>(null);
-  const [newSubFolderName, setNewSubFolderName] = useState('');
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -244,38 +240,7 @@ export default function MasterlistPage() {
     showToast(`Folder "${newFolder.name}" berhasil dibuat!`);
   };
 
-  // Handle create new sub-folder
-  const handleCreateSubFolder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!targetParentFolder || !newSubFolderName.trim()) return;
 
-    const subId = `sub-${targetParentFolder.id}-${Date.now().toString().slice(-4)}`;
-    const newSub: MasterSubFolder = {
-      id: subId,
-      name: newSubFolderName.trim(),
-      docs: [],
-    };
-
-    const updated = folders.map(f => {
-      if (f.id === targetParentFolder.id) {
-        return {
-          ...f,
-          subfolders: [...(f.subfolders || []), newSub],
-        };
-      }
-      return f;
-    });
-
-    setFolders(updated);
-    saveMasterFolders(updated);
-    setExpandedFolderIds(prev => (prev.includes(targetParentFolder.id) ? prev : [...prev, targetParentFolder.id]));
-    setExpandedSubFolderIds(prev => [...prev, subId]);
-
-    setNewSubFolderName('');
-    setIsAddSubFolderOpen(false);
-    setTargetParentFolder(null);
-    showToast(`Sub Folder "${newSub.name}" berhasil ditambahkan ke ${targetParentFolder.name}!`);
-  };
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'var(--font-body)' }}>
@@ -653,37 +618,8 @@ export default function MasterlistPage() {
                     </div>
                   </div>
 
-                  {/* Right: + Sub Folder, Counters & Expand Toggle */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        setTargetParentFolder(folder);
-                        setIsAddSubFolderOpen(true);
-                      }}
-                      title="Tambah Sub Folder ke folder ini"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        padding: '4px 10px',
-                        background: '#f0f9ff',
-                        color: '#0284c7',
-                        border: '1px solid #bae6fd',
-                        borderRadius: '6px',
-                        fontSize: '11.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => (e.currentTarget.style.background = '#e0f2fe')}
-                      onMouseLeave={e => (e.currentTarget.style.background = '#f0f9ff')}
-                    >
-                      <Plus size={12} strokeWidth={2.4} />
-                      <span>Sub Folder</span>
-                    </button>
-
+                  {/* Right: Counters & Expand Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {subCount > 0 && (
                       <span
                         style={{
@@ -695,7 +631,7 @@ export default function MasterlistPage() {
                           borderRadius: '10px',
                         }}
                       >
-                        {subCount} Sub Folder
+                        {subCount} Sub-Folder
                       </span>
                     )}
 
@@ -1123,7 +1059,7 @@ export default function MasterlistPage() {
                     {/* 3. Empty state if neither docs nor subfolders */}
                     {(!folder.docs || folder.docs.length === 0) && (!folder.subfolders || folder.subfolders.length === 0) && (
                       <div style={{ padding: '16px 24px 16px 48px', fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
-                        Belum ada dokumen atau sub-folder. Klik &quot;+ Sub Folder&quot; untuk menambahkan sub-folder ke folder ini.
+                        Belum ada dokumen atau sub-folder di folder ini.
                       </div>
                     )}
                   </div>
@@ -1285,132 +1221,6 @@ export default function MasterlistPage() {
                   }}
                 >
                   Simpan Folder
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ─── MODAL: TAMBAH SUB FOLDER ─── */}
-      {isAddSubFolderOpen && targetParentFolder && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 28, 44, 0.45)',
-            backdropFilter: 'blur(2px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '20px',
-          }}
-          onClick={() => {
-            setIsAddSubFolderOpen(false);
-            setTargetParentFolder(null);
-          }}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              width: '100%',
-              maxWidth: '500px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
-              overflow: 'hidden',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 20px',
-                borderBottom: '1px solid #f1f5f9',
-                background: '#fafafa',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CornerDownRight size={18} color="#0284c7" />
-                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c' }}>
-                  Tambah Sub Folder
-                </h3>
-              </div>
-              <button
-                onClick={() => {
-                  setIsAddSubFolderOpen(false);
-                  setTargetParentFolder(null);
-                }}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateSubFolder} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Folder Induk (Parent):</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#071c2c' }}>{targetParentFolder.name}</span>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Nama Sub Folder <span style={{ color: '#dc2626' }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: 7.3 Instruksi Kerja (Work Instruction)"
-                  value={newSubFolderName}
-                  onChange={e => setNewSubFolderName(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAddSubFolderOpen(false);
-                    setTargetParentFolder(null);
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    fontSize: '12.5px',
-                    color: '#64748b',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '8px 20px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: '#0284c7',
-                    color: '#ffffff',
-                    fontSize: '12.5px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Simpan Sub Folder
                 </button>
               </div>
             </form>
