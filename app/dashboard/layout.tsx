@@ -445,23 +445,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
           )}
 
-          {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 }}>
-            <span style={{
-              fontSize: 11,
-              fontWeight: 800,
-              color: '#38bdf8',
-              letterSpacing: '0.08em',
-              whiteSpace: 'nowrap',
-              background: 'rgba(56, 189, 248, 0.12)',
-              border: '1px solid rgba(56, 189, 248, 0.25)',
-              padding: '2px 7px',
-              borderRadius: '4px',
-            }}>
-              THI
-            </span>
-            <ChevronRight size={13} strokeWidth={2.2} style={{ color: 'rgba(255, 255, 255, 0.35)', flexShrink: 0 }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.01em' }}>
+          {/* Page Title */}
+          <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.01em' }}>
               {currentTitle}
             </span>
           </div>
