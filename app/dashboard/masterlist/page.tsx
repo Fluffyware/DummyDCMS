@@ -426,8 +426,6 @@ export default function MasterlistPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {[
             { key: 'HEAD_OFFICE', label: 'Head Office', icon: Building2, count: totalDocsCount },
-            { key: 'OFFSHORE', label: 'Offshore & Vessel', icon: Ship, count: 0 },
-            { key: 'PROJECT_SITE', label: 'Project Site', icon: HardHat, count: 0 },
           ].map(tab => {
             const isActive = activeTab === tab.key;
             const Icon = tab.icon;
@@ -618,35 +616,8 @@ export default function MasterlistPage() {
                     </div>
                   </div>
 
-                  {/* Right: Counters & Expand Toggle */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {subCount > 0 && (
-                      <span
-                        style={{
-                          fontSize: '11px',
-                          color: '#0369a1',
-                          fontWeight: 600,
-                          background: '#e0f2fe',
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                        }}
-                      >
-                        {subCount} Sub-Folder
-                      </span>
-                    )}
-
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        color: '#94a3b8',
-                        fontWeight: 500,
-                        background: '#f1f5f9',
-                        padding: '2px 8px',
-                        borderRadius: '10px',
-                      }}
-                    >
-                      {totalDocsInFolder} Dokumen
-                    </span>
+                  {/* Right: Expand Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
 
                     <div
                       style={{
@@ -710,20 +681,7 @@ export default function MasterlistPage() {
                                   </span>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <span
-                                    style={{
-                                      fontSize: '11px',
-                                      color: '#64748b',
-                                      background: '#ffffff',
-                                      border: '1px solid #e2e8f0',
-                                      padding: '1px 7px',
-                                      borderRadius: '8px',
-                                      fontWeight: 500,
-                                    }}
-                                  >
-                                    {countSubFolderDocs(sub)} Dokumen
-                                  </span>
+                                <div style={{ display: 'flex', alignItems: 'center' }}>
                                   {isSubExpanded ? <ChevronDown size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
                                 </div>
                               </div>
@@ -756,10 +714,7 @@ export default function MasterlistPage() {
                                               {childSub.name}
                                             </span>
                                           </div>
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <span style={{ fontSize: '10.5px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '6px', fontWeight: 500 }}>
-                                              {childSub.docs?.length || 0} Dokumen
-                                            </span>
+                                          <div style={{ display: 'flex', alignItems: 'center' }}>
                                             {isChildExpanded ? <ChevronDown size={13} color="#64748b" /> : <ChevronRight size={13} color="#64748b" />}
                                           </div>
                                         </div>
