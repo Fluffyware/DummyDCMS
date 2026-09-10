@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Folder,
   FolderOpen,
+  FolderPlus,
   Plus,
   Minus,
   Search,
@@ -15,6 +16,7 @@ import {
   Ship,
   HardHat,
   ChevronRight,
+  ChevronDown,
   Filter,
   CheckCircle2,
   Clock,
@@ -24,206 +26,29 @@ import {
   Layers,
   ShieldAlert,
   History,
+  CornerDownRight,
 } from 'lucide-react';
-
-/* ─── Type Definitions ────────────────────────────────────────── */
-export interface RevisionLog {
-  rev: string;
-  date: string;
-  author: string;
-  approver: string;
-  notes: string;
-  isCurrent: boolean;
-  size: string;
-}
-export interface MasterDocItem {
-  id: string;
-  number: string;
-  title: string;
-  revision: string;
-  effectiveDate: string;
-  reviewDate: string;
-  status: 'CURRENT' | 'DRAFT' | 'REVISED';
-  classification: 'INTERNAL' | 'CONFIDENTIAL' | 'PUBLIC';
-  type: string;
-  size: string;
-  fileExt: 'pdf' | 'docx' | 'xlsx';
-}
-
-export interface MasterFolder {
-  id: number;
-  name: string;
-  category: 'HEAD_OFFICE' | 'OFFSHORE' | 'PROJECT_SITE';
-  description: string;
-  docs: MasterDocItem[];
-}
-
-/* ─── 15 Folders Data with Exact Names ────────────────────────── */
-const MASTER_FOLDERS: MasterFolder[] = [
-  {
-    id: 1,
-    name: '1. Standar Sistem Manajemen',
-    category: 'HEAD_OFFICE',
-    description: 'Dokumen standar acuan ISO dan sertifikasi kepatuhan internasional.',
-    docs: [
-      { id: 'd1-1', number: 'THI-STD-001', title: 'ISO 9001:2015 Quality Management System Requirements', revision: 'Rev.03', effectiveDate: '01 Jan 2026', reviewDate: '01 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Standar', size: '2.4 MB', fileExt: 'pdf' },
-      { id: 'd1-2', number: 'THI-STD-002', title: 'ISO 14001:2015 Environmental Management Standard', revision: 'Rev.02', effectiveDate: '15 Jan 2026', reviewDate: '15 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Standar', size: '1.9 MB', fileExt: 'pdf' },
-      { id: 'd1-3', number: 'THI-STD-003', title: 'ISO 45001:2018 Occupational Health & Safety Standard', revision: 'Rev.02', effectiveDate: '01 Feb 2026', reviewDate: '01 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Standar', size: '3.1 MB', fileExt: 'pdf' },
-      { id: 'd1-4', number: 'THI-STD-004', title: 'IMCA Marine & Survey Standard Compliance Matrix', revision: 'Rev.01', effectiveDate: '10 Feb 2026', reviewDate: '10 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Standar', size: '1.5 MB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 2,
-    name: '2. Kebijakan',
-    category: 'HEAD_OFFICE',
-    description: 'Pernyataan komitmen formal manajemen puncak PT Taka Hydrocore Indonesia.',
-    docs: [
-      { id: 'd2-1', number: 'THI-POL-001', title: 'Kebijakan Terintegrasi Mutu, K3 & Lingkungan (QHSSE Policy)', revision: 'Rev.04', effectiveDate: '01 Jan 2026', reviewDate: '01 Jan 2027', status: 'CURRENT', classification: 'PUBLIC', type: 'Kebijakan', size: '890 KB', fileExt: 'pdf' },
-      { id: 'd2-2', number: 'THI-POL-002', title: 'Kebijakan Stop Work Authority (SWA) Seluruh Personel', revision: 'Rev.03', effectiveDate: '01 Jan 2026', reviewDate: '01 Jan 2027', status: 'CURRENT', classification: 'PUBLIC', type: 'Kebijakan', size: '720 KB', fileExt: 'pdf' },
-      { id: 'd2-3', number: 'THI-POL-003', title: 'Kebijakan Anti-Penyuapan, Etika Bisnis & Tata Kelola', revision: 'Rev.02', effectiveDate: '15 Feb 2026', reviewDate: '15 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Kebijakan', size: '1.1 MB', fileExt: 'pdf' },
-      { id: 'd2-4', number: 'THI-POL-004', title: 'Kebijakan Bebas Alkohol & Obat-Obatan Terlarang (D&A)', revision: 'Rev.02', effectiveDate: '01 Feb 2026', reviewDate: '01 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Kebijakan', size: '640 KB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 3,
-    name: '3. Peraturan Direksi',
-    category: 'HEAD_OFFICE',
-    description: 'Surat keputusan dan regulasi operasional yang ditetapkan oleh Direksi.',
-    docs: [
-      { id: 'd3-1', number: 'THI-SKD-2026-01', title: 'SK Direksi tentang Struktur Organisasi Perusahaan & Penunjukan MR', revision: 'Rev.00', effectiveDate: '02 Jan 2026', reviewDate: '02 Jan 2027', status: 'CURRENT', classification: 'CONFIDENTIAL', type: 'Peraturan Direksi', size: '1.8 MB', fileExt: 'pdf' },
-      { id: 'd3-2', number: 'THI-SKD-2026-02', title: 'Peraturan Direksi tentang Batasan Otoritas Finansial (DOA)', revision: 'Rev.01', effectiveDate: '15 Jan 2026', reviewDate: '15 Jan 2027', status: 'CURRENT', classification: 'CONFIDENTIAL', type: 'Peraturan Direksi', size: '1.4 MB', fileExt: 'pdf' },
-      { id: 'd3-3', number: 'THI-SKD-2026-03', title: 'Ketentuan Tunjangan Penugasan Lepas Pantai (Offshore Allowance)', revision: 'Rev.02', effectiveDate: '01 Feb 2026', reviewDate: '01 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Peraturan Direksi', size: '950 KB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 4,
-    name: '4. Proses Bisnis',
-    category: 'HEAD_OFFICE',
-    description: 'Peta keterkaitan antarproses inti dan pendukung operasional perusahaan.',
-    docs: [
-      { id: 'd4-1', number: 'THI-BP-001', title: 'Peta Arsitektur Proses Bisnis Terpadu PT Taka Hydrocore Indonesia', revision: 'Rev.02', effectiveDate: '10 Jan 2026', reviewDate: '10 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Proses Bisnis', size: '3.8 MB', fileExt: 'pdf' },
-      { id: 'd4-2', number: 'THI-BP-002', title: 'Alur Proses Layanan Geoteknik Kelautan (Offshore Geotechnical Flow)', revision: 'Rev.03', effectiveDate: '20 Jan 2026', reviewDate: '20 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Proses Bisnis', size: '2.1 MB', fileExt: 'pdf' },
-      { id: 'd4-3', number: 'THI-BP-003', title: 'Prosedur Manajemen Perubahan Operasional (Management of Change)', revision: 'Rev.01', effectiveDate: '05 Feb 2026', reviewDate: '05 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Proses Bisnis', size: '1.2 MB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 5,
-    name: '5. Manual Sistem Manajemen',
-    category: 'HEAD_OFFICE',
-    description: 'Buku panduan induk sistem manajemen mutu, keselamatan, dan lingkungan.',
-    docs: [
-      { id: 'd5-1', number: 'THI-MAN-001', title: 'Integrated Management System Manual (IMS Manual)', revision: 'Rev.04', effectiveDate: '01 Jan 2026', reviewDate: '01 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Manual', size: '5.2 MB', fileExt: 'pdf' },
-      { id: 'd5-2', number: 'THI-MAN-002', title: 'Manual Tanggap Darurat & Penanggulangan Krisis Perusahaan', revision: 'Rev.02', effectiveDate: '15 Jan 2026', reviewDate: '15 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Manual', size: '3.4 MB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 6,
-    name: '6. Corporate Planning & Evaluation',
-    category: 'HEAD_OFFICE',
-    description: 'Rencana kerja strategis, sasaran tahunan, dan evaluasi capaian kinerja.',
-    docs: [
-      { id: 'd6-1', number: 'THI-CPE-001', title: 'Rencana Strategis & Target Tahunan Perusahaan 2026', revision: 'Rev.01', effectiveDate: '05 Jan 2026', reviewDate: '05 Jan 2027', status: 'CURRENT', classification: 'CONFIDENTIAL', type: 'Corporate Plan', size: '2.7 MB', fileExt: 'pdf' },
-      { id: 'd6-2', number: 'THI-CPE-002', title: 'Matriks Pengukuran KPI Organisasi & Corporate Scorecard', revision: 'Rev.02', effectiveDate: '12 Jan 2026', reviewDate: '12 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Evaluasi', size: '1.6 MB', fileExt: 'xlsx' },
-    ],
-  },
-  {
-    id: 7,
-    name: '7. QHSSE Management System',
-    category: 'HEAD_OFFICE',
-    description: 'Prosedur keselamatan kerja, manajemen bahaya, dan kesehatan lingkungan kerja.',
-    docs: [
-      { id: 'd7-1', number: 'THI-QHSSE-SOP-001', title: 'Prosedur Identifikasi Bahaya & Penilaian Risiko (HIRA / HAZID)', revision: 'Rev.03', effectiveDate: '10 Jan 2026', reviewDate: '10 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '1.7 MB', fileExt: 'pdf' },
-      { id: 'd7-2', number: 'THI-QHSSE-SOP-002', title: 'Prosedur Investigasi Insiden, Pelaporan Kecelakaan & Near Miss', revision: 'Rev.03', effectiveDate: '15 Jan 2026', reviewDate: '15 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '2.0 MB', fileExt: 'pdf' },
-      { id: 'd7-3', number: 'THI-QHSSE-WI-003', title: 'Instruksi Kerja Penggunaan APD Standar Pekerjaan Offshore & Rig', revision: 'Rev.02', effectiveDate: '01 Feb 2026', reviewDate: '01 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Work Instruction', size: '980 KB', fileExt: 'pdf' },
-      { id: 'd7-4', number: 'THI-QHSSE-FRM-004', title: 'Formulir Izin Kerja Aman (Permit to Work - PTW)', revision: 'Rev.04', effectiveDate: '01 Feb 2026', reviewDate: '01 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Formulir', size: '420 KB', fileExt: 'docx' },
-    ],
-  },
-  {
-    id: 8,
-    name: '8. Marketing & Sales',
-    category: 'HEAD_OFFICE',
-    description: 'Prosedur penawaran tender, kontrak jasa survei, dan manajemen kepuasan klien.',
-    docs: [
-      { id: 'd8-1', number: 'THI-MKT-SOP-001', title: 'Prosedur Penyusunan Proposal Teknis & Komersial Tender', revision: 'Rev.02', effectiveDate: '08 Jan 2026', reviewDate: '08 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '1.3 MB', fileExt: 'pdf' },
-      { id: 'd8-2', number: 'THI-MKT-PRO-002', title: 'Prosedur Pengukuran Kepuasan Pelanggan (Customer Satisfaction Survey)', revision: 'Rev.01', effectiveDate: '20 Jan 2026', reviewDate: '20 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Prosedur', size: '820 KB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 9,
-    name: '9. Engineering',
-    category: 'HEAD_OFFICE',
-    description: 'Standar metodologi geoteknik, uji laboratorium tanah, dan survei geofisika.',
-    docs: [
-      { id: 'd9-1', number: 'THI-ENG-SOP-001', title: 'Prosedur Pemboran Inti & Soil Sampling Lepas Pantai', revision: 'Rev.03', effectiveDate: '15 Jan 2026', reviewDate: '15 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '4.2 MB', fileExt: 'pdf' },
-      { id: 'd9-2', number: 'THI-ENG-SOP-002', title: 'Kalibrasi & Pelaksanaan Cone Penetration Test (CPT/PCPT)', revision: 'Rev.02', effectiveDate: '22 Jan 2026', reviewDate: '22 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '3.1 MB', fileExt: 'pdf' },
-      { id: 'd9-3', number: 'THI-ENG-WI-003', title: 'Instruksi Kerja Pengujian Laboratorium Mekanika Tanah Onshore', revision: 'Rev.01', effectiveDate: '05 Feb 2026', reviewDate: '05 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Work Instruction', size: '1.8 MB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 10,
-    name: '10. Information Technology',
-    category: 'HEAD_OFFICE',
-    description: 'Prosedur keamanan data, akses jaringan offshore-to-shore, dan lisensi perangkat lunak.',
-    docs: [
-      { id: 'd10-1', number: 'THI-IT-SOP-001', title: 'Prosedur Keamanan Informasi & Akses Jaringan Komputer', revision: 'Rev.02', effectiveDate: '12 Jan 2026', reviewDate: '12 Jan 2027', status: 'CURRENT', classification: 'CONFIDENTIAL', type: 'SOP', size: '1.4 MB', fileExt: 'pdf' },
-      { id: 'd10-2', number: 'THI-IT-WI-002', title: 'Panduan Backup Data Akuisisi Survei Kapal & Cloud Storage DMS', revision: 'Rev.01', effectiveDate: '25 Jan 2026', reviewDate: '25 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Work Instruction', size: '910 KB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 11,
-    name: '11. Logistic',
-    category: 'HEAD_OFFICE',
-    description: 'Pengelolaan pergudangan, rantai pasok material kapal, dan mobilisasi peralatan berat.',
-    docs: [
-      { id: 'd11-1', number: 'THI-LOG-SOP-001', title: 'Prosedur Pengadaan Barang & Seleksi Pemasok Terkualifikasi', revision: 'Rev.02', effectiveDate: '10 Jan 2026', reviewDate: '10 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '1.6 MB', fileExt: 'pdf' },
-      { id: 'd11-2', number: 'THI-LOG-SOP-002', title: 'Prosedur Mobilisasi dan Demobilisasi Alat Survei Kelautan', revision: 'Rev.03', effectiveDate: '18 Jan 2026', reviewDate: '18 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '2.5 MB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 12,
-    name: '12. Project Management',
-    category: 'HEAD_OFFICE',
-    description: 'Tata laksana eksekusi proyek, pembuatan jadwal kerja, dan laporan kemajuan harian (DPR).',
-    docs: [
-      { id: 'd12-1', number: 'THI-PM-SOP-001', title: 'Prosedur Perencanaan & Pengendalian Proyek Survei Kelautan', revision: 'Rev.02', effectiveDate: '14 Jan 2026', reviewDate: '14 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '2.8 MB', fileExt: 'pdf' },
-      { id: 'd12-2', number: 'THI-PM-TMP-002', title: 'Template Standar Daily Progress Report (DPR) Offshore', revision: 'Rev.03', effectiveDate: '01 Feb 2026', reviewDate: '01 Feb 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Template', size: '640 KB', fileExt: 'xlsx' },
-    ],
-  },
-  {
-    id: 13,
-    name: '13. Human Capital',
-    category: 'HEAD_OFFICE',
-    description: 'Regulasi ketenagakerjaan, sertifikasi pelaut (BOSIET/OGUK), dan pengembangan kompetensi.',
-    docs: [
-      { id: 'd13-1', number: 'THI-HC-SOP-001', title: 'Prosedur Rekrutmen, Onboarding & Verifikasi Sertifikat Kru Kapal', revision: 'Rev.02', effectiveDate: '08 Jan 2026', reviewDate: '08 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '1.5 MB', fileExt: 'pdf' },
-      { id: 'd13-2', number: 'THI-HC-SOP-002', title: 'Prosedur Matriks Pelatihan & Pengembangan Kompetensi Karyawan', revision: 'Rev.01', effectiveDate: '20 Jan 2026', reviewDate: '20 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '1.2 MB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 14,
-    name: '14. General Affair',
-    category: 'HEAD_OFFICE',
-    description: 'Pemeliharaan fasilitas kantor pusat, mess kru operasional, dan perizinan operasional umum.',
-    docs: [
-      { id: 'd14-1', number: 'THI-GA-SOP-001', title: 'Prosedur Pengelolaan Fasilitas Kantor & Mess Karyawan', revision: 'Rev.01', effectiveDate: '12 Jan 2026', reviewDate: '12 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '1.1 MB', fileExt: 'pdf' },
-      { id: 'd14-2', number: 'THI-GA-WI-002', title: 'Instruksi Kerja Pemeliharaan Kendaraan Operasional & Pool Mobil', revision: 'Rev.01', effectiveDate: '28 Jan 2026', reviewDate: '28 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'Work Instruction', size: '850 KB', fileExt: 'pdf' },
-    ],
-  },
-  {
-    id: 15,
-    name: '15. Finance & Accounting',
-    category: 'HEAD_OFFICE',
-    description: 'Standar penagihan proyek klien (invoicing), kas kecil lapangan, dan audit laporan keuangan.',
-    docs: [
-      { id: 'd15-1', number: 'THI-FIN-SOP-001', title: 'Prosedur Penagihan Pembayaran Proyek (Invoicing) & Rekonsiliasi', revision: 'Rev.02', effectiveDate: '10 Jan 2026', reviewDate: '10 Jan 2027', status: 'CURRENT', classification: 'CONFIDENTIAL', type: 'SOP', size: '1.7 MB', fileExt: 'pdf' },
-      { id: 'd15-2', number: 'THI-FIN-SOP-002', title: 'Prosedur Pengelolaan Kas Kecil Lapangan (Offshore Petty Cash)', revision: 'Rev.02', effectiveDate: '25 Jan 2026', reviewDate: '25 Jan 2027', status: 'CURRENT', classification: 'INTERNAL', type: 'SOP', size: '1.3 MB', fileExt: 'pdf' },
-    ],
-  },
-];
+import {
+  MasterFolder,
+  MasterSubFolder,
+  MasterDocItem,
+  RevisionLog,
+  loadMasterFolders,
+  saveMasterFolders,
+} from '@/lib/masterlist-data';
 
 /* ─── Main Masterlist Component ───────────────────────────────── */
 export default function MasterlistPage() {
   const router = useRouter();
+
+  // Master folders state (stored & persisted in localStorage)
+  const [folders, setFolders] = useState<MasterFolder[]>([]);
+  const [isClientLoaded, setIsClientLoaded] = useState(false);
+
+  useEffect(() => {
+    setFolders(loadMasterFolders());
+    setIsClientLoaded(true);
+  }, []);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -232,11 +57,30 @@ export default function MasterlistPage() {
   const [activeTab, setActiveTab] = useState<'HEAD_OFFICE' | 'OFFSHORE' | 'PROJECT_SITE'>('HEAD_OFFICE');
 
   // Expanded folders state (set of folder IDs)
-  const [expandedFolderIds, setExpandedFolderIds] = useState<number[]>([1]); // folder 1 open by default
+  const [expandedFolderIds, setExpandedFolderIds] = useState<number[]>([1, 7]); // folders 1 & 7 open by default
+  const [expandedSubFolderIds, setExpandedSubFolderIds] = useState<string[]>(['sub-1-1', 'sub-7-1']);
 
   // Selected document for preview modal
   const [previewDoc, setPreviewDoc] = useState<MasterDocItem | null>(null);
   const [modalTab, setModalTab] = useState<'info' | 'history'>('info');
+
+  // Modal Tambah Folder
+  const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderCategory, setNewFolderCategory] = useState<'HEAD_OFFICE' | 'OFFSHORE' | 'PROJECT_SITE'>('HEAD_OFFICE');
+  const [newFolderDesc, setNewFolderDesc] = useState('');
+
+  // Modal Tambah Sub Folder
+  const [isAddSubFolderOpen, setIsAddSubFolderOpen] = useState(false);
+  const [targetParentFolder, setTargetParentFolder] = useState<MasterFolder | null>(null);
+  const [newSubFolderName, setNewSubFolderName] = useState('');
+
+  // Toast feedback
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   // Generate realistic revision history & change notes
   const getDocRevisionHistory = (doc: MasterDocItem): RevisionLog[] => {
@@ -268,47 +112,76 @@ export default function MasterlistPage() {
     return history;
   };
 
-  // Total documents count
+  // Total documents count across all folders and subfolders
   const totalDocsCount = useMemo(() => {
-    return MASTER_FOLDERS.reduce((acc, f) => acc + f.docs.length, 0);
-  }, []);
+    return folders.reduce((acc, f) => {
+      const directDocs = f.docs?.length || 0;
+      const subDocs = (f.subfolders || []).reduce((sAcc, sub) => sAcc + (sub.docs?.length || 0), 0);
+      return acc + directDocs + subDocs;
+    }, 0);
+  }, [folders]);
+
+  // Helper to count docs in a single folder
+  const countFolderDocs = (folder: MasterFolder) => {
+    const directDocs = folder.docs?.length || 0;
+    const subDocs = (folder.subfolders || []).reduce((acc, sub) => acc + (sub.docs?.length || 0), 0);
+    return directDocs + subDocs;
+  };
 
   // Filter folders based on category & search query
   const filteredFolders = useMemo(() => {
-    let folders = MASTER_FOLDERS;
+    let list = folders;
     if (activeTab !== 'HEAD_OFFICE') {
-      // In demo data, default folders are under HEAD_OFFICE, but we can filter or show subset
-      folders = MASTER_FOLDERS.filter(f => f.category === activeTab);
+      list = folders.filter(f => f.category === activeTab);
     }
 
     if (!searchQuery.trim()) {
-      return folders;
+      return list;
     }
 
     const q = searchQuery.toLowerCase().trim();
-    return folders
-      .map(folder => {
-        const folderMatches = folder.name.toLowerCase().includes(q) || folder.description.toLowerCase().includes(q);
-        const matchedDocs = folder.docs.filter(
+    const result: MasterFolder[] = [];
+
+    for (const folder of list) {
+      const folderMatches = folder.name.toLowerCase().includes(q) || folder.description.toLowerCase().includes(q);
+
+      const matchedDirectDocs = (folder.docs || []).filter(
+        d =>
+          d.number.toLowerCase().includes(q) ||
+          d.title.toLowerCase().includes(q) ||
+          d.type.toLowerCase().includes(q) ||
+          d.classification.toLowerCase().includes(q)
+      );
+
+      const matchedSubfolders: MasterSubFolder[] = [];
+      for (const sub of folder.subfolders || []) {
+        const subMatches = sub.name.toLowerCase().includes(q);
+        const matchedSubDocs = (sub.docs || []).filter(
           d =>
             d.number.toLowerCase().includes(q) ||
             d.title.toLowerCase().includes(q) ||
             d.type.toLowerCase().includes(q) ||
             d.classification.toLowerCase().includes(q)
         );
-
-        if (folderMatches || matchedDocs.length > 0) {
-          return {
-            ...folder,
-            // If the folder matched but no docs specifically matched, show all its docs, otherwise show matched docs
-            docs: matchedDocs.length > 0 ? matchedDocs : folder.docs,
-          };
+        if (subMatches || matchedSubDocs.length > 0) {
+          matchedSubfolders.push({
+            ...sub,
+            docs: matchedSubDocs.length > 0 ? matchedSubDocs : sub.docs,
+          });
         }
-        return null;
-      })
-      .filter((f): f is MasterFolder => f !== null);
-  }, [searchQuery, activeTab]);
+      }
 
+      if (folderMatches || matchedDirectDocs.length > 0 || matchedSubfolders.length > 0) {
+        result.push({
+          ...folder,
+          docs: matchedDirectDocs.length > 0 ? matchedDirectDocs : folder.docs,
+          subfolders: matchedSubfolders.length > 0 ? matchedSubfolders : folder.subfolders,
+        });
+      }
+    }
+
+    return result;
+  }, [folders, searchQuery, activeTab]);
 
   // Toggle single folder
   const toggleFolder = (folderId: number) => {
@@ -317,18 +190,115 @@ export default function MasterlistPage() {
     );
   };
 
+  // Toggle single subfolder
+  const toggleSubFolder = (subId: string) => {
+    setExpandedSubFolderIds(prev =>
+      prev.includes(subId) ? prev.filter(id => id !== subId) : [...prev, subId]
+    );
+  };
+
   // Expand all folders
   const handleExpandAll = () => {
-    setExpandedFolderIds(MASTER_FOLDERS.map(f => f.id));
+    setExpandedFolderIds(folders.map(f => f.id));
+    const allSubs: string[] = [];
+    folders.forEach(f => (f.subfolders || []).forEach(sub => allSubs.push(sub.id)));
+    setExpandedSubFolderIds(allSubs);
   };
 
   // Collapse all folders
   const handleCollapseAll = () => {
     setExpandedFolderIds([]);
+    setExpandedSubFolderIds([]);
+  };
+
+  // Handle create new folder
+  const handleCreateFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFolderName.trim()) return;
+
+    const nextId = folders.length > 0 ? Math.max(...folders.map(f => f.id)) + 1 : 1;
+    const newFolder: MasterFolder = {
+      id: nextId,
+      name: newFolderName.trim(),
+      category: newFolderCategory,
+      description: newFolderDesc.trim() || 'Folder dokumen kendali operasional.',
+      docs: [],
+      subfolders: [],
+    };
+
+    const updated = [...folders, newFolder];
+    setFolders(updated);
+    saveMasterFolders(updated);
+    setExpandedFolderIds(prev => [...prev, nextId]);
+
+    setNewFolderName('');
+    setNewFolderDesc('');
+    setIsAddFolderOpen(false);
+    showToast(`Folder "${newFolder.name}" berhasil dibuat!`);
+  };
+
+  // Handle create new sub-folder
+  const handleCreateSubFolder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetParentFolder || !newSubFolderName.trim()) return;
+
+    const subId = `sub-${targetParentFolder.id}-${Date.now().toString().slice(-4)}`;
+    const newSub: MasterSubFolder = {
+      id: subId,
+      name: newSubFolderName.trim(),
+      docs: [],
+    };
+
+    const updated = folders.map(f => {
+      if (f.id === targetParentFolder.id) {
+        return {
+          ...f,
+          subfolders: [...(f.subfolders || []), newSub],
+        };
+      }
+      return f;
+    });
+
+    setFolders(updated);
+    saveMasterFolders(updated);
+    setExpandedFolderIds(prev => (prev.includes(targetParentFolder.id) ? prev : [...prev, targetParentFolder.id]));
+    setExpandedSubFolderIds(prev => [...prev, subId]);
+
+    setNewSubFolderName('');
+    setIsAddSubFolderOpen(false);
+    setTargetParentFolder(null);
+    showToast(`Sub Folder "${newSub.name}" berhasil ditambahkan ke ${targetParentFolder.name}!`);
   };
 
   return (
     <div style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'var(--font-body)' }}>
+      {/* ─── Toast Feedback ─── */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '74px',
+            right: '24px',
+            zIndex: 9999,
+            background: '#071c2c',
+            color: '#ffffff',
+            padding: '12px 20px',
+            borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '13px',
+            fontWeight: 500,
+            borderLeft: '4px solid #0284c7',
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
+          <CheckCircle2 size={16} color="#38bdf8" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* ─── Top Header: Minimalist Corporate with Logo Accent ─── */}
       <div
         style={{
@@ -344,7 +314,6 @@ export default function MasterlistPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {/* Official Logo (Clean, No Card) */}
           <img
             src="/thi-logo-official.png"
             alt="PT Taka Hydrocore Indonesia"
@@ -374,10 +343,35 @@ export default function MasterlistPage() {
           </div>
         </div>
 
-
+        {/* Action Button: Tambah Folder */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            onClick={() => setIsAddFolderOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '9px 16px',
+              background: 'linear-gradient(135deg, #071c2c 0%, #0c273d 100%)',
+              color: '#ffffff',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(7, 28, 44, 0.15)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 14px rgba(7, 28, 44, 0.25)')}
+            onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 8px rgba(7, 28, 44, 0.15)')}
+          >
+            <FolderPlus size={16} strokeWidth={2} />
+            <span>Tambah Folder</span>
+          </button>
+        </div>
       </div>
 
-      {/* ─── Search Bar (exact minimalist design matching screenshot) ─── */}
+      {/* ─── Search Bar ─── */}
       <div style={{ marginBottom: '18px' }}>
         <div
           style={{
@@ -399,7 +393,7 @@ export default function MasterlistPage() {
           />
           <input
             type="text"
-            placeholder="Search for file .."
+            placeholder="Cari folder, sub-folder, atau dokumen..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{
@@ -457,85 +451,56 @@ export default function MasterlistPage() {
           gap: '12px',
         }}
       >
-        {/* Exact Location Pill matching screenshot: "HEAD OFFICE" */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          <button
-            onClick={() => setActiveTab('HEAD_OFFICE')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              fontSize: '11.5px',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              border: 'none',
-              background: activeTab === 'HEAD_OFFICE' ? '#1e1b4b' : '#f1f5f9',
-              color: activeTab === 'HEAD_OFFICE' ? '#ffffff' : '#64748b',
-              boxShadow: activeTab === 'HEAD_OFFICE' ? '0 2px 4px rgba(30, 27, 75, 0.2)' : 'none',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Building2 size={13} />
-            HEAD OFFICE
-          </button>
-
-          <button
-            onClick={() => setActiveTab('OFFSHORE')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              fontSize: '11.5px',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              border: 'none',
-              background: activeTab === 'OFFSHORE' ? '#1e1b4b' : '#f1f5f9',
-              color: activeTab === 'OFFSHORE' ? '#ffffff' : '#64748b',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Ship size={13} />
-            VESSEL & OFFSHORE
-          </button>
-
-          <button
-            onClick={() => setActiveTab('PROJECT_SITE')}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              fontSize: '11.5px',
-              fontWeight: 700,
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              cursor: 'pointer',
-              border: 'none',
-              background: activeTab === 'PROJECT_SITE' ? '#1e1b4b' : '#f1f5f9',
-              color: activeTab === 'PROJECT_SITE' ? '#ffffff' : '#64748b',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <HardHat size={13} />
-            PROJECT BASE
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {[
+            { key: 'HEAD_OFFICE', label: 'Head Office', icon: Building2, count: totalDocsCount },
+            { key: 'OFFSHORE', label: 'Offshore & Vessel', icon: Ship, count: 0 },
+            { key: 'PROJECT_SITE', label: 'Project Site', icon: HardHat, count: 0 },
+          ].map(tab => {
+            const isActive = activeTab === tab.key;
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as any)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 14px',
+                  borderRadius: '20px',
+                  border: isActive ? '1px solid #071c2c' : '1px solid #e2e8f0',
+                  background: isActive ? '#071c2c' : '#ffffff',
+                  color: isActive ? '#ffffff' : '#64748b',
+                  fontSize: '12.5px',
+                  fontWeight: isActive ? 600 : 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Icon size={14} />
+                <span>{tab.label}</span>
+                {tab.count > 0 && (
+                  <span
+                    style={{
+                      background: isActive ? 'rgba(255,255,255,0.2)' : '#f1f5f9',
+                      color: isActive ? '#ffffff' : '#475569',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {/* Expand / Collapse All */}
+        {/* Quick expand/collapse controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-            {filteredFolders.length} Kategori · {totalDocsCount} Dokumen
-          </span>
-          <span style={{ color: '#cbd5e1' }}>·</span>
           <button
             onClick={handleExpandAll}
             style={{
@@ -570,311 +535,807 @@ export default function MasterlistPage() {
         </div>
       </div>
 
-      {/* ─── MAIN CONTENT VIEW ─────────────────────────────────────── */}
-      {
-        /* ─── MINIMALIST FOLDER LIST (Matching Screenshot Exactly) ─── */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {filteredFolders.length === 0 ? (
-            <div
-              style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '48px 24px',
-                textAlign: 'center',
-              }}
-            >
-              <Folder size={36} color="#94a3b8" style={{ marginBottom: '12px', strokeWidth: 1.5 }} />
-              <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b', margin: '0 0 6px 0' }}>
-                Tidak ada folder atau dokumen yang cocok
-              </h3>
-              <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
-                Coba sesuaikan kata kunci pencarian Anda: &quot;{searchQuery}&quot;
-              </p>
-            </div>
-          ) : (
-            filteredFolders.map(folder => {
-              const isExpanded = expandedFolderIds.includes(folder.id) || !!searchQuery.trim();
+      {/* ─── MAIN FOLDER TREE VIEW ─── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {filteredFolders.length === 0 ? (
+          <div
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '48px 24px',
+              textAlign: 'center',
+            }}
+          >
+            <Folder size={36} color="#94a3b8" style={{ marginBottom: '12px', strokeWidth: 1.5 }} />
+            <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b', margin: '0 0 6px 0' }}>
+              Tidak ada folder atau dokumen yang cocok
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+              Coba sesuaikan kata kunci pencarian Anda: &quot;{searchQuery}&quot;
+            </p>
+          </div>
+        ) : (
+          filteredFolders.map(folder => {
+            const isExpanded = expandedFolderIds.includes(folder.id) || !!searchQuery.trim();
+            const totalDocsInFolder = countFolderDocs(folder);
+            const subCount = folder.subfolders?.length || 0;
 
-              return (
+            return (
+              <div
+                key={folder.id}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  transition: 'all 0.18s ease',
+                  boxShadow: isExpanded ? '0 2px 8px rgba(0,0,0,0.03)' : 'none',
+                }}
+              >
+                {/* ── Main Folder Row ── */}
                 <div
-                  key={folder.id}
+                  onClick={() => toggleFolder(folder.id)}
                   style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    overflow: 'hidden',
-                    transition: 'all 0.18s ease',
-                    boxShadow: isExpanded ? '0 2px 6px rgba(0,0,0,0.02)' : 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 18px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    background: isExpanded ? '#f8fafc' : '#ffffff',
+                    borderBottom: isExpanded ? '1px solid #f1f5f9' : 'none',
+                    transition: 'background 0.15s ease',
+                  }}
+                  onMouseOver={e => {
+                    if (!isExpanded) e.currentTarget.style.background = '#f8fafc';
+                  }}
+                  onMouseOut={e => {
+                    if (!isExpanded) e.currentTarget.style.background = '#ffffff';
                   }}
                 >
-                  {/* ── Single Folder Row ── */}
-                  <div
-                    onClick={() => toggleFolder(folder.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px 18px',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      background: isExpanded ? '#f8fafc' : '#ffffff',
-                      borderBottom: isExpanded ? '1px solid #f1f5f9' : 'none',
-                      transition: 'background 0.15s ease',
-                    }}
-                    onMouseOver={e => {
-                      if (!isExpanded) e.currentTarget.style.background = '#f8fafc';
-                    }}
-                    onMouseOut={e => {
-                      if (!isExpanded) e.currentTarget.style.background = '#ffffff';
-                    }}
-                  >
-                    {/* Left: Folder Icon & Exact Name */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div
-                        style={{
-                          color: isExpanded ? '#071c2c' : '#64748b',
-                          display: 'flex',
-                          alignItems: 'center',
-                          transition: 'color 0.15s ease',
-                        }}
-                      >
-                        {isExpanded ? (
-                          <FolderOpen size={18} strokeWidth={1.75} color="#0284c7" />
-                        ) : (
-                          <Folder size={18} strokeWidth={1.75} />
-                        )}
-                      </div>
+                  {/* Left: Folder Icon & Name */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div
+                      style={{
+                        color: isExpanded ? '#071c2c' : '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        transition: 'color 0.15s ease',
+                      }}
+                    >
+                      {isExpanded ? (
+                        <FolderOpen size={19} strokeWidth={1.75} color="#0284c7" />
+                      ) : (
+                        <Folder size={19} strokeWidth={1.75} />
+                      )}
+                    </div>
 
-                      <div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span
                           style={{
                             fontSize: '13.5px',
-                            fontWeight: 500,
+                            fontWeight: 600,
                             color: isExpanded ? '#071c2c' : '#334155',
                             letterSpacing: '-0.01em',
                           }}
                         >
                           {folder.name}
                         </span>
+                        {folder.category !== 'HEAD_OFFICE' && (
+                          <span
+                            style={{
+                              fontSize: '10.5px',
+                              fontWeight: 700,
+                              color: '#d97706',
+                              background: '#fef3c7',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            {folder.category}
+                          </span>
+                        )}
                       </div>
+                      {folder.description && (
+                        <p style={{ margin: '2px 0 0 0', fontSize: '11.5px', color: '#94a3b8' }}>
+                          {folder.description}
+                        </p>
+                      )}
                     </div>
+                  </div>
 
-                    {/* Right: Counter badge & '+' or '−' toggle icon */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  {/* Right: + Sub Folder, Counters & Expand Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        setTargetParentFolder(folder);
+                        setIsAddSubFolderOpen(true);
+                      }}
+                      title="Tambah Sub Folder ke folder ini"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '4px 10px',
+                        background: '#f0f9ff',
+                        color: '#0284c7',
+                        border: '1px solid #bae6fd',
+                        borderRadius: '6px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#e0f2fe')}
+                      onMouseLeave={e => (e.currentTarget.style.background = '#f0f9ff')}
+                    >
+                      <Plus size={12} strokeWidth={2.4} />
+                      <span>Sub Folder</span>
+                    </button>
+
+                    {subCount > 0 && (
                       <span
                         style={{
                           fontSize: '11px',
-                          color: '#94a3b8',
-                          fontWeight: 500,
-                          background: '#f1f5f9',
+                          color: '#0369a1',
+                          fontWeight: 600,
+                          background: '#e0f2fe',
                           padding: '2px 8px',
                           borderRadius: '10px',
                         }}
                       >
-                        {folder.docs.length} Dokumen
+                        {subCount} Sub Folder
                       </span>
+                    )}
 
-                      <div
-                        style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: '#64748b',
-                          background: 'transparent',
-                          transition: 'transform 0.15s ease',
-                        }}
-                      >
-                        {isExpanded ? (
-                          <Minus size={15} strokeWidth={2} />
-                        ) : (
-                          <Plus size={15} strokeWidth={2} />
-                        )}
-                      </div>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: '#94a3b8',
+                        fontWeight: 500,
+                        background: '#f1f5f9',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                      }}
+                    >
+                      {totalDocsInFolder} Dokumen
+                    </span>
+
+                    <div
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#64748b',
+                        background: 'transparent',
+                      }}
+                    >
+                      {isExpanded ? (
+                        <Minus size={15} strokeWidth={2} />
+                      ) : (
+                        <Plus size={15} strokeWidth={2} />
+                      )}
                     </div>
                   </div>
+                </div>
 
-                  {/* ── Expanded Document List ── */}
-                  {isExpanded && (
-                    <div style={{ background: '#ffffff', padding: '6px 0' }}>
-                      {folder.docs.length === 0 ? (
-                        <div style={{ padding: '16px 24px', fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
-                          Belum ada dokumen yang terdaftar dalam folder ini.
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          {folder.docs.map((doc, idx) => (
+                {/* ── Expanded Content: Sub-folders + Documents ── */}
+                {isExpanded && (
+                  <div style={{ background: '#ffffff', padding: '6px 0 10px 0' }}>
+                    {/* 1. Render Subfolders (if any) */}
+                    {(folder.subfolders || []).length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', padding: '6px 18px 6px 36px' }}>
+                        {(folder.subfolders || []).map(sub => {
+                          const isSubExpanded = expandedSubFolderIds.includes(sub.id) || !!searchQuery.trim();
+
+                          return (
                             <div
-                              key={doc.id}
+                              key={sub.id}
                               style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '10px 18px 10px 48px',
-                                borderTop: idx > 0 ? '1px solid #f8fafc' : 'none',
-                                transition: 'background 0.12s ease',
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '6px',
+                                overflow: 'hidden',
+                                background: '#fafcff',
                               }}
-                              onMouseOver={e => (e.currentTarget.style.background = '#f8fafc')}
-                              onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
                             >
-                              {/* Left: Doc Icon, Number, Title */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                                <FileText size={15} color="#0284c7" strokeWidth={1.75} style={{ flexShrink: 0 }} />
-
-                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
-                                  <span
-                                    style={{
-                                      fontSize: '12px',
-                                      fontWeight: 600,
-                                      fontFamily: 'var(--font-mono)',
-                                      color: '#071c2c',
-                                      background: '#f1f5f9',
-                                      padding: '2px 6px',
-                                      borderRadius: '4px',
-                                      letterSpacing: '0.01em',
-                                    }}
-                                  >
-                                    {doc.number}
+                              {/* Subfolder Row Header */}
+                              <div
+                                onClick={() => toggleSubFolder(sub.id)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '8px 14px',
+                                  cursor: 'pointer',
+                                  background: isSubExpanded ? '#f0f5fa' : '#fafcff',
+                                  borderBottom: isSubExpanded && sub.docs?.length > 0 ? '1px solid #e2e8f0' : 'none',
+                                  userSelect: 'none',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                  <CornerDownRight size={14} color="#64748b" />
+                                  <Folder size={15} color={isSubExpanded ? '#0284c7' : '#64748b'} strokeWidth={2} />
+                                  <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#1e293b' }}>
+                                    {sub.name}
                                   </span>
+                                </div>
 
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                   <span
                                     style={{
-                                      fontSize: '13px',
+                                      fontSize: '11px',
+                                      color: '#64748b',
+                                      background: '#ffffff',
+                                      border: '1px solid #e2e8f0',
+                                      padding: '1px 7px',
+                                      borderRadius: '8px',
                                       fontWeight: 500,
-                                      color: '#1e293b',
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                      maxWidth: '520px',
                                     }}
                                   >
-                                    {doc.title}
+                                    {sub.docs?.length || 0} Dokumen
                                   </span>
+                                  {isSubExpanded ? <ChevronDown size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
                                 </div>
                               </div>
 
-                              {/* Right: Meta & Clean Actions */}
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
+                              {/* Documents in Subfolder */}
+                              {isSubExpanded && (
+                                <div style={{ background: '#ffffff' }}>
+                                  {(!sub.docs || sub.docs.length === 0) ? (
+                                    <div style={{ padding: '12px 20px 12px 40px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                                      Belum ada berkas dokumen dalam sub-folder ini.
+                                    </div>
+                                  ) : (
+                                    sub.docs.map((doc, dIdx) => (
+                                      <div
+                                        key={doc.id}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                          padding: '8px 16px 8px 40px',
+                                          borderTop: dIdx > 0 ? '1px solid #f8fafc' : 'none',
+                                          transition: 'background 0.12s ease',
+                                        }}
+                                        onMouseOver={e => (e.currentTarget.style.background = '#f8fafc')}
+                                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                                      >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                          <FileText size={14} color="#0284c7" strokeWidth={1.75} style={{ flexShrink: 0 }} />
+                                          <span
+                                            style={{
+                                              fontSize: '11.5px',
+                                              fontWeight: 600,
+                                              fontFamily: 'var(--font-mono)',
+                                              color: '#071c2c',
+                                              background: '#f1f5f9',
+                                              padding: '2px 6px',
+                                              borderRadius: '4px',
+                                            }}
+                                          >
+                                            {doc.number}
+                                          </span>
+                                          <span
+                                            style={{
+                                              fontSize: '12.5px',
+                                              fontWeight: 500,
+                                              color: '#1e293b',
+                                              overflow: 'hidden',
+                                              textOverflow: 'ellipsis',
+                                              whiteSpace: 'nowrap',
+                                            }}
+                                          >
+                                            {doc.title}
+                                          </span>
+                                          <span
+                                            style={{
+                                              fontSize: '11px',
+                                              fontWeight: 600,
+                                              fontFamily: 'var(--font-mono)',
+                                              color: '#0369a1',
+                                              background: '#e0f2fe',
+                                              padding: '1px 5px',
+                                              borderRadius: '3px',
+                                            }}
+                                          >
+                                            {doc.revision}
+                                          </span>
+                                        </div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                          <button
+                                            onClick={() => {
+                                              setModalTab('info');
+                                              setPreviewDoc(doc);
+                                            }}
+                                            title="Pratinjau Dokumen"
+                                            style={{
+                                              background: '#ffffff',
+                                              border: '1px solid #e2e8f0',
+                                              borderRadius: '4px',
+                                              padding: '5px 8px',
+                                              color: '#334155',
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
+                                              fontSize: '11.5px',
+                                            }}
+                                          >
+                                            <Eye size={13} />
+                                            <span>Lihat</span>
+                                          </button>
+                                          <button
+                                            onClick={() => {
+                                              setModalTab('history');
+                                              setPreviewDoc(doc);
+                                            }}
+                                            title="Riwayat Revisi"
+                                            style={{
+                                              background: '#f0f9ff',
+                                              border: '1px solid #bae6fd',
+                                              borderRadius: '4px',
+                                              padding: '5px 8px',
+                                              color: '#0284c7',
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              gap: '4px',
+                                              fontSize: '11.5px',
+                                            }}
+                                          >
+                                            <History size={13} />
+                                            <span>Revisi</span>
+                                          </button>
+                                        </div>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* 2. Render Direct Folder Documents (if any) */}
+                    {(folder.docs || []).length > 0 && (
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {(folder.docs || []).map((doc, idx) => (
+                          <div
+                            key={doc.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '9px 18px 9px 48px',
+                              borderTop: idx > 0 || (folder.subfolders?.length || 0) > 0 ? '1px solid #f8fafc' : 'none',
+                              transition: 'background 0.12s ease',
+                            }}
+                            onMouseOver={e => (e.currentTarget.style.background = '#f8fafc')}
+                            onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                              <FileText size={15} color="#0284c7" strokeWidth={1.75} style={{ flexShrink: 0 }} />
+                              <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+                                <span
+                                  style={{
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    fontFamily: 'var(--font-mono)',
+                                    color: '#071c2c',
+                                    background: '#f1f5f9',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                  }}
+                                >
+                                  {doc.number}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: '13px',
+                                    fontWeight: 500,
+                                    color: '#1e293b',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  {doc.title}
+                                </span>
                                 <span
                                   style={{
                                     fontSize: '11px',
+                                    fontWeight: 600,
                                     fontFamily: 'var(--font-mono)',
-                                    color: '#64748b',
+                                    color: '#0369a1',
+                                    background: '#e0f2fe',
+                                    padding: '1px 5px',
+                                    borderRadius: '3px',
                                   }}
                                 >
                                   {doc.revision}
                                 </span>
-
-                                <span
-                                  style={{
-                                    fontSize: '11.5px',
-                                    color: '#94a3b8',
-                                  }}
-                                >
-                                  {doc.effectiveDate}
-                                </span>
-
-
-
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      setModalTab('info');
-                                      setPreviewDoc(doc);
-                                    }}
-                                    title="Lihat Detail & Pratinjau Dokumen"
-                                    style={{
-                                      background: 'transparent',
-                                      border: '1px solid #e2e8f0',
-                                      borderRadius: '5px',
-                                      padding: '6px',
-                                      color: '#334155',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.15s ease',
-                                    }}
-                                    onMouseOver={e => {
-                                      e.currentTarget.style.borderColor = '#0284c7';
-                                      e.currentTarget.style.color = '#0284c7';
-                                    }}
-                                    onMouseOut={e => {
-                                      e.currentTarget.style.borderColor = '#e2e8f0';
-                                      e.currentTarget.style.color = '#334155';
-                                    }}
-                                  >
-                                    <Eye size={14} />
-                                  </button>
-
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      setModalTab('history');
-                                      setPreviewDoc(doc);
-                                    }}
-                                    title="Lihat Riwayat Revisi & Change Log"
-                                    style={{
-                                      background: '#f0f9ff',
-                                      border: '1px solid #bae6fd',
-                                      borderRadius: '5px',
-                                      padding: '6px',
-                                      color: '#0369a1',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      transition: 'all 0.15s ease',
-                                    }}
-                                    onMouseOver={e => (e.currentTarget.style.background = '#e0f2fe')}
-                                    onMouseOut={e => (e.currentTarget.style.background = '#f0f9ff')}
-                                  >
-                                    <History size={14} />
-                                  </button>
-
-                                  <button
-                                    onClick={e => {
-                                      e.stopPropagation();
-                                      alert(`Mengunduh file resmi ${doc.number} (${doc.fileExt.toUpperCase()})`);
-                                    }}
-                                    title="Download File"
-                                    style={{
-                                      background: '#f8fafc',
-                                      border: '1px solid #e2e8f0',
-                                      borderRadius: '5px',
-                                      padding: '6px',
-                                      color: '#334155',
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}
-                                    onMouseOver={e => (e.currentTarget.style.background = '#e2e8f0')}
-                                    onMouseOut={e => (e.currentTarget.style.background = '#f8fafc')}
-                                  >
-                                    <Download size={14} />
-                                  </button>
-                                </div>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })
-          )}
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                              <button
+                                onClick={() => {
+                                  setModalTab('info');
+                                  setPreviewDoc(doc);
+                                }}
+                                title="Pratinjau Dokumen"
+                                style={{
+                                  background: '#ffffff',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '5px',
+                                  padding: '5px 10px',
+                                  color: '#334155',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  fontSize: '12px',
+                                }}
+                              >
+                                <Eye size={13} />
+                                <span>Lihat</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setModalTab('history');
+                                  setPreviewDoc(doc);
+                                }}
+                                title="Lihat Riwayat Revisi & Change Log"
+                                style={{
+                                  background: '#f0f9ff',
+                                  border: '1px solid #bae6fd',
+                                  borderRadius: '5px',
+                                  padding: '5px 10px',
+                                  color: '#0369a1',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  fontSize: '12px',
+                                }}
+                              >
+                                <History size={13} />
+                                <span>Riwayat</span>
+                              </button>
+
+                              <button
+                                onClick={() => alert(`Mengunduh file resmi ${doc.number} (${doc.fileExt.toUpperCase()})`)}
+                                title="Download File"
+                                style={{
+                                  background: '#f8fafc',
+                                  border: '1px solid #e2e8f0',
+                                  borderRadius: '5px',
+                                  padding: '6px',
+                                  color: '#334155',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Download size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 3. Empty state if neither docs nor subfolders */}
+                    {(!folder.docs || folder.docs.length === 0) && (!folder.subfolders || folder.subfolders.length === 0) && (
+                      <div style={{ padding: '16px 24px 16px 48px', fontSize: '12.5px', color: '#94a3b8', fontStyle: 'italic' }}>
+                        Belum ada dokumen atau sub-folder. Klik &quot;+ Sub Folder&quot; untuk menambahkan sub-folder ke folder ini.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ─── MODAL: TAMBAH FOLDER BARU ─── */}
+      {isAddFolderOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(7, 28, 44, 0.45)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setIsAddFolderOpen(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0',
+              width: '100%',
+              maxWidth: '520px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid #f1f5f9',
+                background: '#fafafa',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FolderPlus size={18} color="#0284c7" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c' }}>
+                  Tambah Folder Baru
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddFolderOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateFolder} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Nama Folder <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: 16. Supply Chain Management"
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Kategori Folder
+                </label>
+                <select
+                  value={newFolderCategory}
+                  onChange={e => setNewFolderCategory(e.target.value as any)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  <option value="HEAD_OFFICE">Head Office</option>
+                  <option value="OFFSHORE">Offshore &amp; Vessel</option>
+                  <option value="PROJECT_SITE">Project Site</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Deskripsi / Keterangan Folder
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Keterangan singkat mengenai cakupan dokumen dalam folder ini..."
+                  value={newFolderDesc}
+                  onChange={e => setNewFolderDesc(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAddFolderOpen(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '12.5px',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#071c2c',
+                    color: '#ffffff',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Simpan Folder
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      }
+      )}
 
-      {/* ─── Minimalist Document Preview Modal ────────────────────── */}
+      {/* ─── MODAL: TAMBAH SUB FOLDER ─── */}
+      {isAddSubFolderOpen && targetParentFolder && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(7, 28, 44, 0.45)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => {
+            setIsAddSubFolderOpen(false);
+            setTargetParentFolder(null);
+          }}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0',
+              width: '100%',
+              maxWidth: '500px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid #f1f5f9',
+                background: '#fafafa',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CornerDownRight size={18} color="#0284c7" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c' }}>
+                  Tambah Sub Folder
+                </h3>
+              </div>
+              <button
+                onClick={() => {
+                  setIsAddSubFolderOpen(false);
+                  setTargetParentFolder(null);
+                }}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
 
+            <form onSubmit={handleCreateSubFolder} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Folder Induk (Parent):</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#071c2c' }}>{targetParentFolder.name}</span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Nama Sub Folder <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: 7.3 Instruksi Kerja (Work Instruction)"
+                  value={newSubFolderName}
+                  onChange={e => setNewSubFolderName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddSubFolderOpen(false);
+                    setTargetParentFolder(null);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '12.5px',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#0284c7',
+                    color: '#ffffff',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Simpan Sub Folder
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Minimalist Document Preview Modal ─── */}
       {previewDoc && (
         <div
           style={{
@@ -903,7 +1364,7 @@ export default function MasterlistPage() {
             }}
             onClick={e => e.stopPropagation()}
           >
-            {/* Modal Header with Logo Accent */}
+            {/* Modal Header */}
             <div
               style={{
                 display: 'flex',

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -17,9 +17,23 @@ import {
   UploadCloud,
   Check,
   Building2,
+  Folder,
   FolderOpen,
+  FolderPlus,
+  RefreshCw,
+  Layers,
+  CornerDownRight,
   ShieldAlert,
 } from 'lucide-react';
+import {
+  MasterFolder,
+  MasterSubFolder,
+  MasterDocItem,
+  loadMasterFolders,
+  saveMasterFolders,
+  getAllFlattenedDocs,
+  FlattenedDocItem,
+} from '@/lib/masterlist-data';
 
 /* ─── Type Definitions ────────────────────────────────────────── */
 export interface DistributionDoc {
@@ -363,16 +377,52 @@ export default function DistributionPage() {
     );
   }
 
-  // Form State
-  const [groupDoc, setGroupDoc] = useState<'HEAD_OFFICE' | 'PROJECT'>('HEAD_OFFICE');
+  // Masterlist shared folders & docs
+  const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
+
+  useEffect(() => {
+    setMasterFolders(loadMasterFolders());
+  }, []);
+
+  const flattenedDocs = useMemo(() => getAllFlattenedDocs(masterFolders), [masterFolders]);
+
+  // Form State: Mode (NEW_DOC vs REVISION_UPDATE)
+  const [distMode, setDistMode] = useState<'NEW_DOC' | 'REVISION_UPDATE'>('NEW_DOC');
+
+  // Mode 1: Dokumen Baru
+  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
+  const [selectedSubFolderId, setSelectedSubFolderId] = useState<string>('');
   const [dept, setDept] = useState('');
   const [jenis, setJenis] = useState('');
+  const [docNumber, setDocNumber] = useState('');
   const [judulDokumen, setJudulDokumen] = useState('');
-  const [revisiKe, setRevisiKe] = useState('');
-  const [folderDokumen, setFolderDokumen] = useState('');
+  const [revisiKe, setRevisiKe] = useState('00');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Mode 2: Update File Revisi
+  const [selectedExistingDocId, setSelectedExistingDocId] = useState<string>('');
+  const [newRevisionNumber, setNewRevisionNumber] = useState<string>('');
+  const [revisionNotes, setRevisionNotes] = useState<string>('');
+  const [selectedRevFile, setSelectedRevFile] = useState<File | null>(null);
+
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const revFileInputRef = useRef<HTMLInputElement>(null);
+
+  // When selectedExistingDocId changes, auto-populate details and suggest next revision
+  const selectedExistingDoc = useMemo(() => {
+    return flattenedDocs.find(d => d.id === selectedExistingDocId) || null;
+  }, [flattenedDocs, selectedExistingDocId]);
+
+  useEffect(() => {
+    if (selectedExistingDoc) {
+      const curNum = parseInt(selectedExistingDoc.revision.replace(/\D/g, ''), 10) || 0;
+      const nextNum = curNum + 1;
+      setNewRevisionNumber(`Rev.${String(nextNum).padStart(2, '0')}`);
+    } else {
+      setNewRevisionNumber('');
+    }
+  }, [selectedExistingDoc]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -393,65 +443,216 @@ export default function DistributionPage() {
     }
   };
 
+  const handleRevFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setErrorMessage('Ukuran file melebihi batas maksimal 2MB.');
+        setSelectedRevFile(null);
+        if (revFileInputRef.current) revFileInputRef.current.value = '';
+        return;
+      }
+      setErrorMessage('');
+      setSelectedRevFile(file);
+    }
+  };
+
   const handleResetForm = () => {
-    setGroupDoc('HEAD_OFFICE');
+    setSelectedFolderId('');
+    setSelectedSubFolderId('');
     setDept('');
     setJenis('');
+    setDocNumber('');
     setJudulDokumen('');
-    setRevisiKe('');
-    setFolderDokumen('');
+    setRevisiKe('00');
     setSelectedFile(null);
+
+    setSelectedExistingDocId('');
+    setNewRevisionNumber('');
+    setRevisionNotes('');
+    setSelectedRevFile(null);
+
     setErrorMessage('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+    if (revFileInputRef.current) revFileInputRef.current.value = '';
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dept) {
-      setErrorMessage('Silakan pilih Departemen.');
-      return;
-    }
-    if (!jenis) {
-      setErrorMessage('Silakan pilih Jenis dokumen.');
-      return;
-    }
-    if (!judulDokumen.trim()) {
-      setErrorMessage('Silakan isi Judul Dokumen.');
-      return;
-    }
-    if (!folderDokumen) {
-      setErrorMessage('Silakan pilih Folder Dokumen.');
-      return;
-    }
 
-    const newNum = distributions.length + 1;
-    const formattedId = `DIS0926.${String(newNum).padStart(3, '0')}`;
+    if (distMode === 'NEW_DOC') {
+      if (!selectedFolderId) {
+        setErrorMessage('Silakan pilih Folder Utama.');
+        return;
+      }
+      if (!dept) {
+        setErrorMessage('Silakan pilih Departemen.');
+        return;
+      }
+      if (!jenis) {
+        setErrorMessage('Silakan pilih Jenis dokumen.');
+        return;
+      }
+      if (!judulDokumen.trim()) {
+        setErrorMessage('Silakan isi Judul Dokumen.');
+        return;
+      }
 
-    const newEntry: DistributionDoc = {
-      no: 1,
-      id: formattedId,
-      idRegistrasi: '-',
-      dept,
-      jenis,
-      judul: judulDokumen.trim(),
-      revisi: revisiKe.trim() || '00',
-      folder: folderDokumen,
-      groupDoc,
-      fileName: selectedFile ? selectedFile.name : null,
-      fileSize: selectedFile ? `${(selectedFile.size / 1024).toFixed(0)} KB` : '',
-      status: 'Released',
-      createdAt: 'Hari Ini',
-    };
+      const folderObj = masterFolders.find(f => f.id === Number(selectedFolderId));
+      const subObj = folderObj?.subfolders?.find(s => s.id === selectedSubFolderId);
 
-    const updated = [newEntry, ...distributions].map((item, idx) => ({
-      ...item,
-      no: idx + 1,
-    }));
+      const targetFolderDisplay = folderObj
+        ? `${folderObj.name}${subObj ? ' > ' + subObj.name : ''}`
+        : 'General Folder';
 
-    setDistributions(updated);
-    handleResetForm();
-    setViewState('table');
-    showToast(`Dokumen distribusi ${formattedId} berhasil ditambahkan!`);
+      const newNum = distributions.length + 1;
+      const formattedId = `DIS0926.${String(newNum).padStart(3, '0')}`;
+      const finalDocNumber = docNumber.trim() || `THI-${dept.slice(0, 4).toUpperCase()}-${String(newNum).padStart(3, '0')}`;
+
+      const newEntry: DistributionDoc = {
+        no: 1,
+        id: formattedId,
+        idRegistrasi: '-',
+        dept,
+        jenis,
+        judul: judulDokumen.trim(),
+        revisi: revisiKe.trim() || '00',
+        folder: targetFolderDisplay,
+        groupDoc: 'HEAD_OFFICE',
+        fileName: selectedFile ? selectedFile.name : null,
+        fileSize: selectedFile ? `${(selectedFile.size / 1024).toFixed(0)} KB` : '',
+        status: 'Released',
+        createdAt: 'Hari Ini',
+      };
+
+      // Add to Masterlist folders state and storage
+      const newMasterDoc: MasterDocItem = {
+        id: `d-new-${Date.now().toString().slice(-5)}`,
+        number: finalDocNumber,
+        title: judulDokumen.trim(),
+        revision: revisiKe.trim().startsWith('Rev.') ? revisiKe.trim() : `Rev.${revisiKe.trim() || '00'}`,
+        effectiveDate: 'Hari Ini',
+        reviewDate: '01 Jan 2027',
+        status: 'CURRENT',
+        classification: 'INTERNAL',
+        type: jenis,
+        size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '1.2 MB',
+        fileExt: 'pdf',
+        subFolderId: subObj ? subObj.id : undefined,
+        subFolderName: subObj ? subObj.name : undefined,
+      };
+
+      const updatedFolders = masterFolders.map(f => {
+        if (f.id === Number(selectedFolderId)) {
+          if (selectedSubFolderId && f.subfolders) {
+            return {
+              ...f,
+              subfolders: f.subfolders.map(sub => {
+                if (sub.id === selectedSubFolderId) {
+                  return {
+                    ...sub,
+                    docs: [newMasterDoc, ...(sub.docs || [])],
+                  };
+                }
+                return sub;
+              }),
+            };
+          } else {
+            return {
+              ...f,
+              docs: [newMasterDoc, ...(f.docs || [])],
+            };
+          }
+        }
+        return f;
+      });
+
+      setMasterFolders(updatedFolders);
+      saveMasterFolders(updatedFolders);
+
+      const updatedDist = [newEntry, ...distributions].map((item, idx) => ({
+        ...item,
+        no: idx + 1,
+      }));
+
+      setDistributions(updatedDist);
+      handleResetForm();
+      setViewState('table');
+      showToast(`Dokumen "${newEntry.judul}" berhasil didistribusikan ke ${targetFolderDisplay}!`);
+    } else {
+      // REVISION_UPDATE mode
+      if (!selectedExistingDoc) {
+        setErrorMessage('Silakan pilih Dokumen yang ingin direvisi.');
+        return;
+      }
+      if (!newRevisionNumber.trim()) {
+        setErrorMessage('Silakan isi Nomor Revisi Baru.');
+        return;
+      }
+
+      const newNum = distributions.length + 1;
+      const formattedId = `DIS0926.${String(newNum).padStart(3, '0')}`;
+      const revDisplay = newRevisionNumber.trim().startsWith('Rev.') ? newRevisionNumber.trim() : `Rev.${newRevisionNumber.trim()}`;
+
+      const targetFolderDisplay = `${selectedExistingDoc.folderName}${selectedExistingDoc.subFolderName ? ' > ' + selectedExistingDoc.subFolderName : ''}`;
+
+      const newEntry: DistributionDoc = {
+        no: 1,
+        id: formattedId,
+        idRegistrasi: '-',
+        dept: selectedExistingDoc.type || 'QHSE',
+        jenis: selectedExistingDoc.type,
+        judul: selectedExistingDoc.title,
+        revisi: revDisplay.replace('Rev.', ''),
+        folder: targetFolderDisplay,
+        groupDoc: 'HEAD_OFFICE',
+        fileName: selectedRevFile ? selectedRevFile.name : `${selectedExistingDoc.number}_${revDisplay}.pdf`,
+        fileSize: selectedRevFile ? `${(selectedRevFile.size / 1024).toFixed(0)} KB` : '1.5 MB',
+        status: 'Released',
+        createdAt: 'Hari Ini',
+      };
+
+      // Update revision in masterFolders
+      const updatedFolders = masterFolders.map(f => {
+        let folderUpdated = false;
+        const newDirectDocs = (f.docs || []).map(d => {
+          if (d.id === selectedExistingDoc.id) {
+            folderUpdated = true;
+            return { ...d, revision: revDisplay, effectiveDate: 'Hari Ini' };
+          }
+          return d;
+        });
+
+        const newSubs = (f.subfolders || []).map(sub => {
+          const newSubDocs = (sub.docs || []).map(d => {
+            if (d.id === selectedExistingDoc.id) {
+              folderUpdated = true;
+              return { ...d, revision: revDisplay, effectiveDate: 'Hari Ini' };
+            }
+            return d;
+          });
+          return { ...sub, docs: newSubDocs };
+        });
+
+        if (folderUpdated) {
+          return { ...f, docs: newDirectDocs, subfolders: newSubs };
+        }
+        return f;
+      });
+
+      setMasterFolders(updatedFolders);
+      saveMasterFolders(updatedFolders);
+
+      const updatedDist = [newEntry, ...distributions].map((item, idx) => ({
+        ...item,
+        no: idx + 1,
+      }));
+
+      setDistributions(updatedDist);
+      handleResetForm();
+      setViewState('table');
+      showToast(`Revisi ${selectedExistingDoc.number} berhasil diperbarui ke ${revDisplay} dan didistribusikan!`);
+    }
   };
 
   const handleDeleteItem = (id: string, title: string) => {
@@ -1055,201 +1256,450 @@ export default function DistributionPage() {
               </div>
             )}
 
+            {/* Mode Switcher Tabs */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '12px',
+                borderBottom: '1px solid #e2e8f0',
+                paddingBottom: '16px',
+                marginBottom: '6px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  setDistMode('NEW_DOC');
+                  setErrorMessage('');
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: '220px',
+                  padding: '11px 16px',
+                  borderRadius: '8px',
+                  border: distMode === 'NEW_DOC' ? '2px solid #071c2c' : '1px solid #e2e8f0',
+                  background: distMode === 'NEW_DOC' ? '#f0f5fa' : '#ffffff',
+                  color: distMode === 'NEW_DOC' ? '#071c2c' : '#64748b',
+                  fontSize: '13px',
+                  fontWeight: distMode === 'NEW_DOC' ? 700 : 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <FolderPlus size={16} color={distMode === 'NEW_DOC' ? '#0284c7' : '#94a3b8'} />
+                <span>Dokumen Baru (Pilih Folder &amp; Sub Folder)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDistMode('REVISION_UPDATE');
+                  setErrorMessage('');
+                }}
+                style={{
+                  flex: 1,
+                  minWidth: '220px',
+                  padding: '11px 16px',
+                  borderRadius: '8px',
+                  border: distMode === 'REVISION_UPDATE' ? '2px solid #0284c7' : '1px solid #e2e8f0',
+                  background: distMode === 'REVISION_UPDATE' ? '#f0f9ff' : '#ffffff',
+                  color: distMode === 'REVISION_UPDATE' ? '#0284c7' : '#64748b',
+                  fontSize: '13px',
+                  fontWeight: distMode === 'REVISION_UPDATE' ? 700 : 500,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <RefreshCw size={16} color={distMode === 'REVISION_UPDATE' ? '#0284c7' : '#94a3b8'} />
+                <span>Update Dokumen Revisi (Pilih Berkas Terdaftar)</span>
+              </button>
+            </div>
+
             {/* Form */}
             <form onSubmit={handleSubmitForm} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* Field 1: Pilih Group Dokumen */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
-                  Pilih Group Dokumen
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#0f172a', fontWeight: 500 }}>
+              {/* MODE 1: DOKUMEN BARU */}
+              {distMode === 'NEW_DOC' && (
+                <>
+                  {/* Field 1: Folder Dokumen Utama */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Pilih Folder Utama <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <select
+                      value={selectedFolderId}
+                      onChange={e => {
+                        setSelectedFolderId(e.target.value ? Number(e.target.value) : '');
+                        setSelectedSubFolderId('');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        color: selectedFolderId ? '#0f172a' : '#94a3b8',
+                        background: '#ffffff',
+                        outline: 'none',
+                      }}
+                      required
+                    >
+                      <option value="">-- Pilih Folder Utama Masterlist --</option>
+                      {masterFolders.map(f => (
+                        <option key={f.id} value={f.id} style={{ color: '#0f172a' }}>
+                          📁 {f.name} ({f.docs?.length || 0} docs, {f.subfolders?.length || 0} sub)
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Field 2: Sub Folder Dokumen (Bertingkat) */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Pilih Sub Folder (Bertingkat / Opsional)
+                    </label>
+                    <select
+                      value={selectedSubFolderId}
+                      onChange={e => setSelectedSubFolderId(e.target.value)}
+                      disabled={!selectedFolderId}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        color: selectedSubFolderId ? '#0f172a' : '#64748b',
+                        background: !selectedFolderId ? '#f8fafc' : '#ffffff',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">-Root Folder (Tanpa Sub Folder)-</option>
+                      {selectedFolderId &&
+                        (masterFolders.find(f => f.id === Number(selectedFolderId))?.subfolders || []).map(sub => (
+                          <option key={sub.id} value={sub.id} style={{ color: '#0f172a' }}>
+                            📂 {sub.name} ({sub.docs?.length || 0} docs)
+                          </option>
+                        ))}
+                    </select>
+                    {selectedFolderId && (masterFolders.find(f => f.id === Number(selectedFolderId))?.subfolders || []).length === 0 && (
+                      <span style={{ display: 'block', fontSize: '11.5px', color: '#94a3b8', marginTop: '4px' }}>
+                        Folder ini belum memiliki sub-folder. Berkas akan dimasukkan langsung ke folder utama.
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Field 3: Departemen & Jenis */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        Departemen <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <select
+                        value={dept}
+                        onChange={e => setDept(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '13px',
+                          color: dept ? '#0f172a' : '#94a3b8',
+                          background: '#ffffff',
+                          outline: 'none',
+                        }}
+                        required
+                      >
+                        <option value="">-Pilih Departemen-</option>
+                        {DEPT_OPTIONS.map(d => (
+                          <option key={d} value={d} style={{ color: '#0f172a' }}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        Jenis Dokumen <span style={{ color: '#dc2626' }}>*</span>
+                      </label>
+                      <select
+                        value={jenis}
+                        onChange={e => setJenis(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '13px',
+                          color: jenis ? '#0f172a' : '#94a3b8',
+                          background: '#ffffff',
+                          outline: 'none',
+                        }}
+                        required
+                      >
+                        <option value="">-Pilih Jenis-</option>
+                        {JENIS_OPTIONS.map(j => (
+                          <option key={j} value={j} style={{ color: '#0f172a' }}>
+                            {j}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Field 4: Nomor Dokumen & Revisi */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        Nomor Dokumen (Opsional / Otomatis)
+                      </label>
+                      <input
+                        type="text"
+                        value={docNumber}
+                        onChange={e => setDocNumber(e.target.value)}
+                        placeholder="Contoh: THI-QHSSE-SOP-009"
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '13px',
+                          color: '#0f172a',
+                          background: '#ffffff',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        Revisi Ke
+                      </label>
+                      <input
+                        type="text"
+                        value={revisiKe}
+                        onChange={e => setRevisiKe(e.target.value)}
+                        placeholder="00"
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '13px',
+                          color: '#0f172a',
+                          background: '#ffffff',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Field 5: Judul Dokumen */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Judul Dokumen <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
                     <input
-                      type="radio"
-                      name="groupDoc"
-                      checked={groupDoc === 'HEAD_OFFICE'}
-                      onChange={() => setGroupDoc('HEAD_OFFICE')}
-                      style={{ accentColor: '#4a3b7d', cursor: 'pointer' }}
+                      type="text"
+                      value={judulDokumen}
+                      onChange={e => setJudulDokumen(e.target.value)}
+                      placeholder="Masukkan nama judul lengkap dokumen..."
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        background: '#ffffff',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                      required
                     />
-                    <span>HEAD OFFICE</span>
-                  </label>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', color: '#0f172a', fontWeight: 500 }}>
+                  </div>
+
+                  {/* Field 6: Upload Dokumen */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Upload Berkas Dokumen (PDF/Word/Excel, Max: 2MB)
+                    </label>
                     <input
-                      type="radio"
-                      name="groupDoc"
-                      checked={groupDoc === 'PROJECT'}
-                      onChange={() => setGroupDoc('PROJECT')}
-                      style={{ accentColor: '#4a3b7d', cursor: 'pointer' }}
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileChange}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx"
+                      style={{ fontSize: '13px', color: '#475569' }}
                     />
-                    <span>PROJECT</span>
-                  </label>
-                </div>
-              </div>
+                  </div>
+                </>
+              )}
 
-              {/* Field 2: Departemen */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Departemen
-                </label>
-                <select
-                  value={dept}
-                  onChange={e => setDept(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    color: dept ? '#0f172a' : '#94a3b8',
-                    background: '#ffffff',
-                    outline: 'none',
-                  }}
-                  required
-                >
-                  <option value="">-Pilih Departemen-</option>
-                  {DEPT_OPTIONS.map(d => (
-                    <option key={d} value={d} style={{ color: '#0f172a' }}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* MODE 2: UPDATE REVISI DOKUMEN TERDAFTAR */}
+              {distMode === 'REVISION_UPDATE' && (
+                <>
+                  {/* Field 1: Pilih Dokumen Masterlist */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Pilih Dokumen dari Masterlist yang Akan Direvisi <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <select
+                      value={selectedExistingDocId}
+                      onChange={e => setSelectedExistingDocId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        color: selectedExistingDocId ? '#0f172a' : '#94a3b8',
+                        background: '#ffffff',
+                        outline: 'none',
+                      }}
+                      required
+                    >
+                      <option value="">-- Pilih Dokumen Terdaftar --</option>
+                      {flattenedDocs.map(doc => (
+                        <option key={doc.id} value={doc.id} style={{ color: '#0f172a' }}>
+                          [{doc.number}] {doc.title} — Current: {doc.revision} ({doc.folderName})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Field 3: Jenis */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Jenis
-                </label>
-                <select
-                  value={jenis}
-                  onChange={e => setJenis(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    color: jenis ? '#0f172a' : '#94a3b8',
-                    background: '#ffffff',
-                    outline: 'none',
-                  }}
-                  required
-                >
-                  <option value="">-Pilih Jenis-</option>
-                  {JENIS_OPTIONS.map(j => (
-                    <option key={j} value={j} style={{ color: '#0f172a' }}>
-                      {j}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {/* Document Summary Card if selected */}
+                  {selectedExistingDoc && (
+                    <div
+                      style={{
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderLeft: '4px solid #0284c7',
+                        borderRadius: '6px',
+                        padding: '14px 16px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        fontSize: '12.5px',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, color: '#071c2c', fontSize: '13.5px' }}>
+                          {selectedExistingDoc.number} · {selectedExistingDoc.title}
+                        </span>
+                        <span
+                          style={{
+                            fontFamily: 'var(--font-mono)',
+                            fontWeight: 700,
+                            color: '#0284c7',
+                            background: '#e0f2fe',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                          }}
+                        >
+                          Revisi Terdaftar: {selectedExistingDoc.revision}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748b', fontSize: '12px' }}>
+                        <span>📁 Folder: <strong>{selectedExistingDoc.folderName}</strong></span>
+                        {selectedExistingDoc.subFolderName && (
+                          <span>📂 Sub Folder: <strong>{selectedExistingDoc.subFolderName}</strong></span>
+                        )}
+                        <span>Tipe: <strong>{selectedExistingDoc.type}</strong></span>
+                      </div>
+                    </div>
+                  )}
 
-              {/* Field 4: Judul Dokumen */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Judul Dokumen
-                </label>
-                <input
-                  type="text"
-                  value={judulDokumen}
-                  onChange={e => setJudulDokumen(e.target.value)}
-                  placeholder=""
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    color: '#0f172a',
-                    background: '#ffffff',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                  required
-                />
-              </div>
+                  {/* Field 2: Nomor Revisi Baru */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Nomor Revisi Baru <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newRevisionNumber}
+                      onChange={e => setNewRevisionNumber(e.target.value)}
+                      placeholder="Contoh: Rev.04"
+                      style={{
+                        width: '100%',
+                        maxWidth: '240px',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#0284c7',
+                        background: '#f0f9ff',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                      }}
+                      required
+                    />
+                    <span style={{ display: 'block', fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
+                      Sistem secara otomatis menaikkan nomor revisi berikutnya. Anda dapat menyesuaikannya bila perlu.
+                    </span>
+                  </div>
 
-              {/* Field 5: Revisi Ke */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Revisi Ke
-                </label>
-                <input
-                  type="text"
-                  value={revisiKe}
-                  onChange={e => setRevisiKe(e.target.value)}
-                  placeholder="00"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    color: '#0f172a',
-                    background: '#ffffff',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
+                  {/* Field 3: Catatan Perubahan Revisi */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Catatan Perubahan / Alasan Revisi (Change Notes) <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={revisionNotes}
+                      onChange={e => setRevisionNotes(e.target.value)}
+                      placeholder="Jelaskan ringkasan bagian atau klausul apa saja yang diperbarui pada revisi ini..."
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        fontFamily: 'inherit',
+                      }}
+                      required
+                    />
+                  </div>
 
-              {/* Field 6: Folder Dokumen */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Folder Dokumen
-                </label>
-                <select
-                  value={folderDokumen}
-                  onChange={e => setFolderDokumen(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    color: folderDokumen ? '#0f172a' : '#94a3b8',
-                    background: '#ffffff',
-                    outline: 'none',
-                  }}
-                  required
-                >
-                  <option value="">-Pilih Folder-</option>
-                  {FOLDER_OPTIONS.map(f => (
-                    <option key={f} value={f} style={{ color: '#0f172a' }}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {/* Field 4: Upload File Revisi Baru */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                      Upload Berkas File Revisi Terbaru (PDF/Word/Excel, Max: 2MB) <span style={{ color: '#dc2626' }}>*</span>
+                    </label>
+                    <input
+                      ref={revFileInputRef}
+                      type="file"
+                      onChange={handleRevFileChange}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx"
+                      style={{ fontSize: '13px', color: '#475569' }}
+                      required
+                    />
+                  </div>
+                </>
+              )}
 
-              {/* Field 7: Upload Dokumen */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Upload Dokumen (PDF/Word/Excel, Max: 2MB)
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    onChange={handleFileChange}
-                    accept=".pdf,.doc,.docx,.xls,.xlsx"
-                    style={{
-                      fontSize: '13px',
-                      color: '#475569',
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Form Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              {/* Form Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
                 <button
                   type="submit"
                   style={{
-                    padding: '8px 20px',
-                    borderRadius: '4px',
+                    padding: '9px 24px',
+                    borderRadius: '6px',
                     border: 'none',
-                    background: '#4a3b7d',
+                    background: '#071c2c',
                     color: '#ffffff',
                     fontSize: '13px',
                     fontWeight: 700,
@@ -1257,27 +1707,27 @@ export default function DistributionPage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    boxShadow: '0 2px 6px rgba(74, 59, 125, 0.25)',
+                    boxShadow: '0 2px 6px rgba(7, 28, 44, 0.2)',
                   }}
                 >
                   <Check size={14} />
-                  <span>Submit</span>
+                  <span>{distMode === 'NEW_DOC' ? 'Distribusikan Dokumen Baru' : 'Rilis Berkas Revisi'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleResetForm}
                   style={{
-                    padding: '8px 20px',
-                    borderRadius: '4px',
-                    border: 'none',
-                    background: '#64748b',
-                    color: '#ffffff',
+                    padding: '9px 20px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#64748b',
                     fontSize: '13px',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
                   }}
                 >
-                  Reset
+                  Reset Form
                 </button>
               </div>
             </form>
