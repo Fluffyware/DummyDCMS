@@ -308,6 +308,13 @@ body {
 }
 
 /* ── BRAND HEADER ── */
+#global-search::placeholder {
+  color: rgba(255, 255, 255, 0.55);
+}
+#global-search:focus {
+  color: #ffffff;
+}
+
 .sidebar-brand {
   padding: 16px 16px 14px;
   border-bottom: 1px solid rgba(56, 189, 248, 0.12);

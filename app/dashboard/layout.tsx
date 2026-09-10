@@ -414,8 +414,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           alignItems: 'center',
           padding: isMobile ? '0 12px' : '0 24px',
           gap: isMobile ? 8 : 16,
-          background: '#ffffff',
-          borderBottom: '1px solid #e8eef5',
+          background: 'linear-gradient(90deg, #071c2c 0%, #0c273d 100%)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.16)',
           flexShrink: 0,
         }}>
           {/* Mobile Menu Hamburger Button */}
@@ -429,12 +430,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 width: 36,
                 height: 36,
                 borderRadius: 8,
-                border: '1px solid #e8eef5',
-                background: '#ffffff',
-                color: '#071c2c',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                background: 'rgba(255, 255, 255, 0.08)',
+                color: '#ffffff',
                 cursor: 'pointer',
                 flexShrink: 0,
+                transition: 'background 0.15s',
               }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
               title="Open Navigation Menu"
             >
               <Menu size={18} strokeWidth={2} />
@@ -442,12 +446,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           {/* Breadcrumb */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#b0bec9', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 }}>
+            <span style={{
+              fontSize: 11,
+              fontWeight: 800,
+              color: '#38bdf8',
+              letterSpacing: '0.08em',
+              whiteSpace: 'nowrap',
+              background: 'rgba(56, 189, 248, 0.12)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              padding: '2px 7px',
+              borderRadius: '4px',
+            }}>
               THI
             </span>
-            <ChevronRight size={12} strokeWidth={2} style={{ color: '#dce6ee', flexShrink: 0 }} />
-            <span style={{ fontSize: 12.5, fontWeight: 600, color: '#15212a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <ChevronRight size={13} strokeWidth={2.2} style={{ color: 'rgba(255, 255, 255, 0.35)', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '-0.01em' }}>
               {currentTitle}
             </span>
           </div>
@@ -456,10 +470,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {!isMobile && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 8,
-              background: '#f8fafc', border: '1px solid #e8eef5', borderRadius: 8,
-              padding: '7px 12px', width: 'max(200px, 20vw)', flexShrink: 1,
+              background: 'rgba(255, 255, 255, 0.07)',
+              border: '1px solid rgba(255, 255, 255, 0.14)',
+              borderRadius: 8,
+              padding: '7px 12px',
+              width: 'max(220px, 22vw)',
+              flexShrink: 1,
+              transition: 'all 0.15s',
             }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8fa0b0" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
@@ -468,7 +487,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 placeholder="Search documents, SOP…"
                 style={{
                   border: 'none', outline: 'none', background: 'transparent',
-                  fontSize: 12.5, color: '#15212a', width: '100%',
+                  fontSize: 12.5, color: '#ffffff', width: '100%',
                   fontFamily: 'var(--font-body)',
                 }}
               />
@@ -481,8 +500,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div style={{
               display: 'flex',
               alignItems: 'center',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
+              background: 'rgba(0, 0, 0, 0.35)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
               borderRadius: 8,
               padding: '2px',
             }}>
@@ -490,17 +509,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 type="button"
                 onClick={() => login('admin', '', '')}
                 style={{
-                  padding: isMobile ? '3px 6px' : '4px 10px',
+                  padding: isMobile ? '3px 7px' : '4px 11px',
                   fontSize: isMobile ? '10px' : '11px',
-                  fontWeight: activeUser.role === 'admin' ? 800 : 500,
+                  fontWeight: activeUser.role === 'admin' ? 800 : 600,
                   borderRadius: 6,
                   border: 'none',
-                  background: activeUser.role === 'admin' ? '#071c2c' : 'transparent',
-                  color: activeUser.role === 'admin' ? '#ffffff' : '#64748b',
+                  background: activeUser.role === 'admin' ? '#ffffff' : 'transparent',
+                  color: activeUser.role === 'admin' ? '#071c2c' : '#cbd5e1',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
+                  boxShadow: activeUser.role === 'admin' ? '0 1px 4px rgba(0, 0, 0, 0.2)' : 'none',
                   transition: 'all 0.15s',
                 }}
                 title="Mode Admin Master (Otoritas Manual Approval)"
@@ -511,17 +531,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 type="button"
                 onClick={() => login('staff', '', '')}
                 style={{
-                  padding: isMobile ? '3px 6px' : '4px 10px',
+                  padding: isMobile ? '3px 7px' : '4px 11px',
                   fontSize: isMobile ? '10px' : '11px',
-                  fontWeight: activeUser.role === 'staff' ? 800 : 500,
+                  fontWeight: activeUser.role === 'staff' ? 800 : 600,
                   borderRadius: 6,
                   border: 'none',
-                  background: activeUser.role === 'staff' ? '#071c2c' : 'transparent',
-                  color: activeUser.role === 'staff' ? '#ffffff' : '#64748b',
+                  background: activeUser.role === 'staff' ? '#ffffff' : 'transparent',
+                  color: activeUser.role === 'staff' ? '#071c2c' : '#cbd5e1',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
+                  boxShadow: activeUser.role === 'staff' ? '0 1px 4px rgba(0, 0, 0, 0.2)' : 'none',
                   transition: 'all 0.15s',
                 }}
                 title="Mode Staff (Input & Registrasi Dokumen)"
@@ -535,19 +556,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               title="Notifications"
               style={{
                 width: 36, height: 36, borderRadius: 8,
-                border: '1px solid #e8eef5', background: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                background: 'rgba(255, 255, 255, 0.08)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#6b7a8d', position: 'relative',
-                transition: 'background 0.15s', outline: 'none',
+                cursor: 'pointer', color: '#ffffff', position: 'relative',
+                transition: 'all 0.15s', outline: 'none',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
+              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
             >
-              <Bell size={15} strokeWidth={1.75} />
+              <Bell size={15} strokeWidth={2} />
               <span style={{
                 position: 'absolute', top: 9, right: 9,
                 width: 6, height: 6, borderRadius: '50%',
-                background: '#dc2626', border: '1.5px solid #fff',
+                background: '#ef4444', border: '1.5px solid #071c2c',
               }} />
             </button>
 
@@ -556,14 +578,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               title={`${activeUser.name} (${ROLE_LABELS[activeUser.role]}) — Click to sign out`}
               style={{
                 width: 32, height: 32, borderRadius: 8,
-                border: '1px solid #dce6ee', background: '#f0f4f8',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
+                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#071c2c',
+                cursor: 'pointer', fontSize: 11.5, fontWeight: 800, color: '#ffffff',
                 letterSpacing: '0.05em', fontFamily: 'var(--font-display)',
-                outline: 'none', transition: 'background 0.15s',
+                outline: 'none', transition: 'all 0.15s',
+                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
               }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#e8eef5')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#f0f4f8')}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.6)')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 6px rgba(2, 132, 199, 0.3)')}
             >
               {initials}
             </button>
