@@ -73,6 +73,7 @@ export default function MasterlistPage() {
   // Modal Tambah Sub Folder
   const [isAddSubFolderOpen, setIsAddSubFolderOpen] = useState(false);
   const [targetParentFolder, setTargetParentFolder] = useState<MasterFolder | null>(null);
+  const [targetParentSubFolder, setTargetParentSubFolder] = useState<MasterSubFolder | null>(null);
   const [newSubFolderName, setNewSubFolderName] = useState('');
 
   // Toast feedback
@@ -121,10 +122,17 @@ export default function MasterlistPage() {
     }, 0);
   }, [folders]);
 
+  // Helper to count docs in a subfolder (including nested subfolders)
+  const countSubFolderDocs = (sub: MasterSubFolder): number => {
+    const direct = sub.docs?.length || 0;
+    const nested = (sub.subfolders || []).reduce((acc, s) => acc + countSubFolderDocs(s), 0);
+    return direct + nested;
+  };
+
   // Helper to count docs in a single folder
   const countFolderDocs = (folder: MasterFolder) => {
     const directDocs = folder.docs?.length || 0;
-    const subDocs = (folder.subfolders || []).reduce((acc, sub) => acc + (sub.docs?.length || 0), 0);
+    const subDocs = (folder.subfolders || []).reduce((acc, sub) => acc + countSubFolderDocs(sub), 0);
     return directDocs + subDocs;
   };
 
@@ -201,7 +209,10 @@ export default function MasterlistPage() {
   const handleExpandAll = () => {
     setExpandedFolderIds(folders.map(f => f.id));
     const allSubs: string[] = [];
-    folders.forEach(f => (f.subfolders || []).forEach(sub => allSubs.push(sub.id)));
+    folders.forEach(f => (f.subfolders || []).forEach(sub => {
+      allSubs.push(sub.id);
+      (sub.subfolders || []).forEach(cs => allSubs.push(cs.id));
+    }));
     setExpandedSubFolderIds(allSubs);
   };
 
@@ -237,16 +248,64 @@ export default function MasterlistPage() {
     showToast(`Folder "${newFolder.name}" berhasil dibuat!`);
   };
 
-  // Handle create new sub-folder
+  // Handle create new sub-folder (Level 1 or Level 2)
   const handleCreateSubFolder = (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetParentFolder || !newSubFolderName.trim()) return;
 
+    // Case 1: Nested Sub-Folder inside targetParentSubFolder (Level 2)
+    if (targetParentSubFolder) {
+      const childSubId = `sub-${targetParentSubFolder.id}-${Date.now().toString().slice(-4)}`;
+      const newChildSub: MasterSubFolder = {
+        id: childSubId,
+        name: newSubFolderName.trim(),
+        docs: [],
+        subfolders: [],
+      };
+
+      const updated = folders.map(f => {
+        if (f.id === targetParentFolder.id) {
+          return {
+            ...f,
+            subfolders: (f.subfolders || []).map(s => {
+              if (s.id === targetParentSubFolder.id) {
+                return {
+                  ...s,
+                  subfolders: [...(s.subfolders || []), newChildSub],
+                };
+              }
+              return s;
+            }),
+          };
+        }
+        return f;
+      });
+
+      setFolders(updated);
+      saveMasterFolders(updated);
+      setExpandedFolderIds(prev => (prev.includes(targetParentFolder.id) ? prev : [...prev, targetParentFolder.id]));
+      setExpandedSubFolderIds(prev => {
+        const next = new Set(prev);
+        next.add(targetParentSubFolder.id);
+        next.add(childSubId);
+        return Array.from(next);
+      });
+
+      setNewSubFolderName('');
+      setIsAddSubFolderOpen(false);
+      setTargetParentFolder(null);
+      setTargetParentSubFolder(null);
+      showToast(`Sub-Folder "${newChildSub.name}" berhasil ditambahkan ke dalam "${targetParentSubFolder.name}"!`);
+      return;
+    }
+
+    // Case 2: Direct Sub-Folder inside targetParentFolder (Level 1)
     const subId = `sub-${targetParentFolder.id}-${Date.now().toString().slice(-4)}`;
     const newSub: MasterSubFolder = {
       id: subId,
       name: newSubFolderName.trim(),
       docs: [],
+      subfolders: [],
     };
 
     const updated = folders.map(f => {
@@ -267,6 +326,7 @@ export default function MasterlistPage() {
     setNewSubFolderName('');
     setIsAddSubFolderOpen(false);
     setTargetParentFolder(null);
+    setTargetParentSubFolder(null);
     showToast(`Sub Folder "${newSub.name}" berhasil ditambahkan ke ${targetParentFolder.name}!`);
   };
 
@@ -654,6 +714,7 @@ export default function MasterlistPage() {
                       onClick={e => {
                         e.stopPropagation();
                         setTargetParentFolder(folder);
+                        setTargetParentSubFolder(null);
                         setIsAddSubFolderOpen(true);
                       }}
                       title="Tambah Sub Folder ke folder ini"
@@ -782,6 +843,7 @@ export default function MasterlistPage() {
                         onClick={e => {
                           e.stopPropagation();
                           setTargetParentFolder(folder);
+                          setTargetParentSubFolder(null);
                           setIsAddSubFolderOpen(true);
                         }}
                         style={{
@@ -883,9 +945,10 @@ export default function MasterlistPage() {
                                       onClick={e => {
                                         e.stopPropagation();
                                         setTargetParentFolder(folder);
+                                        setTargetParentSubFolder(sub);
                                         setIsAddSubFolderOpen(true);
                                       }}
-                                      title={`Tambah Sub-Folder baru ke ${folder.name}`}
+                                      title={`Tambah Sub-Folder ke dalam "${sub.name}"`}
                                       style={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
@@ -916,6 +979,22 @@ export default function MasterlistPage() {
                                       <span>+ Sub Folder</span>
                                     </button>
 
+                                    {(sub.subfolders || []).length > 0 && (
+                                      <span
+                                        style={{
+                                          fontSize: '10px',
+                                          color: '#c2410c',
+                                          background: '#ffedd5',
+                                          border: '1px solid #fed7aa',
+                                          padding: '1.5px 6px',
+                                          borderRadius: '8px',
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        {sub.subfolders?.length} Sub
+                                      </span>
+                                    )}
+
                                     <span
                                       style={{
                                         fontSize: '11px',
@@ -927,7 +1006,7 @@ export default function MasterlistPage() {
                                         fontWeight: 600,
                                       }}
                                     >
-                                      {sub.docs?.length || 0} Dokumen
+                                      {countSubFolderDocs(sub)} Dokumen
                                     </span>
                                     <div
                                       style={{
@@ -945,118 +1024,351 @@ export default function MasterlistPage() {
                                   </div>
                                 </div>
 
-                                {/* Documents in Subfolder */}
+                                {/* Expanded Content of Subfolder: Child Subfolders + Documents */}
                                 {isSubExpanded && (
-                                  <div style={{ background: '#ffffff', padding: '4px 0' }}>
-                                    {(!sub.docs || sub.docs.length === 0) ? (
-                                      <div style={{ padding: '12px 20px 12px 40px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
-                                        Belum ada berkas dokumen dalam sub-folder ini.
-                                      </div>
-                                    ) : (
-                                      sub.docs.map((doc, dIdx) => (
-                                        <div
-                                          key={doc.id}
-                                          style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '8px 16px 8px 40px',
-                                            borderTop: dIdx > 0 ? '1px solid #f8fafc' : 'none',
-                                            transition: 'background 0.12s ease',
-                                          }}
-                                          onMouseOver={e => (e.currentTarget.style.background = '#f8fafc')}
-                                          onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
-                                        >
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                                            <FileText size={14} color="#0284c7" strokeWidth={1.75} style={{ flexShrink: 0 }} />
-                                            <span
-                                              style={{
-                                                fontSize: '11.5px',
-                                                fontWeight: 600,
-                                                fontFamily: 'var(--font-mono)',
-                                                color: '#071c2c',
-                                                background: '#f1f5f9',
-                                                padding: '2px 6px',
-                                                borderRadius: '4px',
-                                              }}
-                                            >
-                                              {doc.number}
-                                            </span>
-                                            <span
-                                              style={{
-                                                fontSize: '12.5px',
-                                                fontWeight: 500,
-                                                color: '#1e293b',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                                whiteSpace: 'nowrap',
-                                              }}
-                                            >
-                                              {doc.title}
-                                            </span>
-                                            <span
-                                              style={{
-                                                fontSize: '11px',
-                                                fontWeight: 600,
-                                                fontFamily: 'var(--font-mono)',
-                                                color: '#0369a1',
-                                                background: '#e0f2fe',
-                                                padding: '1px 5px',
-                                                borderRadius: '3px',
-                                              }}
-                                            >
-                                              {doc.revision}
-                                            </span>
-                                          </div>
-
-                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                            <button
-                                              onClick={() => {
-                                                setModalTab('info');
-                                                setPreviewDoc(doc);
-                                              }}
-                                              title="Pratinjau Dokumen"
-                                              style={{
-                                                background: '#ffffff',
-                                                border: '1px solid #e2e8f0',
-                                                borderRadius: '4px',
-                                                padding: '5px 8px',
-                                                color: '#334155',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px',
-                                                fontSize: '11.5px',
-                                              }}
-                                            >
-                                              <Eye size={13} />
-                                              <span>Lihat</span>
-                                            </button>
-                                            <button
-                                              onClick={() => {
-                                                setModalTab('history');
-                                                setPreviewDoc(doc);
-                                              }}
-                                              title="Riwayat Revisi"
-                                              style={{
-                                                background: '#f0f9ff',
-                                                border: '1px solid #bae6fd',
-                                                borderRadius: '4px',
-                                                padding: '5px 8px',
-                                                color: '#0284c7',
-                                                cursor: 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '4px',
-                                                fontSize: '11.5px',
-                                              }}
-                                            >
-                                              <History size={13} />
-                                              <span>Revisi</span>
-                                            </button>
-                                          </div>
+                                  <div style={{ background: '#ffffff', padding: '6px 0 10px 0' }}>
+                                    {/* 1. Child Sub-Folders (Level 2 Nested) */}
+                                    {(sub.subfolders || []).length > 0 && (
+                                      <div style={{ padding: '4px 16px 8px 32px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                          <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                            📂 Sub-Folder di dalam &quot;{sub.name}&quot; ({(sub.subfolders || []).length})
+                                          </span>
+                                          <span style={{ height: '1px', flex: 1, background: '#fed7aa' }} />
                                         </div>
-                                      ))
+
+                                        {(sub.subfolders || []).map(childSub => {
+                                          const isChildExpanded = expandedSubFolderIds.includes(childSub.id) || !!searchQuery.trim();
+                                          return (
+                                            <div
+                                              key={childSub.id}
+                                              style={{
+                                                background: '#fffbf5',
+                                                border: '1.5px solid #fed7aa',
+                                                borderLeft: '5px solid #ea580c',
+                                                borderRadius: '6px',
+                                                overflow: 'hidden',
+                                                boxShadow: '0 1px 3px rgba(234, 88, 12, 0.06)',
+                                              }}
+                                            >
+                                              {/* Child Subfolder Row */}
+                                              <div
+                                                onClick={() => toggleSubFolder(childSub.id)}
+                                                style={{
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  justifyContent: 'space-between',
+                                                  padding: '8px 14px',
+                                                  cursor: 'pointer',
+                                                  background: isChildExpanded ? '#ffedd5' : '#fffbf5',
+                                                  borderBottom: isChildExpanded && (childSub.docs?.length || 0) > 0 ? '1px solid #fed7aa' : 'none',
+                                                  userSelect: 'none',
+                                                  transition: 'background 0.15s ease',
+                                                }}
+                                                onMouseOver={e => {
+                                                  if (!isChildExpanded) e.currentTarget.style.background = '#fef3c7';
+                                                }}
+                                                onMouseOut={e => {
+                                                  if (!isChildExpanded) e.currentTarget.style.background = '#fffbf5';
+                                                }}
+                                              >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <Folder size={15} color="#ea580c" strokeWidth={2.2} />
+                                                  <span
+                                                    style={{
+                                                      fontSize: '9.5px',
+                                                      fontWeight: 800,
+                                                      textTransform: 'uppercase',
+                                                      letterSpacing: '0.04em',
+                                                      color: '#9a3412',
+                                                      background: '#fed7aa',
+                                                      padding: '1.5px 5px',
+                                                      borderRadius: '4px',
+                                                    }}
+                                                  >
+                                                    SUB FOLDER
+                                                  </span>
+                                                  <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#071c2c' }}>
+                                                    {childSub.name}
+                                                  </span>
+                                                </div>
+
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                  <span
+                                                    style={{
+                                                      fontSize: '10.5px',
+                                                      color: '#9a3412',
+                                                      background: '#ffffff',
+                                                      border: '1px solid #fed7aa',
+                                                      padding: '1px 7px',
+                                                      borderRadius: '10px',
+                                                      fontWeight: 600,
+                                                    }}
+                                                  >
+                                                    {childSub.docs?.length || 0} Dokumen
+                                                  </span>
+                                                  <div
+                                                    style={{
+                                                      width: 20,
+                                                      height: 20,
+                                                      borderRadius: 3,
+                                                      display: 'flex',
+                                                      alignItems: 'center',
+                                                      justifyContent: 'center',
+                                                      color: '#ea580c',
+                                                    }}
+                                                  >
+                                                    {isChildExpanded ? <ChevronDown size={15} strokeWidth={2.4} /> : <ChevronRight size={15} strokeWidth={2.4} />}
+                                                  </div>
+                                                </div>
+                                              </div>
+
+                                              {/* Documents in Child Subfolder */}
+                                              {isChildExpanded && (
+                                                <div style={{ background: '#ffffff', padding: '4px 0' }}>
+                                                  {(!childSub.docs || childSub.docs.length === 0) ? (
+                                                    <div style={{ padding: '10px 18px 10px 32px', fontSize: '11.5px', color: '#94a3b8', fontStyle: 'italic' }}>
+                                                      Belum ada berkas dokumen dalam sub-folder ini.
+                                                    </div>
+                                                  ) : (
+                                                    childSub.docs.map((doc, cIdx) => (
+                                                      <div
+                                                        key={doc.id}
+                                                        style={{
+                                                          display: 'flex',
+                                                          alignItems: 'center',
+                                                          justifyContent: 'space-between',
+                                                          padding: '7px 14px 7px 32px',
+                                                          borderTop: cIdx > 0 ? '1px solid #f8fafc' : 'none',
+                                                          transition: 'background 0.12s ease',
+                                                        }}
+                                                        onMouseOver={e => (e.currentTarget.style.background = '#f8fafc')}
+                                                        onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                                                      >
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                                          <FileText size={13} color="#ea580c" strokeWidth={1.8} style={{ flexShrink: 0 }} />
+                                                          <span
+                                                            style={{
+                                                              fontSize: '11px',
+                                                              fontWeight: 600,
+                                                              fontFamily: 'var(--font-mono)',
+                                                              color: '#071c2c',
+                                                              background: '#fff7ed',
+                                                              border: '1px solid #ffedd5',
+                                                              padding: '2px 5px',
+                                                              borderRadius: '3px',
+                                                            }}
+                                                          >
+                                                            {doc.number}
+                                                          </span>
+                                                          <span
+                                                            style={{
+                                                              fontSize: '12px',
+                                                              fontWeight: 500,
+                                                              color: '#1e293b',
+                                                              overflow: 'hidden',
+                                                              textOverflow: 'ellipsis',
+                                                              whiteSpace: 'nowrap',
+                                                            }}
+                                                          >
+                                                            {doc.title}
+                                                          </span>
+                                                          <span
+                                                            style={{
+                                                              fontSize: '10.5px',
+                                                              fontWeight: 600,
+                                                              fontFamily: 'var(--font-mono)',
+                                                              color: '#c2410c',
+                                                              background: '#ffedd5',
+                                                              padding: '1px 4px',
+                                                              borderRadius: '3px',
+                                                            }}
+                                                          >
+                                                            {doc.revision}
+                                                          </span>
+                                                        </div>
+
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                                          <button
+                                                            onClick={() => {
+                                                              setModalTab('info');
+                                                              setPreviewDoc(doc);
+                                                            }}
+                                                            title="Pratinjau Dokumen"
+                                                            style={{
+                                                              background: '#ffffff',
+                                                              border: '1px solid #e2e8f0',
+                                                              borderRadius: '4px',
+                                                              padding: '4px 7px',
+                                                              color: '#334155',
+                                                              cursor: 'pointer',
+                                                              display: 'flex',
+                                                              alignItems: 'center',
+                                                              gap: '4px',
+                                                              fontSize: '11px',
+                                                            }}
+                                                          >
+                                                            <Eye size={12} />
+                                                            <span>Lihat</span>
+                                                          </button>
+                                                          <button
+                                                            onClick={() => {
+                                                              setModalTab('history');
+                                                              setPreviewDoc(doc);
+                                                            }}
+                                                            title="Riwayat Revisi"
+                                                            style={{
+                                                              background: '#fff7ed',
+                                                              border: '1px solid #fed7aa',
+                                                              borderRadius: '4px',
+                                                              padding: '4px 7px',
+                                                              color: '#c2410c',
+                                                              cursor: 'pointer',
+                                                              display: 'flex',
+                                                              alignItems: 'center',
+                                                              gap: '4px',
+                                                              fontSize: '11px',
+                                                            }}
+                                                          >
+                                                            <History size={12} />
+                                                            <span>Revisi</span>
+                                                          </button>
+                                                        </div>
+                                                      </div>
+                                                    ))
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
+                                    {/* 2. Direct Documents in Subfolder */}
+                                    {(sub.docs || []).length > 0 && (
+                                      <div>
+                                        {(sub.subfolders || []).length > 0 && (
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 20px 4px 38px' }}>
+                                            <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#78350f', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                              📄 Dokumen ({sub.docs.length})
+                                            </span>
+                                            <span style={{ height: '1px', flex: 1, background: '#fde68a' }} />
+                                          </div>
+                                        )}
+
+                                        {sub.docs.map((doc, dIdx) => (
+                                          <div
+                                            key={doc.id}
+                                            style={{
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'space-between',
+                                              padding: '8px 16px 8px 40px',
+                                              borderTop: dIdx > 0 ? '1px solid #f8fafc' : 'none',
+                                              transition: 'background 0.12s ease',
+                                            }}
+                                            onMouseOver={e => (e.currentTarget.style.background = '#f8fafc')}
+                                            onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+                                          >
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                                              <FileText size={14} color="#0284c7" strokeWidth={1.75} style={{ flexShrink: 0 }} />
+                                              <span
+                                                style={{
+                                                  fontSize: '11.5px',
+                                                  fontWeight: 600,
+                                                  fontFamily: 'var(--font-mono)',
+                                                  color: '#071c2c',
+                                                  background: '#f1f5f9',
+                                                  padding: '2px 6px',
+                                                  borderRadius: '4px',
+                                                }}
+                                              >
+                                                {doc.number}
+                                              </span>
+                                              <span
+                                                style={{
+                                                  fontSize: '12.5px',
+                                                  fontWeight: 500,
+                                                  color: '#1e293b',
+                                                  overflow: 'hidden',
+                                                  textOverflow: 'ellipsis',
+                                                  whiteSpace: 'nowrap',
+                                                }}
+                                              >
+                                                {doc.title}
+                                              </span>
+                                              <span
+                                                style={{
+                                                  fontSize: '11px',
+                                                  fontWeight: 600,
+                                                  fontFamily: 'var(--font-mono)',
+                                                  color: '#0369a1',
+                                                  background: '#e0f2fe',
+                                                  padding: '1px 5px',
+                                                  borderRadius: '3px',
+                                                }}
+                                              >
+                                                {doc.revision}
+                                              </span>
+                                            </div>
+
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                              <button
+                                                onClick={() => {
+                                                  setModalTab('info');
+                                                  setPreviewDoc(doc);
+                                                }}
+                                                title="Pratinjau Dokumen"
+                                                style={{
+                                                  background: '#ffffff',
+                                                  border: '1px solid #e2e8f0',
+                                                  borderRadius: '4px',
+                                                  padding: '5px 8px',
+                                                  color: '#334155',
+                                                  cursor: 'pointer',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  fontSize: '11.5px',
+                                                }}
+                                              >
+                                                <Eye size={13} />
+                                                <span>Lihat</span>
+                                              </button>
+                                              <button
+                                                onClick={() => {
+                                                  setModalTab('history');
+                                                  setPreviewDoc(doc);
+                                                }}
+                                                title="Riwayat Revisi"
+                                                style={{
+                                                  background: '#f0f9ff',
+                                                  border: '1px solid #bae6fd',
+                                                  borderRadius: '4px',
+                                                  padding: '5px 8px',
+                                                  color: '#0284c7',
+                                                  cursor: 'pointer',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  fontSize: '11.5px',
+                                                }}
+                                              >
+                                                <History size={13} />
+                                                <span>Revisi</span>
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* 3. Empty state if neither subfolders nor docs */}
+                                    {(!sub.docs || sub.docs.length === 0) && (!sub.subfolders || sub.subfolders.length === 0) && (
+                                      <div style={{ padding: '12px 20px 12px 40px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>
+                                        Belum ada berkas dokumen atau sub-folder dalam sub-folder ini.
+                                      </div>
                                     )}
                                   </div>
                                 )}
@@ -1398,6 +1710,7 @@ export default function MasterlistPage() {
           onClick={() => {
             setIsAddSubFolderOpen(false);
             setTargetParentFolder(null);
+            setTargetParentSubFolder(null);
           }}
         >
           <div
@@ -1406,7 +1719,7 @@ export default function MasterlistPage() {
               borderRadius: '10px',
               border: '1px solid #e2e8f0',
               width: '100%',
-              maxWidth: '500px',
+              maxWidth: '520px',
               boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
               overflow: 'hidden',
             }}
@@ -1425,13 +1738,14 @@ export default function MasterlistPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CornerDownRight size={18} color="#0284c7" />
                 <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c' }}>
-                  Tambah Sub Folder
+                  {targetParentSubFolder ? 'Tambah Sub-Folder (Level 2)' : 'Tambah Sub Folder'}
                 </h3>
               </div>
               <button
                 onClick={() => {
                   setIsAddSubFolderOpen(false);
                   setTargetParentFolder(null);
+                  setTargetParentSubFolder(null);
                 }}
                 style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
               >
@@ -1440,19 +1754,31 @@ export default function MasterlistPage() {
             </div>
 
             <form onSubmit={handleCreateSubFolder} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Folder Induk (Parent):</span>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#071c2c' }}>{targetParentFolder.name}</span>
+              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Folder Utama:</span>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>{targetParentFolder.name}</span>
+                </div>
+                {targetParentSubFolder && (
+                  <div style={{ marginTop: '4px', paddingTop: '6px', borderTop: '1px dashed #cbd5e1' }}>
+                    <span style={{ fontSize: '11px', color: '#d97706', display: 'block', fontWeight: 700 }}>
+                      ↳ Sub-Folder Induk (Lokasi Penempatan):
+                    </span>
+                    <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#92400e' }}>
+                      {targetParentSubFolder.name}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div>
                 <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Nama Sub Folder <span style={{ color: '#dc2626' }}>*</span>
+                  Nama Sub Folder Baru <span style={{ color: '#dc2626' }}>*</span>
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: 7.3 Instruksi Kerja (Work Instruction)"
+                  placeholder={targetParentSubFolder ? `Contoh: ${targetParentSubFolder.name.split(' ')[0]}.1 Prosedur Khusus...` : 'Contoh: 1.3 Standar Operasional Tambahan...'}
                   value={newSubFolderName}
                   onChange={e => setNewSubFolderName(e.target.value)}
                   style={{
@@ -1473,6 +1799,7 @@ export default function MasterlistPage() {
                   onClick={() => {
                     setIsAddSubFolderOpen(false);
                     setTargetParentFolder(null);
+                    setTargetParentSubFolder(null);
                   }}
                   style={{
                     padding: '8px 16px',

@@ -30,6 +30,7 @@ export interface MasterSubFolder {
   id: string;
   name: string;
   docs: MasterDocItem[];
+  subfolders?: MasterSubFolder[];
 }
 
 export interface MasterFolder {

@@ -499,7 +499,22 @@ export default function DistributionPage() {
       }
 
       const folderObj = masterFolders.find(f => f.id === Number(selectedFolderId));
-      const subObj = folderObj?.subfolders?.find(s => s.id === selectedSubFolderId);
+      
+      // Find subObj or nested childSubObj
+      let subObj: MasterSubFolder | undefined = undefined;
+      for (const s of folderObj?.subfolders || []) {
+        if (s.id === selectedSubFolderId) {
+          subObj = s;
+          break;
+        }
+        for (const cs of s.subfolders || []) {
+          if (cs.id === selectedSubFolderId) {
+            subObj = cs;
+            break;
+          }
+        }
+        if (subObj) break;
+      }
 
       const targetFolderDisplay = folderObj
         ? `${folderObj.name}${subObj ? ' > ' + subObj.name : ''}`
@@ -552,6 +567,21 @@ export default function DistributionPage() {
                   return {
                     ...sub,
                     docs: [newMasterDoc, ...(sub.docs || [])],
+                  };
+                }
+                // Check if target is inside nested child subfolders
+                if ((sub.subfolders || []).some(cs => cs.id === selectedSubFolderId)) {
+                  return {
+                    ...sub,
+                    subfolders: (sub.subfolders || []).map(cs => {
+                      if (cs.id === selectedSubFolderId) {
+                        return {
+                          ...cs,
+                          docs: [newMasterDoc, ...(cs.docs || [])],
+                        };
+                      }
+                      return cs;
+                    }),
                   };
                 }
                 return sub;
@@ -1384,9 +1414,16 @@ export default function DistributionPage() {
                       <option value="">-Root Folder (Tanpa Sub Folder)-</option>
                       {selectedFolderId &&
                         (masterFolders.find(f => f.id === Number(selectedFolderId))?.subfolders || []).map(sub => (
-                          <option key={sub.id} value={sub.id} style={{ color: '#0f172a' }}>
-                            📂 {sub.name} ({sub.docs?.length || 0} docs)
-                          </option>
+                          <React.Fragment key={sub.id}>
+                            <option value={sub.id} style={{ color: '#0f172a', fontWeight: 600 }}>
+                              📁 {sub.name} ({sub.docs?.length || 0} docs)
+                            </option>
+                            {(sub.subfolders || []).map(cs => (
+                              <option key={cs.id} value={cs.id} style={{ color: '#0369a1' }}>
+                                &nbsp;&nbsp;&nbsp;&nbsp;↳ 📂 {cs.name} ({cs.docs?.length || 0} docs)
+                              </option>
+                            ))}
+                          </React.Fragment>
                         ))}
                     </select>
                     {selectedFolderId && (masterFolders.find(f => f.id === Number(selectedFolderId))?.subfolders || []).length === 0 && (
