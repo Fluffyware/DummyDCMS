@@ -1083,7 +1083,7 @@ export default function SettingsPage() {
                     boxSizing: 'border-box', background: '#fff',
                   }}
                 >
-                  <option value="HEAD_OFFICE">HEAD OFFICE</option>
+                  <option value="HEAD_OFFICE">THI OFFICE</option>
                   <option value="OFFSHORE">OFFSHORE</option>
                   <option value="PROJECT_SITE">PROJECT SITE</option>
                 </select>

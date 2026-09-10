@@ -425,7 +425,7 @@ export default function MasterlistPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {[
-            { key: 'HEAD_OFFICE', label: 'Head Office', icon: Building2, count: totalDocsCount },
+            { key: 'HEAD_OFFICE', label: 'THI OFFICE', icon: Building2, count: totalDocsCount },
           ].map(tab => {
             const isActive = activeTab === tab.key;
             const Icon = tab.icon;
@@ -1118,7 +1118,7 @@ export default function MasterlistPage() {
                     boxSizing: 'border-box',
                   }}
                 >
-                  <option value="HEAD_OFFICE">Head Office</option>
+                  <option value="HEAD_OFFICE">THI OFFICE</option>
                   <option value="OFFSHORE">Offshore &amp; Vessel</option>
                   <option value="PROJECT_SITE">Project Site</option>
                 </select>
