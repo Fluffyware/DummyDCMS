@@ -201,7 +201,7 @@ export default function RegistrationPage() {
     const newIdNum = registrations.length + 1;
     const formattedId = `REG0926.${String(newIdNum).padStart(3, '0')}`;
 
-    const currentAuthor = user?.name || (user?.role === 'admin' ? 'Hendra Pratama (Admin QHSE)' : 'Ahmad Fauzi (Staff)');
+    const currentAuthor = user?.name || (user?.role === 'admin' ? 'Rizal (Admin QMS)' : 'Staff');
 
     const newDocItem: RegisteredDoc = {
       no: 1,

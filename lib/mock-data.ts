@@ -74,27 +74,115 @@ export interface UserProfile {
   avatar: string;
 }
 
-export const DEMO_USERS: Record<UserRole, UserProfile> = {
-  admin: {
-    id: 'u-admin',
-    name: 'Hendra Pratama',
-    email: 'admin.qhse@thi.co.id',
+export const ALL_USERS: UserProfile[] = [
+  // ── 2 Akun Admin QMS ───────────────────────────────────────────
+  {
+    id: 'admin-rizal',
+    name: 'Rizal',
+    email: 'rizal@thi.co.id',
     role: 'admin',
-    roleName: 'Admin QHSE',
-    department: 'QHSE',
-    position: 'Head of QHSE & Document Control',
-    avatar: 'QH',
+    roleName: 'Admin QMS',
+    department: 'QHSE & QMS',
+    position: 'Lead Quality & Management System',
+    avatar: 'RZ',
   },
-  staff: {
-    id: 'u-staff',
-    name: 'Ahmad Fauzi',
-    email: 'ahmad.fauzi@thi.co.id',
+  {
+    id: 'admin-khabil',
+    name: 'Khabil',
+    email: 'khabil@thi.co.id',
+    role: 'admin',
+    roleName: 'Admin QMS',
+    department: 'QHSE & QMS',
+    position: 'Document Controller & QMS Admin',
+    avatar: 'KB',
+  },
+
+  // ── 1 Akun Tiap Departemen (Staff) ─────────────────────────────
+  {
+    id: 'staff-geo',
+    name: 'Staff Geotechnical',
+    email: 'geotechnical@thi.co.id',
     role: 'staff',
-    roleName: 'Staff',
-    department: 'Geotechnical & Survey Operations',
-    position: 'Field Engineer & Document Contributor',
-    avatar: 'ST',
+    roleName: 'Staff Geotechnical',
+    department: 'Geotechnical',
+    position: 'Document Controller Geotechnical',
+    avatar: 'GT',
   },
+  {
+    id: 'staff-ops',
+    name: 'Staff Operations',
+    email: 'operations@thi.co.id',
+    role: 'staff',
+    roleName: 'Staff Operations',
+    department: 'Operations',
+    position: 'Document Controller Operations',
+    avatar: 'OP',
+  },
+  {
+    id: 'staff-eng',
+    name: 'Staff Engineering',
+    email: 'engineering@thi.co.id',
+    role: 'staff',
+    roleName: 'Staff Engineering',
+    department: 'Engineering',
+    position: 'Document Controller Engineering',
+    avatar: 'EN',
+  },
+  {
+    id: 'staff-hr',
+    name: 'Staff HR & General Affairs',
+    email: 'hr.ga@thi.co.id',
+    role: 'staff',
+    roleName: 'Staff HR & GA',
+    department: 'HR & General Affairs',
+    position: 'Document Controller HR & GA',
+    avatar: 'HR',
+  },
+  {
+    id: 'staff-fin',
+    name: 'Staff Finance & Accounting',
+    email: 'finance@thi.co.id',
+    role: 'staff',
+    roleName: 'Staff Finance & Accounting',
+    department: 'Finance & Accounting',
+    position: 'Document Controller Finance',
+    avatar: 'FA',
+  },
+  {
+    id: 'staff-it',
+    name: 'Staff Information Technology',
+    email: 'it@thi.co.id',
+    role: 'staff',
+    roleName: 'Staff IT',
+    department: 'Information Technology',
+    position: 'Document Controller IT',
+    avatar: 'IT',
+  },
+  {
+    id: 'staff-env',
+    name: 'Staff Environment',
+    email: 'environment@thi.co.id',
+    role: 'staff',
+    roleName: 'Staff Environment',
+    department: 'Environment',
+    position: 'Document Controller Environment',
+    avatar: 'EV',
+  },
+  {
+    id: 'staff-com',
+    name: 'Staff Commercial & Logistics',
+    email: 'commercial@thi.co.id',
+    role: 'staff',
+    roleName: 'Staff Commercial & Logistics',
+    department: 'Commercial & Logistics',
+    position: 'Document Controller Commercial',
+    avatar: 'CL',
+  },
+];
+
+export const DEMO_USERS: Record<UserRole, UserProfile> = {
+  admin: ALL_USERS[0], // Rizal (Admin QMS)
+  staff: ALL_USERS[2], // Staff Geotechnical
 };
 
 export interface THIFundamental {

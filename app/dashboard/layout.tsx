@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { DEMO_USERS } from '@/lib/mock-data';
+import { DEMO_USERS, ALL_USERS } from '@/lib/mock-data';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -17,6 +17,7 @@ import {
   Settings,
   Bell,
   ChevronRight,
+  ChevronDown,
   Lightbulb,
   Briefcase,
   Menu,
@@ -79,10 +80,11 @@ const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] as [number,number,nu
 
 /* ─── Main Layout ─────────────────────────────────────────────── */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, login } = useAuth();
+  const { user, logout, login, loginAsUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -98,6 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     setMobileOpen(false);
+    setAccountMenuOpen(false);
   }, [pathname]);
 
   useEffect(() => {
@@ -115,7 +118,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (activeUser.role === 'staff') {
       const allowedHrefs = ROLE_NAV.staff.map(k => ALL_NAV[k]?.href).filter(Boolean);
       if (!allowedHrefs.includes(pathname)) {
-        router.replace('/dashboard/masterlist');
+        router.replace('/dashboard');
       }
     }
   }, [activeUser.role, pathname, router]);
@@ -491,59 +494,172 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10, flexShrink: 0 }}>
-            {/* Topbar quick switch role */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              background: 'rgba(0, 0, 0, 0.35)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              borderRadius: 8,
-              padding: '2px',
-            }}>
+            {/* Topbar interactive account switcher */}
+            <div style={{ position: 'relative' }}>
               <button
                 type="button"
-                onClick={() => login('admin', '', '')}
+                id="account-switcher-btn"
+                onClick={() => setAccountMenuOpen(o => !o)}
                 style={{
-                  padding: isMobile ? '3px 7px' : '4px 11px',
-                  fontSize: isMobile ? '10px' : '11px',
-                  fontWeight: activeUser.role === 'admin' ? 800 : 600,
-                  borderRadius: 6,
-                  border: 'none',
-                  background: activeUser.role === 'admin' ? '#ffffff' : 'transparent',
-                  color: activeUser.role === 'admin' ? '#071c2c' : '#cbd5e1',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: activeUser.role === 'admin' ? '0 1px 4px rgba(0, 0, 0, 0.2)' : 'none',
-                  transition: 'all 0.15s',
-                }}
-                title="Mode Admin QHSE (Otoritas Manual Approval)"
-              >
-                <span>{isMobile ? 'Admin' : 'Admin QHSE'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => login('staff', '', '')}
-                style={{
-                  padding: isMobile ? '3px 7px' : '4px 11px',
-                  fontSize: isMobile ? '10px' : '11px',
-                  fontWeight: activeUser.role === 'staff' ? 800 : 600,
-                  borderRadius: 6,
-                  border: 'none',
-                  background: activeUser.role === 'staff' ? '#ffffff' : 'transparent',
-                  color: activeUser.role === 'staff' ? '#071c2c' : '#cbd5e1',
+                  gap: isMobile ? '4px' : '7px',
+                  padding: isMobile ? '4px 8px' : '5px 11px',
+                  background: 'rgba(0, 0, 0, 0.35)',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  borderRadius: 8,
+                  color: '#ffffff',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: activeUser.role === 'staff' ? '0 1px 4px rgba(0, 0, 0, 0.2)' : 'none',
-                  transition: 'all 0.15s',
+                  fontSize: isMobile ? '10.5px' : '11.5px',
+                  fontWeight: 600,
+                  transition: 'all 0.15s ease',
+                  outline: 'none',
                 }}
-                title="Mode Staff (Input & Registrasi Dokumen)"
+                title="Ganti Akun Pengguna (Admin QMS Rizal/Khabil atau Staff Dept)"
               >
-                <span>Staff</span>
+                <span>{activeUser.role === 'admin' ? '👑' : '🏢'}</span>
+                <span style={{ maxWidth: isMobile ? '80px' : '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {activeUser.name}
+                </span>
+                <span style={{
+                  fontSize: '9.5px',
+                  fontWeight: 700,
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  background: activeUser.role === 'admin' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.12)',
+                  color: activeUser.role === 'admin' ? '#38bdf8' : '#e2e8f0',
+                }}>
+                  {activeUser.role === 'admin' ? 'Admin' : 'Staff'}
+                </span>
+                <ChevronDown size={13} color="#94a3b8" style={{ transform: accountMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
               </button>
+
+              {accountMenuOpen && (
+                <>
+                  <div
+                    style={{ position: 'fixed', inset: 0, zIndex: 8999 }}
+                    onClick={() => setAccountMenuOpen(false)}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      right: 0,
+                      width: '270px',
+                      background: '#ffffff',
+                      borderRadius: '10px',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 12px 30px rgba(0,0,0,0.18)',
+                      zIndex: 9000,
+                      overflow: 'hidden',
+                      padding: '6px',
+                    }}
+                  >
+                    <div style={{ padding: '7px 10px 4px', fontSize: '10px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      👑 Admin QMS (2 Akun)
+                    </div>
+                    {ALL_USERS.filter(u => u.role === 'admin').map(u => {
+                      const isCurrent = activeUser.id === u.id || (activeUser.name === u.name && activeUser.role === 'admin');
+                      return (
+                        <button
+                          key={u.id}
+                          onClick={() => {
+                            loginAsUser(u.id);
+                            setAccountMenuOpen(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '7px 10px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: isCurrent ? '#f0f9ff' : 'transparent',
+                            color: isCurrent ? '#0284c7' : '#1e293b',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'background 0.12s ease',
+                          }}
+                          onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.background = '#f8fafc'; }}
+                          onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <div>
+                            <div style={{ fontSize: '12.5px', fontWeight: isCurrent ? 700 : 600 }}>{u.name}</div>
+                            <div style={{ fontSize: '10.5px', color: '#64748b' }}>{u.email}</div>
+                          </div>
+                          {isCurrent && <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: 700 }}>✓ Aktif</span>}
+                        </button>
+                      );
+                    })}
+
+                    <div style={{ margin: '6px 0', borderTop: '1px solid #f1f5f9' }} />
+
+                    <div style={{ padding: '5px 10px 4px', fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      🏢 Staff Departemen (1 Akun / Dept)
+                    </div>
+                    <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
+                      {ALL_USERS.filter(u => u.role === 'staff').map(u => {
+                        const isCurrent = activeUser.id === u.id || (activeUser.department === u.department && activeUser.role === 'staff');
+                        return (
+                          <button
+                            key={u.id}
+                            onClick={() => {
+                              loginAsUser(u.id);
+                              setAccountMenuOpen(false);
+                            }}
+                            style={{
+                              width: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              background: isCurrent ? '#f0f9ff' : 'transparent',
+                              color: isCurrent ? '#0284c7' : '#1e293b',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              transition: 'background 0.12s ease',
+                            }}
+                            onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.background = '#f8fafc'; }}
+                            onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            <div>
+                              <div style={{ fontSize: '12px', fontWeight: isCurrent ? 700 : 500 }}>{u.department}</div>
+                              <div style={{ fontSize: '10.5px', color: '#64748b' }}>{u.email}</div>
+                            </div>
+                            {isCurrent && <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: 700 }}>✓ Aktif</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div style={{ margin: '6px 0', borderTop: '1px solid #f1f5f9' }} />
+
+                    <button
+                      onClick={() => {
+                        logout();
+                        router.push('/login');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '7px 10px',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: '#fef2f2',
+                        color: '#dc2626',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                      }}
+                    >
+                      Keluar (Sign Out)
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
             <button
               id="notif-btn"

@@ -70,7 +70,7 @@ export default function ApprovalPage() {
         name,
         size,
         uploadedAt: `Hari ini, ${timeStr}`,
-        signedBy: user?.name || 'Hendra Pratama (Admin QHSE)',
+        signedBy: user?.name || 'Rizal (Admin QMS)',
       },
     }));
   };
@@ -901,9 +901,9 @@ export default function ApprovalPage() {
                     </div>
 
                     <div style={{ border: '1.5px dashed #f59e0b', borderRadius: '6px', padding: '12px', background: '#fffbeb' }}>
-                      <div style={{ fontSize: 11, color: '#92400e' }}>Disetujui &amp; Disahkan oleh (Admin QHSE):</div>
+                      <div style={{ fontSize: 11, color: '#92400e' }}>Disetujui &amp; Disahkan oleh (Admin QMS):</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginTop: 4 }}>
-                        {user?.role === 'admin' ? user?.name : 'Hendra Pratama'}
+                        {user?.role === 'admin' ? user?.name : 'Rizal'}
                       </div>
                       <div style={{ height: 45, display: 'flex', alignItems: 'center', color: '#d97706', fontSize: 12, fontWeight: 700 }}>
                         {uploadedFiles[previewDoc.id] ? '✓ Berkas TTD Siap Diunggah' : '✍ Menunggu TTD Fisik / Digital'}

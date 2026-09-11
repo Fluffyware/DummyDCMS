@@ -43,14 +43,15 @@ const DOC_TYPES = [
 ];
 
 const DEPARTMENTS = [
-  { id: 1, name: 'QHSE', code: 'QHSE', active: true },
+  { id: 1, name: 'QHSE & QMS', code: 'QHSE', active: true },
   { id: 2, name: 'Geotechnical', code: 'GEO', active: true },
   { id: 3, name: 'Operations', code: 'OPS', active: true },
-  { id: 4, name: 'HR & General Affairs', code: 'HR', active: true },
-  { id: 5, name: 'Environment', code: 'ENV', active: true },
-  { id: 6, name: 'Finance & Accounting', code: 'FIN', active: false },
-  { id: 7, name: 'Engineering', code: 'ENG', active: true },
-  { id: 8, name: 'Information Technology', code: 'IT', active: true },
+  { id: 4, name: 'Engineering', code: 'ENG', active: true },
+  { id: 5, name: 'HR & General Affairs', code: 'HR', active: true },
+  { id: 6, name: 'Finance & Accounting', code: 'FIN', active: true },
+  { id: 7, name: 'Information Technology', code: 'IT', active: true },
+  { id: 8, name: 'Environment', code: 'ENV', active: true },
+  { id: 9, name: 'Commercial & Logistics', code: 'COM', active: true },
 ];
 
 const USERS_APPROVAL = [
@@ -119,9 +120,7 @@ const BADGE_INACTIVE = {
 const TABS: { id: SetupTab; label: string; icon: React.ReactNode; count?: number }[] = [
   { id: 'folder-dokumen',   label: 'Folder Dokumen',  icon: <FolderOpen size={15} strokeWidth={1.75} /> },
   { id: 'jenis-dokumen',    label: 'Jenis Dokumen',   icon: <FileText size={15} strokeWidth={1.75} />, count: 9 },
-  { id: 'departemen',       label: 'Departemen',      icon: <Building2 size={15} strokeWidth={1.75} />, count: 8 },
-  { id: 'user-approval',    label: 'User Approval',   icon: <UserCheck size={15} strokeWidth={1.75} />, count: 4 },
-  { id: 'standar-approval', label: 'Standar Approval',icon: <Shield size={15} strokeWidth={1.75} />, count: 1 },
+  { id: 'departemen',       label: 'Departemen',      icon: <Building2 size={15} strokeWidth={1.75} />, count: 9 },
 ];
 
 export default function SettingsPage() {
@@ -289,7 +288,7 @@ export default function SettingsPage() {
           Setup Master
         </h1>
         <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-          Kelola folder dokumen, jenis dokumen, departemen, pengguna, dan konfigurasi alur approval sistem.
+          Kelola struktur folder dokumen, jenis dokumen, dan daftar departemen sistem manajemen dokumen perusahaan.
         </p>
       </div>
 
