@@ -7,7 +7,7 @@ import { DEMO_USERS } from '@/lib/mock-data';
 
 const ROLES = [
   { key: 'admin', icon: '👑', name: 'Admin QHSE', desc: 'Otoritas penuh, approval manual dokumen & kontrol sistem QHSE' },
-  { key: 'staff', icon: '👤', name: 'Staff',      desc: 'Akses Masterlist Dokumen Terkontrol & Pengajuan Saran & Ide' },
+  { key: 'staff', icon: '👤', name: 'Staff',      desc: 'Akses Dashboard, Management System, Masterlist Dokumen & Pengajuan Saran' },
 ];
 
 export default function LoginPage() {
@@ -23,11 +23,7 @@ export default function LoginPage() {
     setLoading(true);
     setTimeout(() => {
       login(user.role as any, '', '');
-      if (user.role === 'staff') {
-        router.push('/dashboard/masterlist');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push('/dashboard');
     }, 600);
   };
 

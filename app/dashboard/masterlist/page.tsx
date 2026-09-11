@@ -10,6 +10,9 @@ import {
   Minus,
   Search,
   FileText,
+  FilePlus,
+  Upload,
+  AlertCircle,
   Eye,
   Download,
   Building2,
@@ -28,6 +31,7 @@ import {
   History,
   CornerDownRight,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 import {
   MasterFolder,
   MasterSubFolder,
@@ -40,6 +44,8 @@ import {
 /* ─── Main Masterlist Component ───────────────────────────────── */
 export default function MasterlistPage() {
   const router = useRouter();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   // Master folders state (stored & persisted in localStorage)
   const [folders, setFolders] = useState<MasterFolder[]>([]);
@@ -69,6 +75,121 @@ export default function MasterlistPage() {
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderCategory, setNewFolderCategory] = useState<'HEAD_OFFICE' | 'OFFSHORE' | 'PROJECT_SITE'>('HEAD_OFFICE');
   const [newFolderDesc, setNewFolderDesc] = useState('');
+
+  // Modal Tambah Dokumen Langsung (Admin Only)
+  const [isAddDocOpen, setIsAddDocOpen] = useState(false);
+  const [docTargetFolder, setDocTargetFolder] = useState<MasterFolder | null>(null);
+  const [docTargetSubFolder, setDocTargetSubFolder] = useState<MasterSubFolder | null>(null);
+  const [docNumber, setDocNumber] = useState('');
+  const [docTitle, setDocTitle] = useState('');
+  const [docType, setDocType] = useState('SOP');
+  const [docRevision, setDocRevision] = useState('Rev.00');
+  const [docClassification, setDocClassification] = useState<'INTERNAL' | 'CONFIDENTIAL' | 'PUBLIC'>('INTERNAL');
+  const [docDate, setDocDate] = useState('');
+  const [docFileName, setDocFileName] = useState('');
+  const [docFileSize, setDocFileSize] = useState('1.85 MB');
+  const [docFileExt, setDocFileExt] = useState<'pdf' | 'docx' | 'xlsx'>('pdf');
+  const [docErrors, setDocErrors] = useState<Record<string, boolean>>({});
+
+  const openAddDocModal = (folder: MasterFolder, sub?: MasterSubFolder) => {
+    setDocTargetFolder(folder);
+    setDocTargetSubFolder(sub || null);
+    const folderNum = folder.name.match(/^\d+/)?.[0] || '01';
+    setDocNumber(`SOP-THI-${folderNum}-${String(Math.floor(Math.random() * 899 + 100))}`);
+    setDocTitle('');
+    setDocType('SOP');
+    setDocRevision('Rev.00');
+    setDocClassification('INTERNAL');
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    setDocDate(`${day} ${months[now.getMonth()]} ${now.getFullYear()}`);
+    setDocFileName('');
+    setDocFileSize('1.85 MB');
+    setDocFileExt('pdf');
+    setDocErrors({});
+    setIsAddDocOpen(true);
+  };
+
+  const handleAddDocSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const errs: Record<string, boolean> = {};
+    if (!docNumber.trim()) errs.number = true;
+    if (!docTitle.trim()) errs.title = true;
+    if (Object.keys(errs).length > 0) {
+      setDocErrors(errs);
+      return;
+    }
+    if (!docTargetFolder) return;
+
+    const newDoc: MasterDocItem = {
+      id: `doc-${Date.now()}`,
+      number: docNumber.trim().toUpperCase(),
+      title: docTitle.trim(),
+      type: docType,
+      revision: docRevision.trim() || 'Rev.00',
+      effectiveDate: docDate.trim() || 'Hari Ini',
+      reviewDate: '1 Tahun Mendatang',
+      status: 'CURRENT',
+      classification: docClassification,
+      size: docFileSize || '1.85 MB',
+      fileExt: docFileExt,
+      subFolderId: docTargetSubFolder?.id,
+      subFolderName: docTargetSubFolder?.name,
+    };
+
+    let updatedFolders: MasterFolder[];
+
+    if (docTargetSubFolder) {
+      const updateSubRecursive = (sub: MasterSubFolder): MasterSubFolder => {
+        if (sub.id === docTargetSubFolder.id) {
+          return {
+            ...sub,
+            docs: [newDoc, ...(sub.docs || [])],
+          };
+        }
+        if (sub.subfolders && sub.subfolders.length > 0) {
+          return {
+            ...sub,
+            subfolders: sub.subfolders.map(updateSubRecursive),
+          };
+        }
+        return sub;
+      };
+
+      updatedFolders = folders.map(f => {
+        if (f.id === docTargetFolder.id) {
+          return {
+            ...f,
+            subfolders: (f.subfolders || []).map(updateSubRecursive),
+          };
+        }
+        return f;
+      });
+    } else {
+      updatedFolders = folders.map(f => {
+        if (f.id === docTargetFolder.id) {
+          return {
+            ...f,
+            docs: [newDoc, ...(f.docs || [])],
+          };
+        }
+        return f;
+      });
+    }
+
+    setFolders(updatedFolders);
+    saveMasterFolders(updatedFolders);
+
+    // Expand folder and subfolder to show newly added file
+    setExpandedFolderIds(prev => prev.includes(docTargetFolder.id) ? prev : [...prev, docTargetFolder.id]);
+    if (docTargetSubFolder) {
+      setExpandedSubFolderIds(prev => prev.includes(docTargetSubFolder.id) ? prev : [...prev, docTargetSubFolder.id]);
+    }
+
+    setIsAddDocOpen(false);
+    showToast(`Dokumen "${newDoc.number} - ${newDoc.title}" berhasil ditambahkan ke ${docTargetSubFolder?.name || docTargetFolder.name}!`);
+  };
 
 
   // Toast feedback
@@ -616,8 +737,45 @@ export default function MasterlistPage() {
                     </div>
                   </div>
 
-                  {/* Right: Expand Toggle */}
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {/* Right: Actions & Expand Toggle */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openAddDocModal(folder);
+                        }}
+                        title={`Tambah Dokumen langsung ke "${folder.name}"`}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          padding: '4px 10px',
+                          background: '#f0f9ff',
+                          color: '#0284c7',
+                          border: '1px solid #bae6fd',
+                          borderRadius: '6px',
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = '#0284c7';
+                          e.currentTarget.style.color = '#ffffff';
+                          e.currentTarget.style.borderColor = '#0284c7';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = '#f0f9ff';
+                          e.currentTarget.style.color = '#0284c7';
+                          e.currentTarget.style.borderColor = '#bae6fd';
+                        }}
+                      >
+                        <FilePlus size={13} strokeWidth={2.2} />
+                        <span>+ Tambah File</span>
+                      </button>
+                    )}
 
                     <div
                       style={{
@@ -681,7 +839,44 @@ export default function MasterlistPage() {
                                   </span>
                                 </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {isAdmin && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openAddDocModal(folder, sub);
+                                      }}
+                                      title={`Tambah Dokumen ke "${sub.name}"`}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '3px 8px',
+                                        background: '#f0f9ff',
+                                        color: '#0284c7',
+                                        border: '1px solid #bae6fd',
+                                        borderRadius: '5px',
+                                        fontSize: '11px',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s ease',
+                                      }}
+                                      onMouseEnter={e => {
+                                        e.currentTarget.style.background = '#0284c7';
+                                        e.currentTarget.style.color = '#ffffff';
+                                        e.currentTarget.style.borderColor = '#0284c7';
+                                      }}
+                                      onMouseLeave={e => {
+                                        e.currentTarget.style.background = '#f0f9ff';
+                                        e.currentTarget.style.color = '#0284c7';
+                                        e.currentTarget.style.borderColor = '#bae6fd';
+                                      }}
+                                    >
+                                      <FilePlus size={12} strokeWidth={2.2} />
+                                      <span>+ File</span>
+                                    </button>
+                                  )}
                                   {isSubExpanded ? <ChevronDown size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
                                 </div>
                               </div>
@@ -714,7 +909,44 @@ export default function MasterlistPage() {
                                               {childSub.name}
                                             </span>
                                           </div>
-                                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            {isAdmin && (
+                                              <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openAddDocModal(folder, childSub);
+                                                }}
+                                                title={`Tambah Dokumen ke "${childSub.name}"`}
+                                                style={{
+                                                  display: 'inline-flex',
+                                                  alignItems: 'center',
+                                                  gap: '4px',
+                                                  padding: '2px 7px',
+                                                  background: '#f0f9ff',
+                                                  color: '#0284c7',
+                                                  border: '1px solid #bae6fd',
+                                                  borderRadius: '4px',
+                                                  fontSize: '10.5px',
+                                                  fontWeight: 600,
+                                                  cursor: 'pointer',
+                                                  transition: 'all 0.15s ease',
+                                                }}
+                                                onMouseEnter={e => {
+                                                  e.currentTarget.style.background = '#0284c7';
+                                                  e.currentTarget.style.color = '#ffffff';
+                                                  e.currentTarget.style.borderColor = '#0284c7';
+                                                }}
+                                                onMouseLeave={e => {
+                                                  e.currentTarget.style.background = '#f0f9ff';
+                                                  e.currentTarget.style.color = '#0284c7';
+                                                  e.currentTarget.style.borderColor = '#bae6fd';
+                                                }}
+                                              >
+                                                <FilePlus size={11} strokeWidth={2.2} />
+                                                <span>+ File</span>
+                                              </button>
+                                            )}
                                             {isChildExpanded ? <ChevronDown size={13} color="#64748b" /> : <ChevronRight size={13} color="#64748b" />}
                                           </div>
                                         </div>
@@ -1176,6 +1408,329 @@ export default function MasterlistPage() {
                   }}
                 >
                   Simpan Folder
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: TAMBAH DOKUMEN LANGSUNG KE FOLDER / SUBFOLDER ─── */}
+      {isAddDocOpen && docTargetFolder && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(7, 28, 44, 0.45)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setIsAddDocOpen(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0',
+              width: '100%',
+              maxWidth: '560px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+              maxHeight: '90vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid #f1f5f9',
+                background: '#fafafa',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FilePlus size={18} color="#0284c7" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c' }}>
+                  Tambah Dokumen Baru
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddDocOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Folder Destination Notice */}
+            <div style={{ padding: '10px 20px', background: '#f0f9ff', borderBottom: '1px solid #e0f2fe', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Folder size={14} color="#0284c7" />
+              <div style={{ fontSize: '12px', color: '#0369a1', fontWeight: 500 }}>
+                Simpan di: <strong>{docTargetFolder.name}</strong>
+                {docTargetSubFolder && (
+                  <span> &rarr; <strong style={{ color: '#0284c7' }}>{docTargetSubFolder.name}</strong></span>
+                )}
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleAddDocSubmit}
+              style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto' }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Nomor Dokumen <span style={{ color: '#dc2626' }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: SOP-THI-01-001"
+                    value={docNumber}
+                    onChange={e => {
+                      setDocNumber(e.target.value);
+                      if (docErrors.number) setDocErrors(prev => ({ ...prev, number: false }));
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: docErrors.number ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      fontFamily: 'var(--font-mono)',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                  {docErrors.number && (
+                    <span style={{ fontSize: '11px', color: '#ef4444', marginTop: '2px', display: 'block' }}>Nomor dokumen wajib diisi</span>
+                  )}
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Tipe Dokumen
+                  </label>
+                  <select
+                    value={docType}
+                    onChange={e => setDocType(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      background: '#fff',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="SOP">SOP (Standar Operasional)</option>
+                    <option value="Manual">Manual Sistem</option>
+                    <option value="Kebijakan">Kebijakan / Policy</option>
+                    <option value="Instruksi Kerja">Instruksi Kerja (IK / WI)</option>
+                    <option value="Formulir">Formulir / Template</option>
+                    <option value="Prosedur">Prosedur Teknis</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                  Judul Dokumen <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Prosedur Pengendalian Dokumen & Rekaman QHSE"
+                  value={docTitle}
+                  onChange={e => {
+                    setDocTitle(e.target.value);
+                    if (docErrors.title) setDocErrors(prev => ({ ...prev, title: false }));
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: docErrors.title ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                {docErrors.title && (
+                  <span style={{ fontSize: '11px', color: '#ef4444', marginTop: '2px', display: 'block' }}>Judul dokumen wajib diisi</span>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Revisi
+                  </label>
+                  <input
+                    type="text"
+                    value={docRevision}
+                    onChange={e => setDocRevision(e.target.value)}
+                    placeholder="Rev.00"
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Klasifikasi
+                  </label>
+                  <select
+                    value={docClassification}
+                    onChange={e => setDocClassification(e.target.value as any)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      background: '#fff',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="INTERNAL">Internal Use</option>
+                    <option value="CONFIDENTIAL">Confidential</option>
+                    <option value="PUBLIC">Public</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Format Berkas
+                  </label>
+                  <select
+                    value={docFileExt}
+                    onChange={e => setDocFileExt(e.target.value as any)}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      background: '#fff',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <option value="pdf">PDF Document (.pdf)</option>
+                    <option value="docx">Word Document (.docx)</option>
+                    <option value="xlsx">Excel Spreadsheet (.xlsx)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Upload File Input / Simulator */}
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                  Berkas Dokumen
+                </label>
+                <label
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '16px',
+                    borderRadius: '8px',
+                    border: '1.5px dashed #cbd5e1',
+                    background: '#f8fafc',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseOver={e => (e.currentTarget.style.borderColor = '#0284c7')}
+                  onMouseOut={e => (e.currentTarget.style.borderColor = '#cbd5e1')}
+                >
+                  <input
+                    type="file"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setDocFileName(file.name);
+                        const mb = (file.size / (1024 * 1024)).toFixed(2);
+                        setDocFileSize(`${mb} MB`);
+                        const ext = file.name.split('.').pop()?.toLowerCase();
+                        if (ext === 'docx' || ext === 'xlsx' || ext === 'pdf') {
+                          setDocFileExt(ext as any);
+                        }
+                        if (!docTitle) {
+                          setDocTitle(file.name.replace(/\.[^/.]+$/, ''));
+                        }
+                      }
+                    }}
+                  />
+                  <Upload size={22} color="#0284c7" style={{ marginBottom: '6px' }} />
+                  {docFileName ? (
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#071c2c' }}>{docFileName}</span>
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>{docFileSize} &bull; Siap diunggah</div>
+                    </div>
+                  ) : (
+                    <div style={{ textAlign: 'center' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#0284c7' }}>Pilih atau seret berkas ke sini</span>
+                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>Mendukung PDF, DOCX, XLSX (Maks. 25MB)</div>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAddDocOpen(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '12.5px',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 20px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#071c2c',
+                    color: '#ffffff',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <FilePlus size={14} />
+                  Simpan Dokumen
                 </button>
               </div>
             </form>

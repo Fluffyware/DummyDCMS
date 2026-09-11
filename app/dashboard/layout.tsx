@@ -47,7 +47,7 @@ const ALL_NAV: Record<string, NavItemDef> = {
 };
 
 const ROLE_NAV: Record<string, string[]> = {
-  staff: ['masterlist', 'suggestions'],
+  staff: ['dashboard', 'concepts', 'masterlist', 'suggestions'],
   admin: ['dashboard', 'concepts', 'masterlist', 'distribution', 'suggestions', 'settings'],
 };
 
