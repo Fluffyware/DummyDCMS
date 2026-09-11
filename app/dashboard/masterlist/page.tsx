@@ -89,6 +89,8 @@ export default function MasterlistPage() {
   const [docFileName, setDocFileName] = useState('');
   const [docFileSize, setDocFileSize] = useState('1.85 MB');
   const [docFileExt, setDocFileExt] = useState<'pdf' | 'docx' | 'xlsx'>('pdf');
+  const [docSelectedFile, setDocSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [docErrors, setDocErrors] = useState<Record<string, boolean>>({});
 
   const openAddDocModal = (folder: MasterFolder, sub?: MasterSubFolder) => {
@@ -107,11 +109,13 @@ export default function MasterlistPage() {
     setDocFileName('');
     setDocFileSize('1.85 MB');
     setDocFileExt('pdf');
+    setDocSelectedFile(null);
+    setIsUploading(false);
     setDocErrors({});
     setIsAddDocOpen(true);
   };
 
-  const handleAddDocSubmit = (e?: React.FormEvent) => {
+  const handleAddDocSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const errs: Record<string, boolean> = {};
     if (!docNumber.trim()) errs.number = true;
@@ -121,6 +125,36 @@ export default function MasterlistPage() {
       return;
     }
     if (!docTargetFolder) return;
+
+    setIsUploading(true);
+
+    // Call Cloudflare R2 / Supabase API route
+    try {
+      const formData = new FormData();
+      if (docSelectedFile) {
+        formData.append('file', docSelectedFile);
+      }
+      formData.append('docNumber', docNumber.trim());
+      formData.append('docTitle', docTitle.trim());
+      formData.append('docType', docType);
+      formData.append('docRevision', docRevision.trim());
+      formData.append('docClassification', docClassification);
+      formData.append('folderId', String(docTargetFolder.id));
+      if (docTargetSubFolder) {
+        formData.append('subFolderId', docTargetSubFolder.id);
+        formData.append('subFolderName', docTargetSubFolder.name);
+      }
+      formData.append('uploader', user?.name || 'Admin QMS');
+
+      await fetch('/api/r2/upload', {
+        method: 'POST',
+        body: formData,
+      });
+    } catch (err) {
+      console.warn('R2/Supabase upload skipped (running in offline/demo mode):', err);
+    } finally {
+      setIsUploading(false);
+    }
 
     const newDoc: MasterDocItem = {
       id: `doc-${Date.now()}`,
@@ -1669,6 +1703,7 @@ export default function MasterlistPage() {
                     onChange={e => {
                       const file = e.target.files?.[0];
                       if (file) {
+                        setDocSelectedFile(file);
                         setDocFileName(file.name);
                         const mb = (file.size / (1024 * 1024)).toFixed(2);
                         setDocFileSize(`${mb} MB`);
@@ -1686,7 +1721,7 @@ export default function MasterlistPage() {
                   {docFileName ? (
                     <div style={{ textAlign: 'center' }}>
                       <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#071c2c' }}>{docFileName}</span>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>{docFileSize} &bull; Siap diunggah</div>
+                      <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600 }}>{docFileSize} &bull; Berkas siap disimpan ke Cloudflare R2</div>
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center' }}>
@@ -1701,6 +1736,7 @@ export default function MasterlistPage() {
                 <button
                   type="button"
                   onClick={() => setIsAddDocOpen(false)}
+                  disabled={isUploading}
                   style={{
                     padding: '8px 16px',
                     borderRadius: '6px',
@@ -1715,6 +1751,7 @@ export default function MasterlistPage() {
                 </button>
                 <button
                   type="submit"
+                  disabled={isUploading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1722,15 +1759,15 @@ export default function MasterlistPage() {
                     padding: '8px 20px',
                     borderRadius: '6px',
                     border: 'none',
-                    background: '#071c2c',
+                    background: isUploading ? '#94a3b8' : '#071c2c',
                     color: '#ffffff',
                     fontSize: '12.5px',
                     fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: isUploading ? 'not-allowed' : 'pointer',
                   }}
                 >
                   <FilePlus size={14} />
-                  Simpan Dokumen
+                  {isUploading ? 'Menyimpan ke R2 & Database…' : 'Simpan Dokumen'}
                 </button>
               </div>
             </form>
