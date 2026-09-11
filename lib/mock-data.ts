@@ -52,45 +52,14 @@ export interface DistributionItem {
   distributedAt: string;
 }
 
-export const DOCUMENTS: Document[] = [
-  { id: '1', number: 'SOP-GEO-001', title: 'Soil Investigation Procedure', type: 'SOP', department: 'Geotechnical', owner: 'Ahmad Fauzi', revision: 'Rev.02', status: 'CURRENT', effectiveDate: '2026-08-01', reviewDate: '2027-08-01', classification: 'INTERNAL', description: 'Standard operating procedure for soil investigation activities.' },
-  { id: '2', number: 'WI-OPS-002', title: 'Excavation Safety Work Instruction', type: 'Work Instruction', department: 'Operations', owner: 'Budi Santoso', revision: 'Rev.01', status: 'CURRENT', effectiveDate: '2026-07-15', reviewDate: '2027-07-15', classification: 'INTERNAL', description: 'Safety requirements for excavation work.' },
-  { id: '3', number: 'POL-QHSE-001', title: 'QHSSE Management Policy', type: 'Policy', department: 'QHSSE', owner: 'Citra Dewi', revision: 'Rev.03', status: 'CURRENT', effectiveDate: '2026-06-01', reviewDate: '2027-06-01', classification: 'PUBLIC', description: 'Company QHSSE management policy document.' },
-  { id: '4', number: 'FRM-HR-003', title: 'Employee Safety Induction Form', type: 'Form', department: 'HR', owner: 'Dian Pratama', revision: 'Rev.01', status: 'CURRENT', effectiveDate: '2026-05-01', reviewDate: '2027-05-01', classification: 'INTERNAL', description: 'Form for new employee safety induction.' },
-  { id: '5', number: 'SOP-OPS-004', title: 'Heavy Equipment Operation Procedure', type: 'SOP', department: 'Operations', owner: 'Eko Susilo', revision: 'Rev.00', status: 'PENDING_APPROVAL', effectiveDate: '-', reviewDate: '-', classification: 'INTERNAL', description: 'SOP for operating heavy equipment on-site.' },
-  { id: '6', number: 'MAN-QHSE-001', title: 'QHSSE Management System Manual', type: 'Manual', department: 'QHSSE', owner: 'Citra Dewi', revision: 'Rev.02', status: 'CURRENT', effectiveDate: '2026-01-01', reviewDate: '2027-01-01', classification: 'INTERNAL', description: 'Main QHSSE management system manual.' },
-  { id: '7', number: 'PRO-GEO-002', title: 'Geotechnical Reporting Procedure', type: 'Procedure', department: 'Geotechnical', owner: 'Ahmad Fauzi', revision: 'Rev.01', status: 'DRAFT', effectiveDate: '-', reviewDate: '-', classification: 'INTERNAL', description: 'Procedure for geotechnical reporting.' },
-  { id: '8', number: 'SOP-ENV-001', title: 'Environmental Monitoring SOP', type: 'SOP', department: 'Environment', owner: 'Fitri Handayani', revision: 'Rev.01', status: 'CURRENT', effectiveDate: '2026-03-01', reviewDate: '2027-03-01', classification: 'INTERNAL', description: 'SOP for environmental monitoring activities.' },
-  { id: '9', number: 'WI-SAFE-003', title: 'PPE Inspection Work Instruction', type: 'Work Instruction', department: 'QHSSE', owner: 'Gunawan Wicaksono', revision: 'Rev.00', status: 'REJECTED', effectiveDate: '-', reviewDate: '-', classification: 'INTERNAL', description: 'Work instruction for PPE inspection.' },
-  { id: '10', number: 'SOP-GEO-001', title: 'Soil Investigation Procedure', type: 'SOP', department: 'Geotechnical', owner: 'Ahmad Fauzi', revision: 'Rev.01', status: 'SUPERSEDED', effectiveDate: '2025-08-01', reviewDate: '2026-08-01', classification: 'INTERNAL', description: 'Previous version — superseded.' },
-  { id: '11', number: 'FRM-OPS-001', title: 'Daily Safety Inspection Form', type: 'Form', department: 'Operations', owner: 'Hendra Wijaya', revision: 'Rev.02', status: 'CURRENT', effectiveDate: '2026-04-01', reviewDate: '2027-04-01', classification: 'INTERNAL', description: 'Daily safety inspection checklist form.' },
-  { id: '12', number: 'TMP-HR-002', title: 'Safety Training Attendance Template', type: 'Template', department: 'HR', owner: 'Indah Lestari', revision: 'Rev.00', status: 'CURRENT', effectiveDate: '2026-02-01', reviewDate: '2027-02-01', classification: 'INTERNAL', description: 'Template for safety training attendance records.' },
-];
+export const DOCUMENTS: Document[] = [];
 
-export const APPROVAL_QUEUE: ApprovalItem[] = [
-  { id: '1', docNumber: 'SOP-OPS-004', title: 'Heavy Equipment Operation Procedure', submittedBy: 'Eko Susilo', department: 'Operations', revision: 'Rev.00', submittedAt: '2026-09-03', daysWaiting: 2, type: 'SOP' },
-  { id: '2', docNumber: 'PRO-ENV-003', title: 'Waste Disposal Procedure', submittedBy: 'Fitri Handayani', department: 'Environment', revision: 'Rev.01', submittedAt: '2026-09-01', daysWaiting: 4, type: 'Procedure' },
-  { id: '3', docNumber: 'WI-GEO-005', title: 'Borehole Logging Work Instruction', submittedBy: 'Ahmad Fauzi', department: 'Geotechnical', revision: 'Rev.00', submittedAt: '2026-08-30', daysWaiting: 6, type: 'Work Instruction' },
-];
+export const APPROVAL_QUEUE: ApprovalItem[] = [];
 
-export const DISTRIBUTION: DistributionItem[] = [
-  { id: '1', docNumber: 'SOP-GEO-001', title: 'Soil Investigation Procedure', revision: 'Rev.02', recipients: 25, acknowledged: 21, pending: 3, overdue: 1, distributedAt: '2026-08-02' },
-  { id: '2', docNumber: 'POL-QHSE-001', title: 'QHSSE Management Policy', revision: 'Rev.03', recipients: 150, acknowledged: 132, pending: 15, overdue: 3, distributedAt: '2026-06-02' },
-  { id: '3', docNumber: 'WI-OPS-002', title: 'Excavation Safety Work Instruction', revision: 'Rev.01', recipients: 40, acknowledged: 38, pending: 2, overdue: 0, distributedAt: '2026-07-16' },
-  { id: '4', docNumber: 'MAN-QHSE-001', title: 'QHSSE Management System Manual', revision: 'Rev.02', recipients: 80, acknowledged: 55, pending: 18, overdue: 7, distributedAt: '2026-01-15' },
-];
+export const DISTRIBUTION: DistributionItem[] = [];
 
-export const AUDIT_LOGS: AuditLog[] = [
-  { id: '1', action: 'PUBLISH_DOCUMENT', user: 'Hendra Pratama', role: 'Admin Master', entity: 'SOP-GEO-001 Rev.02', timestamp: '2026-08-01 09:14:22', detail: 'Dokumen disahkan manual oleh Admin Master dan didistribusikan ke divisi terkait', type: 'publish' },
-  { id: '2', action: 'APPROVE_DOCUMENT', user: 'Hendra Pratama', role: 'Admin Master', entity: 'SOP-GEO-001 Rev.02', timestamp: '2026-07-31 16:30:05', detail: 'Manual approval diberikan oleh Admin Master setelah penandatanganan berkas dan pengunggahan dokumen ber-TTD', type: 'approve' },
-  { id: '3', action: 'SUBMIT_DOCUMENT', user: 'Ahmad Fauzi', role: 'Staff', entity: 'SOP-GEO-001 Rev.02', timestamp: '2026-07-28 14:05:00', detail: 'Dokumen diajukan oleh Staff ke antrean approval manual Admin Master', type: 'create' },
-  { id: '4', action: 'CREATE_REVISION', user: 'Ahmad Fauzi', role: 'Staff', entity: 'SOP-GEO-001 Rev.02', timestamp: '2026-07-27 10:30:00', detail: 'Draf revisi baru dibuat dari Rev.01', type: 'revise' },
-  { id: '5', action: 'ACKNOWLEDGE_DOCUMENT', user: 'Ahmad Fauzi', role: 'Staff', entity: 'SOP-GEO-001 Rev.02', timestamp: '2026-08-03 08:45:33', detail: 'Staff mengonfirmasi penerimaan dan pemahaman dokumen terkendali', type: 'acknowledge' },
-  { id: '6', action: 'REJECT_DOCUMENT', user: 'Hendra Pratama', role: 'Admin Master', entity: 'WI-SAFE-003 Rev.00', timestamp: '2026-09-01 15:20:00', detail: 'Catatan Admin Master: Matriks identifikasi bahaya belum lengkap pada Bagian 4. Dikembalikan ke Staff.', type: 'reject' },
-  { id: '7', action: 'DISTRIBUTE_DOCUMENT', user: 'Hendra Pratama', role: 'Admin Master', entity: 'POL-QHSE-001 Rev.03', timestamp: '2026-06-02 09:00:00', detail: 'Distribusi salinan terkendali ke seluruh divisi (150 penerima)', type: 'distribute' },
-  { id: '8', action: 'CREATE_DOCUMENT', user: 'Ahmad Fauzi', role: 'Staff', entity: 'SOP-OPS-004 Rev.00', timestamp: '2026-09-02 14:00:00', detail: 'Pendaftaran berkas baru oleh Staff ke antrean registrasi', type: 'create' },
-  { id: '9', action: 'SUPERSEDE_DOCUMENT', user: 'Hendra Pratama', role: 'Admin Master', entity: 'SOP-GEO-001 Rev.01', timestamp: '2026-08-01 09:14:22', detail: 'Status revisi lama diperbarui menjadi superseded setelah rilis Rev.02', type: 'archive' },
-];
+export const AUDIT_LOGS: AuditLog[] = [];
+
 
 export type UserRole = 'staff' | 'admin';
 

@@ -56,44 +56,8 @@ const DEPT_OPTIONS = [
 ];
 
 /* ─── Mock initial suggestions ──────────────────────────────── */
-const INITIAL_SUGGESTIONS: Suggestion[] = [
-  {
-    id: 'SGS-001',
-    nama: 'Ahmad Fauzi',
-    dept: 'Geotechnical Operation',
-    judul: 'Perbaikan Alur Distribusi Dokumen Lapangan',
-    masalah: 'Saat ini distribusi dokumen SOP ke tim lapangan membutuhkan waktu 3-5 hari karena proses manual print & kirim fisik ke kapal survei. Kru sering menggunakan revisi lama.',
-    idePerbaikan: 'Implementasi sistem digital notification langsung ke tablet lapangan saat dokumen baru dirilis, sehingga kru selalu mendapat versi terbaru secara real-time.',
-    foto: null,
-    fotoName: null,
-    status: 'Baru',
-    createdAt: '05/09/2026',
-  },
-  {
-    id: 'SGS-002',
-    nama: 'Budi Santoso',
-    dept: 'Mechanical & Construction',
-    judul: 'Optimasi Jadwal Preventive Maintenance Rig',
-    masalah: 'Jadwal preventive maintenance sering bertabrakan dengan jadwal operasi offshore, menyebabkan penundaan maintenance dan potensi kerusakan equipment.',
-    idePerbaikan: 'Buat calendar terintegrasi antara schedule operasi dan maintenance, dengan auto-alert 2 minggu sebelum jadwal PM jatuh tempo.',
-    foto: null,
-    fotoName: null,
-    status: 'Ditinjau',
-    createdAt: '03/09/2026',
-  },
-  {
-    id: 'SGS-003',
-    nama: 'Siti Rahayu',
-    dept: 'QHSE',
-    judul: 'Digitalisasi Form Inspeksi Harian',
-    masalah: 'Form inspeksi harian masih menggunakan kertas, sehingga data sulit direkap dan sering hilang saat transit kapal.',
-    idePerbaikan: 'Gunakan form digital via tablet dengan auto-sync ke server saat koneksi tersedia, termasuk fitur foto bukti inspeksi.',
-    foto: null,
-    fotoName: null,
-    status: 'Diterima',
-    createdAt: '01/09/2026',
-  },
-];
+const INITIAL_SUGGESTIONS: Suggestion[] = [];
+
 
 /* ─── Status badge styles ───────────────────────────────────── */
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string }> = {

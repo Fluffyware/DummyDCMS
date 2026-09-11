@@ -17,158 +17,8 @@ interface MasterlistEntry {
   status: 'CURRENT' | 'SUPERSEDED' | 'DRAFT';
 }
 
-const MASTERLIST_ENTRIES: MasterlistEntry[] = [
-  {
-    id: 1,
-    dept: 'Geotechnical Operation',
-    jenis: 'SOP',
-    number: 'SOP-GEO-001',
-    judul: 'Offshore Soil Investigation & Rotary Drilling Procedure',
-    released: '01/08/2026',
-    revisi: 'Rev.02',
-    status: 'CURRENT',
-  },
-  {
-    id: 2,
-    dept: 'Mechanical & Construction',
-    jenis: 'Instruksi Kerja (WI)',
-    number: 'WI-OPS-002',
-    judul: 'Excavation Safety, Heavy Winching & Deck Operations',
-    released: '15/07/2026',
-    revisi: 'Rev.01',
-    status: 'CURRENT',
-  },
-  {
-    id: 3,
-    dept: 'QHSE',
-    jenis: 'Kebijakan (Policy)',
-    number: 'POL-QHSE-001',
-    judul: 'QHSSE Corporate Management Policy & Zero Harm Mandate',
-    released: '01/06/2026',
-    revisi: 'Rev.03',
-    status: 'CURRENT',
-  },
-  {
-    id: 4,
-    dept: 'Human Resources',
-    jenis: 'Formulir',
-    number: 'FRM-HR-003',
-    judul: 'Employee Safety Induction & Offshore Readiness Checklist',
-    released: '01/05/2026',
-    revisi: 'Rev.01',
-    status: 'CURRENT',
-  },
-  {
-    id: 5,
-    dept: 'Mechanical & Construction',
-    jenis: 'SOP',
-    number: 'SOP-OPS-004',
-    judul: 'Heavy Equipment & Seabed CPT Deployment Procedure',
-    released: '20/04/2026',
-    revisi: 'Rev.00',
-    status: 'CURRENT',
-  },
-  {
-    id: 6,
-    dept: 'QHSE',
-    jenis: 'Manual',
-    number: 'MAN-QHSE-001',
-    judul: 'Integrated Management System (IMS) QHSSE Manual',
-    released: '01/01/2026',
-    revisi: 'Rev.02',
-    status: 'CURRENT',
-  },
-  {
-    id: 7,
-    dept: 'Geotechnical Operation',
-    jenis: 'Prosedur',
-    number: 'PRO-GEO-002',
-    judul: 'Geotechnical Core Logging & Sample Lithology Reporting',
-    released: '12/03/2026',
-    revisi: 'Rev.01',
-    status: 'CURRENT',
-  },
-  {
-    id: 8,
-    dept: 'QHSE',
-    jenis: 'SOP',
-    number: 'SOP-ENV-001',
-    judul: 'Marine Environmental Monitoring & Waste Disposal SOP',
-    released: '01/03/2026',
-    revisi: 'Rev.01',
-    status: 'CURRENT',
-  },
-  {
-    id: 9,
-    dept: 'QHSE',
-    jenis: 'Instruksi Kerja (WI)',
-    number: 'WI-SAFE-003',
-    judul: 'PPE Inspection & Offshore Rig Lifting Gear Certification',
-    released: '18/02/2026',
-    revisi: 'Rev.00',
-    status: 'CURRENT',
-  },
-  {
-    id: 10,
-    dept: 'Geophysical Operation',
-    jenis: 'Formulir',
-    number: 'FRM-OPS-001',
-    judul: 'Daily Safety Inspection & Pre-Shift Toolbox Talk (TBT) Record',
-    released: '01/04/2026',
-    revisi: 'Rev.02',
-    status: 'CURRENT',
-  },
-  {
-    id: 11,
-    dept: 'Human Resources',
-    jenis: 'Template',
-    number: 'TMP-HR-002',
-    judul: 'Offshore Safety Training Attendance & Competency Log Template',
-    released: '01/02/2026',
-    revisi: 'Rev.00',
-    status: 'CURRENT',
-  },
-  {
-    id: 12,
-    dept: 'Geotechnical Operation',
-    jenis: 'SOP',
-    number: 'SOP-LAB-001',
-    judul: 'Soil Mechanics Triaxial Shear & Oedometer Testing Standard',
-    released: '10/01/2026',
-    revisi: 'Rev.02',
-    status: 'CURRENT',
-  },
-  {
-    id: 13,
-    dept: 'Commercial',
-    jenis: 'Prosedur',
-    number: 'PRO-PRJ-003',
-    judul: 'Client QHSSE Bridging & Offshore Survey SIMOPS Protocol',
-    released: '05/01/2026',
-    revisi: 'Rev.01',
-    status: 'CURRENT',
-  },
-  {
-    id: 14,
-    dept: 'Facility',
-    jenis: 'Pedoman',
-    number: 'GDL-ENG-002',
-    judul: 'Downhole Piezocone Penetrometer (PCPT) Calibration Guidelines',
-    released: '15/12/2025',
-    revisi: 'Rev.01',
-    status: 'CURRENT',
-  },
-  {
-    id: 15,
-    dept: 'Finance',
-    jenis: 'Prosedur',
-    number: 'PRO-AUD-001',
-    judul: 'Financial Invoicing & Payment Reconciliation Procedure',
-    released: '01/12/2025',
-    revisi: 'Rev.02',
-    status: 'CURRENT',
-  },
-];
+const MASTERLIST_ENTRIES: MasterlistEntry[] = [];
+
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -856,7 +706,9 @@ export default function DashboardPage() {
               {paginatedEntries.length === 0 ? (
                 <tr>
                   <td colSpan={6} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                    Tidak ada dokumen yang sesuai dengan pencarian &quot;{searchTerm}&quot;
+                    {searchTerm
+                      ? `Tidak ada dokumen yang sesuai dengan pencarian "${searchTerm}"`
+                      : 'Belum ada dokumen yang terdaftar dalam masterlist.'}
                   </td>
                 </tr>
               ) : (
