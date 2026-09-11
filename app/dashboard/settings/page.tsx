@@ -43,21 +43,21 @@ const DOC_TYPES = [
 ];
 
 const DEPARTMENTS = [
-  { id: 1, name: 'QHSSE', code: 'QHSSE', manager: 'Citra Dewi', active: true },
-  { id: 2, name: 'Geotechnical', code: 'GEO', manager: 'Ahmad Fauzi', active: true },
-  { id: 3, name: 'Operations', code: 'OPS', manager: 'Bambang Nugroho', active: true },
-  { id: 4, name: 'HR & General Affairs', code: 'HR', manager: 'Dian Pratama', active: true },
-  { id: 5, name: 'Environment', code: 'ENV', manager: 'Fitri Handayani', active: true },
-  { id: 6, name: 'Finance & Accounting', code: 'FIN', manager: 'Adi Kusuma', active: false },
-  { id: 7, name: 'Engineering', code: 'ENG', manager: 'Rudi Santoso', active: true },
-  { id: 8, name: 'Information Technology', code: 'IT', manager: 'Hendra Wijaya', active: true },
+  { id: 1, name: 'QHSE', code: 'QHSE', active: true },
+  { id: 2, name: 'Geotechnical', code: 'GEO', active: true },
+  { id: 3, name: 'Operations', code: 'OPS', active: true },
+  { id: 4, name: 'HR & General Affairs', code: 'HR', active: true },
+  { id: 5, name: 'Environment', code: 'ENV', active: true },
+  { id: 6, name: 'Finance & Accounting', code: 'FIN', active: false },
+  { id: 7, name: 'Engineering', code: 'ENG', active: true },
+  { id: 8, name: 'Information Technology', code: 'IT', active: true },
 ];
 
 const USERS_APPROVAL = [
-  { id: 1, name: 'Hendra Wijaya', dept: 'QHSSE', role: 'Admin Master', level: 1, active: true },
-  { id: 2, name: 'Citra Dewi', dept: 'QHSSE', role: 'Admin Master', level: 1, active: true },
-  { id: 3, name: 'Reza Firmansyah', dept: 'QHSSE', role: 'Staff', level: 0, active: true },
-  { id: 4, name: 'Dimas Pratama', dept: 'Engineering', role: 'Staff', level: 0, active: true },
+  { id: 1, name: 'Hendra Pratama', dept: 'QHSE', role: 'Admin QHSE', active: true },
+  { id: 2, name: 'Citra Dewi', dept: 'QHSE', role: 'Admin QHSE', active: true },
+  { id: 3, name: 'Ahmad Fauzi', dept: 'Geotechnical & Survey Operations', role: 'Staff', active: true },
+  { id: 4, name: 'Dimas Pratama', dept: 'Engineering', role: 'Staff', active: true },
 ];
 
 const APPROVAL_STANDARDS = [
@@ -65,7 +65,7 @@ const APPROVAL_STANDARDS = [
     id: 1,
     name: 'Alur Approval Manual 2-Tingkat',
     applies: 'Seluruh Jenis Dokumen',
-    steps: ['Pengajuan Dokumen oleh Staff', 'Verifikasi & Review Admin Master', 'Upload Berkas TTD & Approval Resmi', 'Publikasi & Distribusi'],
+    steps: ['Pengajuan Dokumen oleh Staff', 'Verifikasi & Review Admin QHSE', 'Upload Berkas TTD & Approval Resmi', 'Publikasi & Distribusi'],
     active: true,
   },
 ];
@@ -770,8 +770,7 @@ export default function SettingsPage() {
                   >
                     <Building2 size={14} strokeWidth={1.75} color={d.active ? '#0369a1' : '#94a3b8'} style={{ flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 500, color: d.active ? '#1e293b' : '#94a3b8' }}>{d.name}</div>
-                      <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '1px' }}>PIC: {d.manager}</div>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: d.active ? '#1e293b' : '#94a3b8' }}>{d.name}</div>
                     </div>
                     <span style={{
                       fontFamily: 'var(--font-mono, monospace)',
@@ -821,8 +820,8 @@ export default function SettingsPage() {
                     {/* Avatar */}
                     <div style={{
                       width: 32, height: 32, borderRadius: '8px',
-                      background: u.level === 1 ? '#071c2c' : '#f1f5f9',
-                      color: u.level === 1 ? '#ffffff' : '#475569',
+                      background: u.role === 'Admin QHSE' ? '#071c2c' : '#f1f5f9',
+                      color: u.role === 'Admin QHSE' ? '#ffffff' : '#475569',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '11px', fontWeight: 700, flexShrink: 0,
                       letterSpacing: '0.04em',
@@ -835,9 +834,9 @@ export default function SettingsPage() {
                     </div>
                     <span style={{
                       fontSize: '11px', fontWeight: 600,
-                      color: u.role === 'Admin Master' ? '#0369a1' : '#64748b',
-                      background: u.role === 'Admin Master' ? '#f0f9ff' : '#f8fafc',
-                      border: `1px solid ${u.role === 'Admin Master' ? '#bae6fd' : '#e2e8f0'}`,
+                      color: u.role === 'Admin QHSE' ? '#0369a1' : '#64748b',
+                      background: u.role === 'Admin QHSE' ? '#f0f9ff' : '#f8fafc',
+                      border: `1px solid ${u.role === 'Admin QHSE' ? '#bae6fd' : '#e2e8f0'}`,
                       padding: '2px 8px', borderRadius: '6px',
                     }}>
                       {u.role}

@@ -246,7 +246,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Tile 2: Distribusi Dokumen (Admin Master Only) */}
+          {/* Tile 2: Distribusi Dokumen (Admin QHSE Only) */}
           {user?.role !== 'staff' && (
             <div
               onClick={() => router.push('/dashboard/distribution')}

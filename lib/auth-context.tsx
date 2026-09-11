@@ -28,7 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (parsed.role === 'admin' || parsed.role === 'staff') {
-          setUser(parsed);
+          const freshUser = DEMO_USERS[parsed.role as UserRole];
+          setUser(freshUser);
+          localStorage.setItem('qhsse_demo_user', JSON.stringify(freshUser));
         } else {
           setUser(DEMO_USERS.admin);
           localStorage.setItem('qhsse_demo_user', JSON.stringify(DEMO_USERS.admin));

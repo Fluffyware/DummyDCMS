@@ -171,11 +171,11 @@ export default function DistributionPage() {
           </span>
 
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#071c2c', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
-            Otoritas Khusus Admin Master
+            Otoritas Khusus Admin QHSE
           </h2>
 
           <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6, margin: '0 0 28px' }}>
-            Akun <strong>Staff</strong> tidak memiliki hak akses ke modul <strong>Distribusi Dokumen</strong>. Modul ini diperuntukkan khusus bagi <em>Document Controller / Admin Master</em> untuk mengelola dan mendistribusikan salinan dokumen resmi.
+            Akun <strong>Staff</strong> tidak memiliki hak akses ke modul <strong>Distribusi Dokumen</strong>. Modul ini diperuntukkan khusus bagi <em>Document Controller / Admin QHSE</em> untuk mengelola dan mendistribusikan salinan dokumen resmi.
           </p>
 
           <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>

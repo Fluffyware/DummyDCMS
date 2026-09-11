@@ -6,8 +6,8 @@ import { useAuth } from '@/lib/auth-context';
 import { DEMO_USERS } from '@/lib/mock-data';
 
 const ROLES = [
-  { key: 'admin', icon: '👑', name: 'Admin Master', desc: 'Otoritas penuh, approval manual dokumen & kontrol sistem' },
-  { key: 'staff', icon: '👤', name: 'Staff',        desc: 'Akses Masterlist Dokumen Terkontrol & Pengajuan Saran & Ide' },
+  { key: 'admin', icon: '👑', name: 'Admin QHSE', desc: 'Otoritas penuh, approval manual dokumen & kontrol sistem QHSE' },
+  { key: 'staff', icon: '👤', name: 'Staff',      desc: 'Akses Masterlist Dokumen Terkontrol & Pengajuan Saran & Ide' },
 ];
 
 export default function LoginPage() {
@@ -53,7 +53,7 @@ export default function LoginPage() {
           <div style={{ marginTop: 'var(--sp-8)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
             {[
               'Document lifecycle management',
-              'Alur manual approval terverifikasi (Staff → Admin Master)',
+              'Alur manual approval terverifikasi (Staff → Admin QHSE)',
               'Distribution & acknowledgement tracking',
               'Complete audit trail & compliance',
             ].map(f => (

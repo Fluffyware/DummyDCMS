@@ -59,7 +59,7 @@ const SECTIONS: { id: 'core' | 'docs' | 'governance'; title: string }[] = [
 
 const ROLE_LABELS: Record<string, string> = {
   staff: 'Staff',
-  admin: 'Admin Master',
+  admin: 'Admin QHSE',
 };
 
 const PAGE_TITLES: Record<string, string> = {
@@ -518,9 +518,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   boxShadow: activeUser.role === 'admin' ? '0 1px 4px rgba(0, 0, 0, 0.2)' : 'none',
                   transition: 'all 0.15s',
                 }}
-                title="Mode Admin Master (Otoritas Manual Approval)"
+                title="Mode Admin QHSE (Otoritas Manual Approval)"
               >
-                <span>{isMobile ? 'Admin' : 'Admin Master'}</span>
+                <span>{isMobile ? 'Admin' : 'Admin QHSE'}</span>
               </button>
               <button
                 type="button"
