@@ -22,6 +22,8 @@ import {
   Briefcase,
   Menu,
   X,
+  LogOut,
+  User,
 } from 'lucide-react';
 
 /* ─── Types ──────────────────────────────────────────────────── */
@@ -80,7 +82,7 @@ const TRANSITION = { duration: 0.28, ease: [0.4, 0, 0.2, 1] as [number,number,nu
 
 /* ─── Main Layout ─────────────────────────────────────────────── */
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, logout, login, loginAsUser } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -88,6 +90,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Authentication guard: if session is invalid or missing, redirect to login
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.replace('/login');
+    }
+  }, [isLoading, user, router]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -109,7 +118,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     });
   }, [router]);
 
-  const activeUser = user || DEMO_USERS.admin;
+  // Loading state while checking authentication
+  if (isLoading || !user) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#071c2c',
+        color: '#ffffff',
+        gap: '14px',
+      }}>
+        <div style={{
+          width: '36px',
+          height: '36px',
+          border: '3px solid rgba(255,255,255,0.15)',
+          borderTopColor: '#38bdf8',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 500, margin: 0 }}>
+          Memverifikasi sesi &amp; hak akses...
+        </p>
+      </div>
+    );
+  }
+
+  const activeUser = user;
 
   const navKeys  = ROLE_NAV[activeUser.role] || ROLE_NAV.admin;
   const navItems = navKeys.map(k => ALL_NAV[k]).filter(Boolean);
@@ -494,40 +531,53 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 10, flexShrink: 0 }}>
-            {/* Topbar interactive account switcher */}
+            {/* Topbar User Profile & Session Menu */}
             <div style={{ position: 'relative' }}>
               <button
                 type="button"
-                id="account-switcher-btn"
+                id="user-profile-btn"
                 onClick={() => setAccountMenuOpen(o => !o)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: isMobile ? '4px' : '7px',
-                  padding: isMobile ? '4px 8px' : '5px 11px',
+                  gap: isMobile ? '5px' : '8px',
+                  padding: isMobile ? '4px 8px' : '5px 12px',
                   background: 'rgba(0, 0, 0, 0.35)',
                   border: '1px solid rgba(255, 255, 255, 0.16)',
                   borderRadius: 8,
                   color: '#ffffff',
                   cursor: 'pointer',
-                  fontSize: isMobile ? '10.5px' : '11.5px',
+                  fontSize: isMobile ? '11px' : '12px',
                   fontWeight: 600,
                   transition: 'all 0.15s ease',
                   outline: 'none',
                 }}
-                title="Ganti Akun Pengguna (Admin QMS Rizal/Khabil atau Staff Dept)"
+                title="Profil Pengguna & Sesi"
               >
-                <span>{activeUser.role === 'admin' ? '👑' : '🏢'}</span>
-                <span style={{ maxWidth: isMobile ? '80px' : '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <div style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  background: activeUser.role === 'admin' ? '#0284c7' : '#059669',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                }}>
+                  {activeUser.avatar || initials}
+                </div>
+                <span style={{ maxWidth: isMobile ? '90px' : '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {activeUser.name}
                 </span>
                 <span style={{
                   fontSize: '9.5px',
                   fontWeight: 700,
-                  padding: '1px 5px',
+                  padding: '1px 6px',
                   borderRadius: '4px',
-                  background: activeUser.role === 'admin' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255, 255, 255, 0.12)',
-                  color: activeUser.role === 'admin' ? '#38bdf8' : '#e2e8f0',
+                  background: activeUser.role === 'admin' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                  color: activeUser.role === 'admin' ? '#38bdf8' : '#34d399',
                 }}>
                   {activeUser.role === 'admin' ? 'Admin' : 'Staff'}
                 </span>
@@ -545,118 +595,149 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       position: 'absolute',
                       top: 'calc(100% + 8px)',
                       right: 0,
-                      width: '270px',
+                      width: '280px',
                       background: '#ffffff',
-                      borderRadius: '10px',
+                      borderRadius: '12px',
                       border: '1px solid #e2e8f0',
-                      boxShadow: '0 12px 30px rgba(0,0,0,0.18)',
+                      boxShadow: '0 12px 32px rgba(0,0,0,0.18)',
                       zIndex: 9000,
                       overflow: 'hidden',
-                      padding: '6px',
                     }}
                   >
-                    <div style={{ padding: '7px 10px 4px', fontSize: '10px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      👑 Admin QMS (2 Akun)
-                    </div>
-                    {ALL_USERS.filter(u => u.role === 'admin').map(u => {
-                      const isCurrent = activeUser.id === u.id || (activeUser.name === u.name && activeUser.role === 'admin');
-                      return (
-                        <button
-                          key={u.id}
-                          onClick={() => {
-                            loginAsUser(u.id);
-                            setAccountMenuOpen(false);
-                          }}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '7px 10px',
-                            borderRadius: '6px',
-                            border: 'none',
-                            background: isCurrent ? '#f0f9ff' : 'transparent',
-                            color: isCurrent ? '#0284c7' : '#1e293b',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'background 0.12s ease',
-                          }}
-                          onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.background = '#f8fafc'; }}
-                          onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.background = 'transparent'; }}
-                        >
-                          <div>
-                            <div style={{ fontSize: '12.5px', fontWeight: isCurrent ? 700 : 600 }}>{u.name}</div>
-                            <div style={{ fontSize: '10.5px', color: '#64748b' }}>{u.email}</div>
+                    {/* User Info Header */}
+                    <div style={{ padding: '14px 16px', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '8px',
+                          background: activeUser.role === 'admin' ? '#071c2c' : '#047857',
+                          color: '#ffffff',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '13px',
+                          fontWeight: 800,
+                          flexShrink: 0,
+                        }}>
+                          {activeUser.avatar || initials}
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#071c2c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {activeUser.name}
                           </div>
-                          {isCurrent && <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: 700 }}>✓ Aktif</span>}
-                        </button>
-                      );
-                    })}
+                          <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {activeUser.email}
+                          </div>
+                        </div>
+                      </div>
 
-                    <div style={{ margin: '6px 0', borderTop: '1px solid #f1f5f9' }} />
-
-                    <div style={{ padding: '5px 10px 4px', fontSize: '10px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      🏢 Staff Departemen (1 Akun / Dept)
-                    </div>
-                    <div style={{ maxHeight: '180px', overflowY: 'auto' }}>
-                      {ALL_USERS.filter(u => u.role === 'staff').map(u => {
-                        const isCurrent = activeUser.id === u.id || (activeUser.department === u.department && activeUser.role === 'staff');
-                        return (
-                          <button
-                            key={u.id}
-                            onClick={() => {
-                              loginAsUser(u.id);
-                              setAccountMenuOpen(false);
-                            }}
-                            style={{
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '6px 10px',
-                              borderRadius: '6px',
-                              border: 'none',
-                              background: isCurrent ? '#f0f9ff' : 'transparent',
-                              color: isCurrent ? '#0284c7' : '#1e293b',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                              transition: 'background 0.12s ease',
-                            }}
-                            onMouseEnter={e => { if (!isCurrent) e.currentTarget.style.background = '#f8fafc'; }}
-                            onMouseLeave={e => { if (!isCurrent) e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            <div>
-                              <div style={{ fontSize: '12px', fontWeight: isCurrent ? 700 : 500 }}>{u.department}</div>
-                              <div style={{ fontSize: '10.5px', color: '#64748b' }}>{u.email}</div>
-                            </div>
-                            {isCurrent && <span style={{ fontSize: '10.5px', color: '#0284c7', fontWeight: 700 }}>✓ Aktif</span>}
-                          </button>
-                        );
-                      })}
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
+                        <span style={{
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          background: activeUser.role === 'admin' ? '#e0f2fe' : '#dcfce7',
+                          color: activeUser.role === 'admin' ? '#0284c7' : '#15803d',
+                        }}>
+                          {activeUser.roleName || (activeUser.role === 'admin' ? 'Admin QMS' : 'Staff')}
+                        </span>
+                        <span style={{
+                          fontSize: '10.5px',
+                          fontWeight: 600,
+                          padding: '2px 7px',
+                          borderRadius: '4px',
+                          background: '#f1f5f9',
+                          color: '#475569',
+                        }}>
+                          Dept: {activeUser.department}
+                        </span>
+                      </div>
                     </div>
 
-                    <div style={{ margin: '6px 0', borderTop: '1px solid #f1f5f9' }} />
+                    {/* Session Security Details */}
+                    <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
+                        <span>Status Sesi</span>
+                        <span style={{ color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a' }} />
+                          Terverifikasi
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
+                        <span>Username / ID</span>
+                        <span style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600, color: '#1e293b' }}>
+                          {activeUser.username}
+                        </span>
+                      </div>
+                    </div>
 
-                    <button
-                      onClick={() => {
-                        logout();
-                        router.push('/login');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '7px 10px',
-                        borderRadius: '6px',
-                        border: 'none',
-                        background: '#fef2f2',
-                        color: '#dc2626',
-                        fontSize: '11.5px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                      }}
-                    >
-                      Keluar (Sign Out)
-                    </button>
+                    {/* Menu Actions */}
+                    <div style={{ padding: '6px' }}>
+                      <button
+                        onClick={() => {
+                          setAccountMenuOpen(false);
+                          router.push('/dashboard/settings');
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#334155',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background 0.12s ease',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                      >
+                        <Settings size={14} color="#64748b" />
+                        <span>Pengaturan Akun</span>
+                      </button>
+
+                      <div style={{ margin: '4px 0', borderTop: '1px solid #f1f5f9' }} />
+
+                      <button
+                        onClick={() => {
+                          setAccountMenuOpen(false);
+                          logout();
+                          router.replace('/login');
+                        }}
+                        style={{
+                          width: '100%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 10px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: '#fef2f2',
+                          color: '#dc2626',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          transition: 'background 0.12s ease',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; }}
+                      >
+                        <LogOut size={14} color="#dc2626" />
+                        <span>Keluar (Sign Out)</span>
+                      </button>
+
+                      <div style={{ padding: '6px 8px 2px', fontSize: '10px', color: '#94a3b8', lineHeight: 1.4, textAlign: 'center' }}>
+                        Untuk mengganti akun, silakan keluar dan masuk dengan akun yang dituju.
+                      </div>
+                    </div>
                   </div>
                 </>
               )}

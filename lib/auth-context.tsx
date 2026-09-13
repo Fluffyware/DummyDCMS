@@ -28,43 +28,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session from localStorage or initialize with default demo user (Rizal)
+    // Restore session from localStorage if present and valid
     try {
       const stored = localStorage.getItem('qhsse_demo_user');
       if (stored) {
         const parsed = JSON.parse(stored);
-        const matched = ALL_USERS.find(u => u.id === parsed.id || u.email === parsed.email || u.username === parsed.username);
+        const matched = ALL_USERS.find(
+          u => u.id === parsed.id || 
+               u.username.toLowerCase() === parsed.username?.toLowerCase() || 
+               u.email.toLowerCase() === parsed.email?.toLowerCase()
+        );
         if (matched) {
           setUser(matched);
-          localStorage.setItem('qhsse_demo_user', JSON.stringify(matched));
-        } else if (parsed.role && DEMO_USERS[parsed.role as UserRole]) {
-          const freshUser = DEMO_USERS[parsed.role as UserRole];
-          setUser(freshUser);
-          localStorage.setItem('qhsse_demo_user', JSON.stringify(freshUser));
         } else {
-          setUser(ALL_USERS[0]);
-          localStorage.setItem('qhsse_demo_user', JSON.stringify(ALL_USERS[0]));
+          setUser(null);
+          localStorage.removeItem('qhsse_demo_user');
         }
       } else {
-        const defaultUser = ALL_USERS[0];
-        setUser(defaultUser);
-        localStorage.setItem('qhsse_demo_user', JSON.stringify(defaultUser));
+        setUser(null);
       }
     } catch {
-      const defaultUser = ALL_USERS[0];
-      setUser(defaultUser);
+      setUser(null);
+      localStorage.removeItem('qhsse_demo_user');
     }
     setIsLoading(false);
   }, []);
 
-  const loginAsUser = async (userId: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 400));
-    const target = ALL_USERS.find(u => u.id === userId);
-    if (target) {
-      setUser(target);
-      localStorage.setItem('qhsse_demo_user', JSON.stringify(target));
-      return true;
-    }
+  const loginAsUser = async (_userId: string): Promise<boolean> => {
+    // In production, switching accounts directly without password is disabled for security
     return false;
   };
 
