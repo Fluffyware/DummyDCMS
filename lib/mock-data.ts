@@ -106,7 +106,7 @@ export const ALL_USERS: UserProfile[] = [
   // ── 1 Akun Tiap Departemen (Staff, Password: 12345) ─────────────
   {
     id: 'staff-geo',
-    username: 'geotechnical',
+    username: 'GT',
     password: '12345',
     name: 'Staff Geotechnical',
     email: 'geotechnical@thi.co.id',
@@ -118,7 +118,7 @@ export const ALL_USERS: UserProfile[] = [
   },
   {
     id: 'staff-ops',
-    username: 'operations',
+    username: 'OP',
     password: '12345',
     name: 'Staff Operations',
     email: 'operations@thi.co.id',
@@ -130,7 +130,7 @@ export const ALL_USERS: UserProfile[] = [
   },
   {
     id: 'staff-eng',
-    username: 'engineering',
+    username: 'EN',
     password: '12345',
     name: 'Staff Engineering',
     email: 'engineering@thi.co.id',
@@ -142,7 +142,7 @@ export const ALL_USERS: UserProfile[] = [
   },
   {
     id: 'staff-hr',
-    username: 'hr',
+    username: 'HR',
     password: '12345',
     name: 'Staff HR & General Affairs',
     email: 'hr.ga@thi.co.id',
@@ -154,7 +154,7 @@ export const ALL_USERS: UserProfile[] = [
   },
   {
     id: 'staff-fin',
-    username: 'finance',
+    username: 'FA',
     password: '12345',
     name: 'Staff Finance & Accounting',
     email: 'finance@thi.co.id',
@@ -166,7 +166,7 @@ export const ALL_USERS: UserProfile[] = [
   },
   {
     id: 'staff-it',
-    username: 'it',
+    username: 'IT',
     password: '12345',
     name: 'Staff Information Technology',
     email: 'it@thi.co.id',
@@ -178,7 +178,7 @@ export const ALL_USERS: UserProfile[] = [
   },
   {
     id: 'staff-env',
-    username: 'environment',
+    username: 'EV',
     password: '12345',
     name: 'Staff Environment',
     email: 'environment@thi.co.id',
@@ -190,7 +190,7 @@ export const ALL_USERS: UserProfile[] = [
   },
   {
     id: 'staff-com',
-    username: 'commercial',
+    username: 'CL',
     password: '12345',
     name: 'Staff Commercial & Logistics',
     email: 'commercial@thi.co.id',

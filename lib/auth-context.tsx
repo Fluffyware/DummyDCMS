@@ -76,35 +76,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const cleanUser = usernameInput.trim().toLowerCase();
     const cleanPass = passwordInput.trim();
 
-    // Password validation: 12345
-    if (cleanPass !== '12345') {
-      return { success: false, error: 'Password salah! Gunakan password: 12345' };
-    }
-
-    // Find matching user
+    // Find matching user by username, email, or department code
     let target = ALL_USERS.find(
       u => u.username.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser
     );
 
-    // Aliases support
+    // Support code aliases and full department names
     if (!target) {
       if (cleanUser === 'rizal') target = ALL_USERS.find(u => u.id === 'admin-rizal');
       else if (cleanUser === 'khabil') target = ALL_USERS.find(u => u.id === 'admin-khabil');
-      else if (cleanUser === 'geo' || cleanUser === 'geotechnical') target = ALL_USERS.find(u => u.id === 'staff-geo');
-      else if (cleanUser === 'ops' || cleanUser === 'operations') target = ALL_USERS.find(u => u.id === 'staff-ops');
-      else if (cleanUser === 'eng' || cleanUser === 'engineering') target = ALL_USERS.find(u => u.id === 'staff-eng');
-      else if (cleanUser === 'hr' || cleanUser === 'ga' || cleanUser === 'hr.ga') target = ALL_USERS.find(u => u.id === 'staff-hr');
-      else if (cleanUser === 'fin' || cleanUser === 'finance') target = ALL_USERS.find(u => u.id === 'staff-fin');
-      else if (cleanUser === 'it') target = ALL_USERS.find(u => u.id === 'staff-it');
-      else if (cleanUser === 'env' || cleanUser === 'environment') target = ALL_USERS.find(u => u.id === 'staff-env');
-      else if (cleanUser === 'com' || cleanUser === 'commercial' || cleanUser === 'logistics') target = ALL_USERS.find(u => u.id === 'staff-com');
-      else if (cleanUser === 'dept') target = ALL_USERS.find(u => u.id === 'staff-geo');
+      else if (cleanUser === 'gt' || cleanUser === 'geotechnical' || cleanUser === 'geo') target = ALL_USERS.find(u => u.id === 'staff-geo');
+      else if (cleanUser === 'op' || cleanUser === 'operations' || cleanUser === 'ops') target = ALL_USERS.find(u => u.id === 'staff-ops');
+      else if (cleanUser === 'en' || cleanUser === 'engineering' || cleanUser === 'eng') target = ALL_USERS.find(u => u.id === 'staff-eng');
+      else if (cleanUser === 'hr' || cleanUser === 'ga' || cleanUser === 'hr.ga' || cleanUser === 'hr & general affairs') target = ALL_USERS.find(u => u.id === 'staff-hr');
+      else if (cleanUser === 'fa' || cleanUser === 'finance' || cleanUser === 'fin' || cleanUser === 'finance & accounting') target = ALL_USERS.find(u => u.id === 'staff-fin');
+      else if (cleanUser === 'it' || cleanUser === 'information technology') target = ALL_USERS.find(u => u.id === 'staff-it');
+      else if (cleanUser === 'ev' || cleanUser === 'environment' || cleanUser === 'env') target = ALL_USERS.find(u => u.id === 'staff-env');
+      else if (cleanUser === 'cl' || cleanUser === 'commercial' || cleanUser === 'com' || cleanUser === 'commercial & logistics') target = ALL_USERS.find(u => u.id === 'staff-com');
     }
 
-    if (!target) {
+    // Production security: Generic error message for either invalid username or invalid password
+    if (!target || cleanPass !== '12345') {
       return {
         success: false,
-        error: 'Username tidak ditemukan. Gunakan "rizal", "khabil", atau nama departemen (contoh: "geotechnical", "ops", "hr", dll).',
+        error: 'Username atau password salah. Silakan periksa kembali.',
       };
     }
 

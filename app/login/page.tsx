@@ -3,50 +3,28 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { ALL_USERS, UserProfile } from '@/lib/mock-data';
+import { Eye, EyeOff, Lock, User, ShieldAlert, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
   const { loginWithCredentials } = useAuth();
   const router = useRouter();
 
-  // Category tab: 'admin' | 'staff'
-  const [accountType, setAccountType] = useState<'admin' | 'staff'>('admin');
-  const [selectedUserId, setSelectedUserId] = useState<string>('admin-rizal');
-  const [usernameInput, setUsernameInput] = useState('rizal');
-  const [passwordInput, setPasswordInput] = useState('12345');
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const adminUsers = ALL_USERS.filter(u => u.role === 'admin');
-  const staffUsers = ALL_USERS.filter(u => u.role === 'staff');
-
-  const selectedUser = ALL_USERS.find(u => u.id === selectedUserId) || ALL_USERS[0];
-
-  const handleSelectAccount = (user: UserProfile) => {
-    setSelectedUserId(user.id);
-    setUsernameInput(user.username);
-    setPasswordInput('12345');
-    setErrorMessage('');
-  };
-
-  const handleSwitchTab = (type: 'admin' | 'staff') => {
-    setAccountType(type);
-    if (type === 'admin') {
-      setSelectedUserId('admin-rizal');
-      setUsernameInput('rizal');
-      setPasswordInput('12345');
-    } else {
-      setSelectedUserId('staff-geo');
-      setUsernameInput('geotechnical');
-      setPasswordInput('12345');
-    }
-    setErrorMessage('');
-  };
-
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!usernameInput.trim() || !passwordInput.trim()) {
+      setErrorMessage('Silakan isi username dan password Anda.');
+      return;
+    }
+
     setLoading(true);
     setErrorMessage('');
+
     const res = await loginWithCredentials(usernameInput, passwordInput);
     if (res.success) {
       router.push('/dashboard');
@@ -57,7 +35,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-page">
+    <div className="login-page" suppressHydrationWarning>
       {/* ── LEFT PANEL ── */}
       <div className="login-left">
         <div className="login-left-graphic" />
@@ -66,25 +44,25 @@ export default function LoginPage() {
           <div className="login-company-logo">🏭</div>
           <p className="login-tagline">PT Taka Hydrocore Indonesia</p>
           <h1 className="login-headline">
-            QHSSE Document<br />Management System
+            QHSSE Document<br />Control &amp; Management System
           </h1>
           <p className="login-body">
-            Centralized platform for quality, health, safety, security &amp; environmental document control. Manage controlled documents from creation to archival with full traceability.
+            Sistem terpusat pengendalian dokumen Quality, Health, Safety, Security &amp; Environmental. Mengelola dokumen terkendali mulai dari registrasi, peninjauan, hingga distribusi resmi secara aman dan terintegrasi.
           </p>
 
           {/* Feature list */}
           <div style={{ marginTop: 'var(--sp-8)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
             {[
-              'Document lifecycle management',
-              'Alur terverifikasi: Admin QMS (Rizal & Khabil) & PIC Departemen',
-              'Distribution & acknowledgement tracking',
-              'Complete audit trail & compliance',
+              'Siklus hidup dokumen terkendali & terstruktur',
+              'Akses terverifikasi berbasis divisi & otorisasi resmi',
+              'Pelacakan distribusi & konfirmasi tanda terima dokumen',
+              'Jejak audit menyeluruh sesuai standar ISO 9001 & SMK3',
             ].map(f => (
               <div key={f} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
                 <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, flexShrink: 0 }}>
                   ✓
                 </div>
-                <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.65)' }}>{f}</span>
+                <span style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.75)' }}>{f}</span>
               </div>
             ))}
           </div>
@@ -93,217 +71,169 @@ export default function LoginPage() {
 
       {/* ── RIGHT PANEL ── */}
       <div className="login-right">
-        <div className="login-form-wrap" style={{ maxWidth: '480px' }}>
-          <p className="login-tagline" style={{ color: 'var(--ink-faint)', fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 'var(--sp-2)' }}>
-            PT Taka Hydrocore Indonesia
+        <div className="login-form-wrap" style={{ maxWidth: '420px', width: '100%' }}>
+          <p className="login-tagline" style={{ color: 'var(--ink-faint)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 'var(--sp-2)' }}>
+            PT TAKA HYDROCORE INDONESIA
           </p>
           <h2 className="login-form-title">Sign in</h2>
-          <p className="login-form-sub">Masukkan username &amp; password atau klik profil akun di bawah.</p>
+          <p className="login-form-sub">Masukkan username &amp; password akun Anda untuk mengakses sistem.</p>
 
           <form onSubmit={handleLogin}>
             {errorMessage && (
               <div style={{
-                padding: '9px 12px',
+                padding: '10px 14px',
                 background: '#fef2f2',
                 border: '1px solid #fecaca',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 color: '#dc2626',
-                fontSize: '12.5px',
-                marginBottom: '14px',
+                fontSize: '13px',
+                marginBottom: '16px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '8px',
               }}>
-                <span>⚠️</span>
+                <ShieldAlert size={16} style={{ flexShrink: 0 }} />
                 <span>{errorMessage}</span>
               </div>
             )}
 
-            {/* Username / Password Fields */}
-            <div className="form-group">
-              <label className="form-label">Username</label>
-              <input
-                id="login-username"
-                className="form-input"
-                type="text"
-                required
-                value={usernameInput}
-                onChange={e => {
-                  setUsernameInput(e.target.value);
-                  setErrorMessage('');
-                }}
-                placeholder="Contoh: rizal, khabil, geotechnical"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <input
-                id="login-password"
-                className="form-input"
-                type="password"
-                required
-                value={passwordInput}
-                onChange={e => {
-                  setPasswordInput(e.target.value);
-                  setErrorMessage('');
-                }}
-                placeholder="Password (12345)"
-              />
+            {/* Username Field */}
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label className="form-label" htmlFor="login-username" style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                Username
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="login-username"
+                  className="form-input"
+                  type="text"
+                  required
+                  autoComplete="username"
+                  value={usernameInput}
+                  onChange={e => {
+                    setUsernameInput(e.target.value);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Masukkan username Anda"
+                  style={{
+                    paddingLeft: '38px',
+                    height: '46px',
+                    fontSize: '14px',
+                    borderRadius: '8px',
+                  }}
+                />
+                <User
+                  size={17}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#94a3b8',
+                    pointerEvents: 'none',
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="login-divider">Atau Pilih Cepat Akun</div>
+            {/* Password Field */}
+            <div className="form-group" style={{ marginBottom: '22px' }}>
+              <label className="form-label" htmlFor="login-password" style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+                Password
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="login-password"
+                  className="form-input"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={passwordInput}
+                  onChange={e => {
+                    setPasswordInput(e.target.value);
+                    setErrorMessage('');
+                  }}
+                  placeholder="Masukkan password Anda"
+                  style={{
+                    paddingLeft: '38px',
+                    paddingRight: '40px',
+                    height: '46px',
+                    fontSize: '14px',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Lock
+                  size={17}
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: '#94a3b8',
+                    pointerEvents: 'none',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                  aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </div>
 
-          {/* Account Type Tabs */}
-          <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', marginBottom: '14px', gap: '3px' }}>
             <button
-              type="button"
-              onClick={() => handleSwitchTab('admin')}
+              id="login-submit"
+              type="submit"
+              className="btn btn-primary"
               style={{
-                flex: 1,
-                padding: '8px 12px',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '12.5px',
-                fontWeight: accountType === 'admin' ? 700 : 500,
-                background: accountType === 'admin' ? '#ffffff' : 'transparent',
-                color: accountType === 'admin' ? '#071c2c' : '#64748b',
-                boxShadow: accountType === 'admin' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                width: '100%',
+                height: 46,
+                fontSize: 14.5,
+                fontWeight: 600,
+                justifyContent: 'center',
+                gap: '8px',
+                borderRadius: '8px',
               }}
+              disabled={loading}
             >
-              👑 Admin QMS (2 Akun)
+              {loading ? (
+                'Memverifikasi...'
+              ) : (
+                <>
+                  <span>Masuk ke Sistem</span>
+                  <ArrowRight size={16} />
+                </>
+              )}
             </button>
-            <button
-              type="button"
-              onClick={() => handleSwitchTab('staff')}
-              style={{
-                flex: 1,
-                padding: '8px 12px',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '12.5px',
-                fontWeight: accountType === 'staff' ? 700 : 500,
-                background: accountType === 'staff' ? '#ffffff' : 'transparent',
-                color: accountType === 'staff' ? '#071c2c' : '#64748b',
-                boxShadow: accountType === 'staff' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              🏢 Akun Tiap Dept ({staffUsers.length})
-            </button>
-          </div>
-
-          {/* Accounts List */}
-          {accountType === 'admin' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-              {adminUsers.map(user => {
-                const isActive = selectedUserId === user.id;
-                return (
-                  <div
-                    key={user.id}
-                    id={`account-${user.id}`}
-                    onClick={() => handleSelectAccount(user)}
-                    style={{
-                      padding: '12px 14px',
-                      borderRadius: '8px',
-                      border: isActive ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                      background: isActive ? '#f0f9ff' : '#ffffff',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <div style={{
-                        width: '28px', height: '28px', borderRadius: '6px',
-                        background: isActive ? '#0284c7' : '#071c2c',
-                        color: '#ffffff',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '11px', fontWeight: 800,
-                      }}>
-                        {user.avatar}
-                      </div>
-                      <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#0284c7', background: '#e0f2fe', padding: '1px 6px', borderRadius: '4px' }}>
-                        Admin QMS
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#071c2c' }}>{user.name}</div>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{user.position}</div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '8px',
-              maxHeight: '220px',
-              overflowY: 'auto',
-              marginBottom: '14px',
-              paddingRight: '4px',
-            }}>
-              {staffUsers.map(user => {
-                const isActive = selectedUserId === user.id;
-                return (
-                  <div
-                    key={user.id}
-                    id={`account-${user.id}`}
-                    onClick={() => handleSelectAccount(user)}
-                    style={{
-                      padding: '9px 11px',
-                      borderRadius: '8px',
-                      border: isActive ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                      background: isActive ? '#f0f9ff' : '#ffffff',
-                      cursor: 'pointer',
-                      transition: 'all 0.12s ease',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{
-                        width: '24px', height: '24px', borderRadius: '5px',
-                        background: isActive ? '#0284c7' : '#f1f5f9',
-                        color: isActive ? '#ffffff' : '#334155',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '10px', fontWeight: 700, flexShrink: 0,
-                      }}>
-                        {user.avatar}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: '#071c2c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {user.department}
-                        </div>
-                        <div style={{ fontSize: '10.5px', color: '#64748b' }}>
-                          1 Akun Staff
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Active Preview */}
-          <div className="role-selected-preview" style={{ marginBottom: '14px' }}>
-            Signing in as: <strong>{selectedUser.name}</strong> ({selectedUser.department} &bull; {selectedUser.roleName})
-          </div>
-
-          <button
-            id="login-submit"
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', height: 46, fontSize: 14, justifyContent: 'center' }}
-            disabled={loading}
-          >
-            {loading ? 'Signing in…' : `Sign in as ${usernameInput} →`}
-          </button>
           </form>
 
-          <p style={{ marginTop: 'var(--sp-4)', fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', lineHeight: 1.6 }}>
-            Kredensial: <strong>rizal / 12345</strong>, <strong>khabil / 12345</strong>, atau <strong>[dept] / 12345</strong>
-          </p>
+          <div style={{
+            marginTop: 'var(--sp-6)',
+            paddingTop: 'var(--sp-4)',
+            borderTop: '1px solid #f1f5f9',
+            fontSize: 11.5,
+            color: '#94a3b8',
+            textAlign: 'center',
+            lineHeight: 1.5,
+          }}>
+            Akses sistem terbatas untuk personel PT Taka Hydrocore Indonesia yang terotorisasi.
+          </div>
         </div>
       </div>
     </div>

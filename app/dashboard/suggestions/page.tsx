@@ -41,18 +41,15 @@ interface Suggestion {
 
 /* ─── Department options (aligned with the rest of the system) ── */
 const DEPT_OPTIONS = [
-  'Finance',
-  'Purchasing',
-  'Human Resources',
-  'General Affairs',
-  'Commercial',
-  'Logistics',
-  'QHSE',
-  'Geotechnical Operation',
-  'Geophysical Operation',
-  'PPEC',
-  'Facility',
-  'Mechanical & Construction',
+  'Geotechnical',
+  'Operations',
+  'Engineering',
+  'HR & General Affairs',
+  'Finance & Accounting',
+  'Information Technology',
+  'Environment',
+  'Commercial & Logistics',
+  'QHSE & QMS',
 ];
 
 /* ─── Mock initial suggestions ──────────────────────────────── */
@@ -77,8 +74,8 @@ export default function SuggestionsPage() {
 
   const [suggestions, setSuggestions] = useState<Suggestion[]>(INITIAL_SUGGESTIONS);
 
-  // ── Staff form state ──
-  const [formNama, setFormNama] = useState(user?.name || '');
+  // ── Staff form state (Kosong default, tidak ada autofill) ──
+  const [formNama, setFormNama] = useState('');
   const [formDept, setFormDept] = useState('');
   const [formJudul, setFormJudul] = useState('');
   const [formMasalah, setFormMasalah] = useState('');
@@ -138,7 +135,7 @@ export default function SuggestionsPage() {
     };
 
     setSuggestions(prev => [newSuggestion, ...prev]);
-    setFormNama(user?.name || '');
+    setFormNama('');
     setFormDept('');
     setFormJudul('');
     setFormMasalah('');
