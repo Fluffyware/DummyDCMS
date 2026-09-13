@@ -7,7 +7,9 @@
 create extension if not exists "uuid-ossp";
 
 -- ── 1. PROFILES & USER ACCOUNTS ──────────────────────────────────────
-create table if not exists public.profiles (
+drop table if exists public.profiles cascade;
+
+create table public.profiles (
   id text primary key,
   username text unique not null,
   password text not null default '12345',
@@ -127,15 +129,35 @@ alter table public.audit_logs enable row level security;
 alter table public.suggestions enable row level security;
 
 -- Allow read access to authenticated & anon for demo/portal
+drop policy if exists "Allow public read profiles" on public.profiles;
 create policy "Allow public read profiles" on public.profiles for select using (true);
+
+drop policy if exists "Allow public read documents" on public.documents;
 create policy "Allow public read documents" on public.documents for select using (true);
+
+drop policy if exists "Allow public insert documents" on public.documents;
 create policy "Allow public insert documents" on public.documents for insert with check (true);
+
+drop policy if exists "Allow public update documents" on public.documents;
 create policy "Allow public update documents" on public.documents for update using (true);
+
+drop policy if exists "Allow public delete documents" on public.documents;
 create policy "Allow public delete documents" on public.documents for delete using (true);
 
+drop policy if exists "Allow public read folders" on public.master_folders;
 create policy "Allow public read folders" on public.master_folders for select using (true);
+
+drop policy if exists "Allow public read subfolders" on public.master_subfolders;
 create policy "Allow public read subfolders" on public.master_subfolders for select using (true);
+
+drop policy if exists "Allow public read audit_logs" on public.audit_logs;
 create policy "Allow public read audit_logs" on public.audit_logs for select using (true);
+
+drop policy if exists "Allow public insert audit_logs" on public.audit_logs;
 create policy "Allow public insert audit_logs" on public.audit_logs for insert with check (true);
+
+drop policy if exists "Allow public read suggestions" on public.suggestions;
 create policy "Allow public read suggestions" on public.suggestions for select using (true);
+
+drop policy if exists "Allow public insert suggestions" on public.suggestions;
 create policy "Allow public insert suggestions" on public.suggestions for insert with check (true);
