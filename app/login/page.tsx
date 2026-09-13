@@ -6,12 +6,15 @@ import { useAuth } from '@/lib/auth-context';
 import { ALL_USERS, UserProfile } from '@/lib/mock-data';
 
 export default function LoginPage() {
-  const { loginAsUser } = useAuth();
+  const { loginWithCredentials } = useAuth();
   const router = useRouter();
 
   // Category tab: 'admin' | 'staff'
   const [accountType, setAccountType] = useState<'admin' | 'staff'>('admin');
   const [selectedUserId, setSelectedUserId] = useState<string>('admin-rizal');
+  const [usernameInput, setUsernameInput] = useState('rizal');
+  const [passwordInput, setPasswordInput] = useState('12345');
+  const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
   const adminUsers = ALL_USERS.filter(u => u.role === 'admin');
@@ -21,21 +24,36 @@ export default function LoginPage() {
 
   const handleSelectAccount = (user: UserProfile) => {
     setSelectedUserId(user.id);
+    setUsernameInput(user.username);
+    setPasswordInput('12345');
+    setErrorMessage('');
   };
 
   const handleSwitchTab = (type: 'admin' | 'staff') => {
     setAccountType(type);
     if (type === 'admin') {
       setSelectedUserId('admin-rizal');
+      setUsernameInput('rizal');
+      setPasswordInput('12345');
     } else {
       setSelectedUserId('staff-geo');
+      setUsernameInput('geotechnical');
+      setPasswordInput('12345');
     }
+    setErrorMessage('');
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLoading(true);
-    await loginAsUser(selectedUserId);
-    router.push('/dashboard');
+    setErrorMessage('');
+    const res = await loginWithCredentials(usernameInput, passwordInput);
+    if (res.success) {
+      router.push('/dashboard');
+    } else {
+      setErrorMessage(res.error || 'Username atau password salah.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,31 +98,60 @@ export default function LoginPage() {
             PT Taka Hydrocore Indonesia
           </p>
           <h2 className="login-form-title">Sign in</h2>
-          <p className="login-form-sub">Pilih akun untuk masuk ke portal QHSSE DMS.</p>
+          <p className="login-form-sub">Masukkan username &amp; password atau klik profil akun di bawah.</p>
 
-          {/* Email/Password Fields (Auto-filled by selection) */}
-          <div className="form-group">
-            <label className="form-label">Email address</label>
-            <input
-              id="login-email"
-              className="form-input"
-              type="email"
-              value={selectedUser.email}
-              readOnly
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input
-              id="login-password"
-              className="form-input"
-              type="password"
-              value="••••••••••••"
-              readOnly
-            />
-          </div>
+          <form onSubmit={handleLogin}>
+            {errorMessage && (
+              <div style={{
+                padding: '9px 12px',
+                background: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '6px',
+                color: '#dc2626',
+                fontSize: '12.5px',
+                marginBottom: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <span>⚠️</span>
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-          <div className="login-divider">Pilih Akun Pengguna</div>
+            {/* Username / Password Fields */}
+            <div className="form-group">
+              <label className="form-label">Username</label>
+              <input
+                id="login-username"
+                className="form-input"
+                type="text"
+                required
+                value={usernameInput}
+                onChange={e => {
+                  setUsernameInput(e.target.value);
+                  setErrorMessage('');
+                }}
+                placeholder="Contoh: rizal, khabil, geotechnical"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <input
+                id="login-password"
+                className="form-input"
+                type="password"
+                required
+                value={passwordInput}
+                onChange={e => {
+                  setPasswordInput(e.target.value);
+                  setErrorMessage('');
+                }}
+                placeholder="Password (12345)"
+              />
+            </div>
+
+            <div className="login-divider">Atau Pilih Cepat Akun</div>
 
           {/* Account Type Tabs */}
           <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', marginBottom: '14px', gap: '3px' }}>
@@ -245,16 +292,17 @@ export default function LoginPage() {
 
           <button
             id="login-submit"
+            type="submit"
             className="btn btn-primary"
             style={{ width: '100%', height: 46, fontSize: 14, justifyContent: 'center' }}
-            onClick={handleLogin}
             disabled={loading}
           >
-            {loading ? 'Signing in…' : `Sign in as ${selectedUser.name} →`}
+            {loading ? 'Signing in…' : `Sign in as ${usernameInput} →`}
           </button>
+          </form>
 
           <p style={{ marginTop: 'var(--sp-4)', fontSize: 12, color: 'var(--ink-faint)', textAlign: 'center', lineHeight: 1.6 }}>
-            Demo Sistem QHSSE DMS &bull; 2 Akun Admin QMS (Rizal &amp; Khabil) + 1 Akun Tiap Dept
+            Kredensial: <strong>rizal / 12345</strong>, <strong>khabil / 12345</strong>, atau <strong>[dept] / 12345</strong>
           </p>
         </div>
       </div>

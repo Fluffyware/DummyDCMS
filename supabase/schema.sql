@@ -9,6 +9,8 @@ create extension if not exists "uuid-ossp";
 -- ── 1. PROFILES & USER ACCOUNTS ──────────────────────────────────────
 create table if not exists public.profiles (
   id text primary key,
+  username text unique not null,
+  password text not null default '12345',
   name text not null,
   email text unique not null,
   role text not null check (role in ('admin', 'staff')),
@@ -20,21 +22,23 @@ create table if not exists public.profiles (
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
--- Seed Data: 2 Akun Admin QMS & 8 Akun Staff Tiap Departemen
-insert into public.profiles (id, name, email, role, role_name, department, position, avatar)
+-- Seed Data: 2 Akun Admin QMS & 8 Akun Staff Tiap Departemen (Password: 12345)
+insert into public.profiles (id, username, password, name, email, role, role_name, department, position, avatar)
 values
-  ('admin-rizal', 'Rizal', 'rizal@thi.co.id', 'admin', 'Admin QMS', 'QHSE & QMS', 'Lead Quality & Management System', 'RZ'),
-  ('admin-khabil', 'Khabil', 'khabil@thi.co.id', 'admin', 'Admin QMS', 'QHSE & QMS', 'Document Controller & QMS Admin', 'KB'),
-  ('staff-geo', 'Staff Geotechnical', 'geotechnical@thi.co.id', 'staff', 'Staff Geotechnical', 'Geotechnical', 'Document Controller Geotechnical', 'GT'),
-  ('staff-ops', 'Staff Operations', 'operations@thi.co.id', 'staff', 'Staff Operations', 'Operations', 'Document Controller Operations', 'OP'),
-  ('staff-eng', 'Staff Engineering', 'engineering@thi.co.id', 'staff', 'Staff Engineering', 'Engineering', 'Document Controller Engineering', 'EN'),
-  ('staff-hr', 'Staff HR & General Affairs', 'hr.ga@thi.co.id', 'staff', 'Staff HR & GA', 'HR & General Affairs', 'Document Controller HR & GA', 'HR'),
-  ('staff-fin', 'Staff Finance & Accounting', 'finance@thi.co.id', 'staff', 'Staff Finance & Accounting', 'Finance & Accounting', 'Document Controller Finance', 'FA'),
-  ('staff-it', 'Staff Information Technology', 'it@thi.co.id', 'staff', 'Staff IT', 'Information Technology', 'Document Controller IT', 'IT'),
-  ('staff-env', 'Staff Environment', 'environment@thi.co.id', 'staff', 'Staff Environment', 'Environment', 'Document Controller Environment', 'EV'),
-  ('staff-com', 'Staff Commercial & Logistics', 'commercial@thi.co.id', 'staff', 'Staff Commercial & Logistics', 'Commercial & Logistics', 'Document Controller Commercial', 'CL')
+  ('admin-rizal', 'rizal', '12345', 'Rizal', 'rizal@thi.co.id', 'admin', 'Admin QMS', 'QHSE & QMS', 'Lead Quality & Management System', 'RZ'),
+  ('admin-khabil', 'khabil', '12345', 'Khabil', 'khabil@thi.co.id', 'admin', 'Admin QMS', 'QHSE & QMS', 'Document Controller & QMS Admin', 'KB'),
+  ('staff-geo', 'geotechnical', '12345', 'Staff Geotechnical', 'geotechnical@thi.co.id', 'staff', 'Staff Geotechnical', 'Geotechnical', 'Document Controller Geotechnical', 'GT'),
+  ('staff-ops', 'operations', '12345', 'Staff Operations', 'operations@thi.co.id', 'staff', 'Staff Operations', 'Operations', 'Document Controller Operations', 'OP'),
+  ('staff-eng', 'engineering', '12345', 'Staff Engineering', 'engineering@thi.co.id', 'staff', 'Staff Engineering', 'Engineering', 'Document Controller Engineering', 'EN'),
+  ('staff-hr', 'hr', '12345', 'Staff HR & General Affairs', 'hr.ga@thi.co.id', 'staff', 'Staff HR & GA', 'HR & General Affairs', 'Document Controller HR & GA', 'HR'),
+  ('staff-fin', 'finance', '12345', 'Staff Finance & Accounting', 'finance@thi.co.id', 'staff', 'Staff Finance & Accounting', 'Finance & Accounting', 'Document Controller Finance', 'FA'),
+  ('staff-it', 'it', '12345', 'Staff Information Technology', 'it@thi.co.id', 'staff', 'Staff IT', 'Information Technology', 'Document Controller IT', 'IT'),
+  ('staff-env', 'environment', '12345', 'Staff Environment', 'environment@thi.co.id', 'staff', 'Staff Environment', 'Environment', 'Document Controller Environment', 'EV'),
+  ('staff-com', 'commercial', '12345', 'Staff Commercial & Logistics', 'commercial@thi.co.id', 'staff', 'Staff Commercial & Logistics', 'Commercial & Logistics', 'Document Controller Commercial', 'CL')
 on conflict (id) do update
 set
+  username = excluded.username,
+  password = excluded.password,
   name = excluded.name,
   role = excluded.role,
   role_name = excluded.role_name,
