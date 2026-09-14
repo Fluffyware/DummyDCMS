@@ -124,6 +124,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     });
   }, [router]);
 
+  // Staff route protection
+  useEffect(() => {
+    if (user?.role === 'staff') {
+      const allowedHrefs = ROLE_NAV.staff.map(k => ALL_NAV[k]?.href).filter(Boolean);
+      if (!allowedHrefs.includes(pathname)) {
+        router.replace('/dashboard');
+      }
+    }
+  }, [user?.role, pathname, router]);
+
   // Prevent hydration mismatch during initial SSR reload
   if (!mounted) {
     return null;
@@ -167,20 +177,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const activeUser = user;
-
-  const navKeys  = ROLE_NAV[activeUser.role] || ROLE_NAV.admin;
+  const navKeys  = ROLE_NAV[activeUser?.role] || ROLE_NAV.admin;
   const navItems = navKeys.map(k => ALL_NAV[k]).filter(Boolean);
 
-  useEffect(() => {
-    if (activeUser.role === 'staff') {
-      const allowedHrefs = ROLE_NAV.staff.map(k => ALL_NAV[k]?.href).filter(Boolean);
-      if (!allowedHrefs.includes(pathname)) {
-        router.replace('/dashboard');
-      }
-    }
-  }, [activeUser.role, pathname, router]);
   const currentTitle = PAGE_TITLES[pathname] || 'Dashboard';
-  const initials = activeUser.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+  const initials = (activeUser?.name || 'User')
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   // Shared fade animate — text fades in/out in sync with width
   const labelAnimate = {

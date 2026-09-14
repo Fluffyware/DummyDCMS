@@ -119,6 +119,58 @@ export default function DistributionPage() {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Masterlist shared folders & docs
+  const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
+
+  useEffect(() => {
+    setMasterFolders(loadMasterFolders());
+  }, []);
+
+  const flattenedDocs = useMemo(() => getAllFlattenedDocs(masterFolders), [masterFolders]);
+
+  // Form State: Mode (NEW_DOC vs REVISION_UPDATE)
+  const [distMode, setDistMode] = useState<'NEW_DOC' | 'REVISION_UPDATE'>('NEW_DOC');
+
+  // Mode 1: Dokumen Baru
+  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
+  const [selectedSubFolderId, setSelectedSubFolderId] = useState<string>('');
+  const [dept, setDept] = useState('');
+  const [jenis, setJenis] = useState('');
+  const [docNumber, setDocNumber] = useState('');
+  const [judulDokumen, setJudulDokumen] = useState('');
+  const [revisiKe, setRevisiKe] = useState('00');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Mode 2: Update File Revisi
+  const [selectedExistingDocId, setSelectedExistingDocId] = useState<string>('');
+  const [newRevisionNumber, setNewRevisionNumber] = useState<string>('');
+  const [revisionNotes, setRevisionNotes] = useState<string>('');
+  const [selectedRevFile, setSelectedRevFile] = useState<File | null>(null);
+
+  const [errorMessage, setErrorMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const revFileInputRef = useRef<HTMLInputElement>(null);
+
+  // When selectedExistingDocId changes, auto-populate details and suggest next revision
+  const selectedExistingDoc = useMemo(() => {
+    return flattenedDocs.find(d => d.id === selectedExistingDocId) || null;
+  }, [flattenedDocs, selectedExistingDocId]);
+
+  useEffect(() => {
+    if (selectedExistingDoc) {
+      const curNum = parseInt(selectedExistingDoc.revision.replace(/\D/g, ''), 10) || 0;
+      const nextNum = curNum + 1;
+      setNewRevisionNumber(`Rev.${String(nextNum).padStart(2, '0')}`);
+    } else {
+      setNewRevisionNumber('');
+    }
+  }, [selectedExistingDoc]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   // If user is Staff, block access
   if (user?.role === 'staff') {
     return (
@@ -225,58 +277,6 @@ export default function DistributionPage() {
       </div>
     );
   }
-
-  // Masterlist shared folders & docs
-  const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
-
-  useEffect(() => {
-    setMasterFolders(loadMasterFolders());
-  }, []);
-
-  const flattenedDocs = useMemo(() => getAllFlattenedDocs(masterFolders), [masterFolders]);
-
-  // Form State: Mode (NEW_DOC vs REVISION_UPDATE)
-  const [distMode, setDistMode] = useState<'NEW_DOC' | 'REVISION_UPDATE'>('NEW_DOC');
-
-  // Mode 1: Dokumen Baru
-  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
-  const [selectedSubFolderId, setSelectedSubFolderId] = useState<string>('');
-  const [dept, setDept] = useState('');
-  const [jenis, setJenis] = useState('');
-  const [docNumber, setDocNumber] = useState('');
-  const [judulDokumen, setJudulDokumen] = useState('');
-  const [revisiKe, setRevisiKe] = useState('00');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-
-  // Mode 2: Update File Revisi
-  const [selectedExistingDocId, setSelectedExistingDocId] = useState<string>('');
-  const [newRevisionNumber, setNewRevisionNumber] = useState<string>('');
-  const [revisionNotes, setRevisionNotes] = useState<string>('');
-  const [selectedRevFile, setSelectedRevFile] = useState<File | null>(null);
-
-  const [errorMessage, setErrorMessage] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const revFileInputRef = useRef<HTMLInputElement>(null);
-
-  // When selectedExistingDocId changes, auto-populate details and suggest next revision
-  const selectedExistingDoc = useMemo(() => {
-    return flattenedDocs.find(d => d.id === selectedExistingDocId) || null;
-  }, [flattenedDocs, selectedExistingDocId]);
-
-  useEffect(() => {
-    if (selectedExistingDoc) {
-      const curNum = parseInt(selectedExistingDoc.revision.replace(/\D/g, ''), 10) || 0;
-      const nextNum = curNum + 1;
-      setNewRevisionNumber(`Rev.${String(nextNum).padStart(2, '0')}`);
-    } else {
-      setNewRevisionNumber('');
-    }
-  }, [selectedExistingDoc]);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
