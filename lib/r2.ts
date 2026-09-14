@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const accountId = process.env.R2_ACCOUNT_ID || '';
@@ -125,3 +125,34 @@ export async function deleteObjectFromR2(key: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Delete all objects with a given key prefix from Cloudflare R2
+ */
+export async function deleteObjectsByPrefix(prefix: string): Promise<boolean> {
+  const client = getR2Client();
+  if (!client) return false;
+
+  try {
+    const listCmd = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+    });
+    const listRes = await client.send(listCmd);
+    if (listRes.Contents && listRes.Contents.length > 0) {
+      for (const item of listRes.Contents) {
+        if (item.Key) {
+          await client.send(new DeleteObjectCommand({
+            Bucket: bucketName,
+            Key: item.Key,
+          }));
+        }
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error('Error deleting objects by prefix from R2:', error);
+    return false;
+  }
+}
+

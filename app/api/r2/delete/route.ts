@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isR2Configured, deleteObjectFromR2 } from '@/lib/r2';
+import { isR2Configured, deleteObjectFromR2, deleteObjectsByPrefix } from '@/lib/r2';
 import { getSupabaseServer } from '@/lib/supabase';
 
 export async function POST(req: NextRequest) {
@@ -10,12 +10,20 @@ export async function POST(req: NextRequest) {
     const supabaseServer = getSupabaseServer();
 
     if (type === 'document') {
-      // 1. Delete object from Cloudflare R2 if key is available
+      // 1. Delete object from Cloudflare R2
       if (r2Key && isR2Configured()) {
         try {
           await deleteObjectFromR2(r2Key);
         } catch (r2Err) {
           console.warn('R2 delete warning:', r2Err);
+        }
+      } else if (docNumber && isR2Configured()) {
+        // Fallback: Delete any object matching the document number prefix
+        try {
+          const cleanDocNum = docNumber.replace(/[^a-zA-Z0-9_-]/g, '_');
+          await deleteObjectsByPrefix(`documents/${cleanDocNum}`);
+        } catch (r2Err) {
+          console.warn('R2 delete prefix warning:', r2Err);
         }
       }
 

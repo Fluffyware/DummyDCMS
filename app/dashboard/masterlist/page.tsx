@@ -300,6 +300,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     parentFolderId?: number;
     parentSubFolderId?: string;
     docNumber?: string;
+    r2Key?: string;
   } | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -328,6 +329,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
       docNumber: doc.number,
       parentFolderId,
       parentSubFolderId,
+      r2Key: doc.r2Key,
     });
   };
 
@@ -335,7 +337,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     if (!deleteConfirm) return;
     setIsDeleting(true);
 
-    const { type, targetId, targetName, docNumber, parentFolderId } = deleteConfirm;
+    const { type, targetId, targetName, docNumber, parentFolderId, r2Key } = deleteConfirm;
 
     try {
       if (type === 'folder') {
@@ -418,6 +420,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
               type: 'document',
               docId: targetId,
               docNumber,
+              r2Key,
             }),
           });
         } catch (apiErr) {
@@ -1492,6 +1495,36 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                           >
                                             <Download size={13} />
                                           </button>
+
+                                          {isAdmin && (
+                                            <button
+                                              type="button"
+                                              onClick={() => promptDeleteDoc(doc, folder.id, sub.id)}
+                                              title={`Hapus Dokumen "${doc.number}"`}
+                                              style={{
+                                                background: '#fef2f2',
+                                                border: '1px solid #fecaca',
+                                                borderRadius: '4px',
+                                                padding: '5px 8px',
+                                                color: '#dc2626',
+                                                cursor: 'pointer',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                transition: 'all 0.12s ease',
+                                              }}
+                                              onMouseEnter={e => {
+                                                e.currentTarget.style.background = '#dc2626';
+                                                e.currentTarget.style.color = '#ffffff';
+                                              }}
+                                              onMouseLeave={e => {
+                                                e.currentTarget.style.background = '#fef2f2';
+                                                e.currentTarget.style.color = '#dc2626';
+                                              }}
+                                            >
+                                              <Trash2 size={13} strokeWidth={2} />
+                                            </button>
+                                          )}
                                         </div>
                                       </div>
                                     ))
