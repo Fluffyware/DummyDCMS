@@ -91,12 +91,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [isMobile, setIsMobile] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Authentication guard: if session is invalid or missing, redirect to login
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (mounted && !isLoading && !user) {
       router.replace('/login');
     }
-  }, [isLoading, user, router]);
+  }, [mounted, isLoading, user, router]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -118,28 +124,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     });
   }, [router]);
 
+  // Prevent hydration mismatch during initial SSR reload
+  if (!mounted) {
+    return null;
+  }
+
   // Loading state while checking authentication
   if (isLoading || !user) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#071c2c',
-        color: '#ffffff',
-        gap: '14px',
-      }}>
-        <div style={{
-          width: '36px',
-          height: '36px',
-          border: '3px solid rgba(255,255,255,0.15)',
-          borderTopColor: '#38bdf8',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite',
-        }} />
-        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 500, margin: 0 }}>
+      <div
+        suppressHydrationWarning
+        style={{
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#071c2c',
+          color: '#ffffff',
+          gap: '14px',
+        }}
+      >
+        <div
+          suppressHydrationWarning
+          style={{
+            width: '36px',
+            height: '36px',
+            border: '3px solid rgba(255,255,255,0.15)',
+            borderTopColor: '#38bdf8',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }}
+        />
+        <p
+          suppressHydrationWarning
+          style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 500, margin: 0 }}
+        >
           Memverifikasi sesi &amp; hak akses...
         </p>
       </div>
@@ -351,7 +371,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   );
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: 'var(--font-body)' }}>
+    <div
+      suppressHydrationWarning
+      style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#f8fafc', fontFamily: 'var(--font-body)' }}
+    >
 
       {/* ═══════════════════════════════════════════════════════
           DESKTOP SIDEBAR WRAPPER

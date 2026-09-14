@@ -30,6 +30,8 @@ import {
   ShieldAlert,
   History,
   CornerDownRight,
+  Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -233,6 +235,146 @@ export default function MasterlistPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  // ─── Modal Konfirmasi Hapus (Admin QMS) ───
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'folder' | 'subfolder' | 'document';
+    targetId: string | number;
+    targetName: string;
+    parentFolderId?: number;
+    parentSubFolderId?: string;
+    docNumber?: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const promptDeleteFolder = (folderId: number, folderName: string) => {
+    setDeleteConfirm({
+      type: 'folder',
+      targetId: folderId,
+      targetName: folderName,
+    });
+  };
+
+  const promptDeleteSubFolder = (folderId: number, subFolderId: string, subFolderName: string) => {
+    setDeleteConfirm({
+      type: 'subfolder',
+      targetId: subFolderId,
+      targetName: subFolderName,
+      parentFolderId: folderId,
+    });
+  };
+
+  const promptDeleteDoc = (doc: MasterDocItem, parentFolderId?: number, parentSubFolderId?: string) => {
+    setDeleteConfirm({
+      type: 'document',
+      targetId: doc.id,
+      targetName: `${doc.number} - ${doc.title}`,
+      docNumber: doc.number,
+      parentFolderId,
+      parentSubFolderId,
+    });
+  };
+
+  const executeDelete = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
+
+    const { type, targetId, targetName, docNumber, parentFolderId } = deleteConfirm;
+
+    try {
+      if (type === 'folder') {
+        const updated = folders.filter(f => f.id !== targetId);
+        setFolders(updated);
+        saveMasterFolders(updated);
+
+        try {
+          await fetch('/api/r2/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'folder', folderId: targetId }),
+          });
+        } catch (apiErr) {
+          console.warn('API delete folder skipped:', apiErr);
+        }
+
+        showToast(`Folder "${targetName}" berhasil dihapus.`);
+      } else if (type === 'subfolder') {
+        const removeSubRecursive = (subs: MasterSubFolder[]): MasterSubFolder[] => {
+          return subs
+            .filter(s => s.id !== targetId)
+            .map(s => ({
+              ...s,
+              subfolders: s.subfolders ? removeSubRecursive(s.subfolders) : [],
+            }));
+        };
+
+        const updated = folders.map(f => {
+          if (!parentFolderId || f.id === parentFolderId) {
+            return {
+              ...f,
+              subfolders: removeSubRecursive(f.subfolders || []),
+            };
+          }
+          return f;
+        });
+
+        setFolders(updated);
+        saveMasterFolders(updated);
+
+        try {
+          await fetch('/api/r2/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'subfolder', subFolderId: targetId }),
+          });
+        } catch (apiErr) {
+          console.warn('API delete subfolder skipped:', apiErr);
+        }
+
+        showToast(`Sub-folder "${targetName}" berhasil dihapus.`);
+      } else if (type === 'document') {
+        const removeDocRecursive = (subs: MasterSubFolder[]): MasterSubFolder[] => {
+          return subs.map(s => ({
+            ...s,
+            docs: (s.docs || []).filter(d => d.id !== targetId && d.number !== docNumber),
+            subfolders: s.subfolders ? removeDocRecursive(s.subfolders) : [],
+          }));
+        };
+
+        const updated = folders.map(f => ({
+          ...f,
+          docs: (f.docs || []).filter(d => d.id !== targetId && d.number !== docNumber),
+          subfolders: removeDocRecursive(f.subfolders || []),
+        }));
+
+        setFolders(updated);
+        saveMasterFolders(updated);
+
+        if (previewDoc && (previewDoc.id === targetId || previewDoc.number === docNumber)) {
+          setPreviewDoc(null);
+        }
+
+        try {
+          await fetch('/api/r2/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: 'document',
+              docId: targetId,
+              docNumber,
+            }),
+          });
+        } catch (apiErr) {
+          console.warn('API delete document skipped:', apiErr);
+        }
+
+        showToast(`Dokumen "${targetName}" berhasil dihapus.`);
+      }
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(null);
+    }
+  };
+
   // Generate realistic revision history & change notes
   const getDocRevisionHistory = (doc: MasterDocItem): RevisionLog[] => {
     const currentRevNum = parseInt(doc.revision.replace(/\D/g, ''), 10) || 0;
@@ -398,7 +540,10 @@ export default function MasterlistPage() {
 
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'var(--font-body)' }}>
+    <div
+      suppressHydrationWarning
+      style={{ padding: '24px 32px', maxWidth: '1400px', margin: '0 auto', fontFamily: 'var(--font-body)' }}
+    >
       {/* ─── Toast Feedback ─── */}
       {toastMessage && (
         <div
@@ -774,41 +919,77 @@ export default function MasterlistPage() {
                   {/* Right: Actions & Expand Toggle */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openAddDocModal(folder);
-                        }}
-                        title={`Tambah Dokumen langsung ke "${folder.name}"`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          padding: '4px 10px',
-                          background: '#f0f9ff',
-                          color: '#0284c7',
-                          border: '1px solid #bae6fd',
-                          borderRadius: '6px',
-                          fontSize: '11.5px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = '#0284c7';
-                          e.currentTarget.style.color = '#ffffff';
-                          e.currentTarget.style.borderColor = '#0284c7';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = '#f0f9ff';
-                          e.currentTarget.style.color = '#0284c7';
-                          e.currentTarget.style.borderColor = '#bae6fd';
-                        }}
-                      >
-                        <FilePlus size={13} strokeWidth={2.2} />
-                        <span>+ Tambah File</span>
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAddDocModal(folder);
+                          }}
+                          title={`Tambah Dokumen langsung ke "${folder.name}"`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px',
+                            padding: '4px 10px',
+                            background: '#f0f9ff',
+                            color: '#0284c7',
+                            border: '1px solid #bae6fd',
+                            borderRadius: '6px',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = '#0284c7';
+                            e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.borderColor = '#0284c7';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = '#f0f9ff';
+                            e.currentTarget.style.color = '#0284c7';
+                            e.currentTarget.style.borderColor = '#bae6fd';
+                          }}
+                        >
+                          <FilePlus size={13} strokeWidth={2.2} />
+                          <span>+ Tambah File</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            promptDeleteFolder(folder.id, folder.name);
+                          }}
+                          title={`Hapus Folder "${folder.name}"`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '28px',
+                            height: '28px',
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = '#dc2626';
+                            e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.borderColor = '#dc2626';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = '#fef2f2';
+                            e.currentTarget.style.color = '#dc2626';
+                            e.currentTarget.style.borderColor = '#fecaca';
+                          }}
+                        >
+                          <Trash2 size={13} strokeWidth={2} />
+                        </button>
+                      </>
                     )}
 
                     <div
@@ -875,41 +1056,77 @@ export default function MasterlistPage() {
 
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   {isAdmin && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openAddDocModal(folder, sub);
-                                      }}
-                                      title={`Tambah Dokumen ke "${sub.name}"`}
-                                      style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px',
-                                        padding: '3px 8px',
-                                        background: '#f0f9ff',
-                                        color: '#0284c7',
-                                        border: '1px solid #bae6fd',
-                                        borderRadius: '5px',
-                                        fontSize: '11px',
-                                        fontWeight: 600,
-                                        cursor: 'pointer',
-                                        transition: 'all 0.15s ease',
-                                      }}
-                                      onMouseEnter={e => {
-                                        e.currentTarget.style.background = '#0284c7';
-                                        e.currentTarget.style.color = '#ffffff';
-                                        e.currentTarget.style.borderColor = '#0284c7';
-                                      }}
-                                      onMouseLeave={e => {
-                                        e.currentTarget.style.background = '#f0f9ff';
-                                        e.currentTarget.style.color = '#0284c7';
-                                        e.currentTarget.style.borderColor = '#bae6fd';
-                                      }}
-                                    >
-                                      <FilePlus size={12} strokeWidth={2.2} />
-                                      <span>+ File</span>
-                                    </button>
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openAddDocModal(folder, sub);
+                                        }}
+                                        title={`Tambah Dokumen ke "${sub.name}"`}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '3px 8px',
+                                          background: '#f0f9ff',
+                                          color: '#0284c7',
+                                          border: '1px solid #bae6fd',
+                                          borderRadius: '5px',
+                                          fontSize: '11px',
+                                          fontWeight: 600,
+                                          cursor: 'pointer',
+                                          transition: 'all 0.15s ease',
+                                        }}
+                                        onMouseEnter={e => {
+                                          e.currentTarget.style.background = '#0284c7';
+                                          e.currentTarget.style.color = '#ffffff';
+                                          e.currentTarget.style.borderColor = '#0284c7';
+                                        }}
+                                        onMouseLeave={e => {
+                                          e.currentTarget.style.background = '#f0f9ff';
+                                          e.currentTarget.style.color = '#0284c7';
+                                          e.currentTarget.style.borderColor = '#bae6fd';
+                                        }}
+                                      >
+                                        <FilePlus size={12} strokeWidth={2.2} />
+                                        <span>+ File</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          promptDeleteSubFolder(folder.id, sub.id, sub.name);
+                                        }}
+                                        title={`Hapus Sub-Folder "${sub.name}"`}
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          width: '24px',
+                                          height: '24px',
+                                          background: '#fef2f2',
+                                          color: '#dc2626',
+                                          border: '1px solid #fecaca',
+                                          borderRadius: '5px',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.15s ease',
+                                        }}
+                                        onMouseEnter={e => {
+                                          e.currentTarget.style.background = '#dc2626';
+                                          e.currentTarget.style.color = '#ffffff';
+                                          e.currentTarget.style.borderColor = '#dc2626';
+                                        }}
+                                        onMouseLeave={e => {
+                                          e.currentTarget.style.background = '#fef2f2';
+                                          e.currentTarget.style.color = '#dc2626';
+                                          e.currentTarget.style.borderColor = '#fecaca';
+                                        }}
+                                      >
+                                        <Trash2 size={12} strokeWidth={2} />
+                                      </button>
+                                    </>
                                   )}
                                   {isSubExpanded ? <ChevronDown size={14} color="#64748b" /> : <ChevronRight size={14} color="#64748b" />}
                                 </div>
@@ -945,41 +1162,77 @@ export default function MasterlistPage() {
                                           </div>
                                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                             {isAdmin && (
-                                              <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  openAddDocModal(folder, childSub);
-                                                }}
-                                                title={`Tambah Dokumen ke "${childSub.name}"`}
-                                                style={{
-                                                  display: 'inline-flex',
-                                                  alignItems: 'center',
-                                                  gap: '4px',
-                                                  padding: '2px 7px',
-                                                  background: '#f0f9ff',
-                                                  color: '#0284c7',
-                                                  border: '1px solid #bae6fd',
-                                                  borderRadius: '4px',
-                                                  fontSize: '10.5px',
-                                                  fontWeight: 600,
-                                                  cursor: 'pointer',
-                                                  transition: 'all 0.15s ease',
-                                                }}
-                                                onMouseEnter={e => {
-                                                  e.currentTarget.style.background = '#0284c7';
-                                                  e.currentTarget.style.color = '#ffffff';
-                                                  e.currentTarget.style.borderColor = '#0284c7';
-                                                }}
-                                                onMouseLeave={e => {
-                                                  e.currentTarget.style.background = '#f0f9ff';
-                                                  e.currentTarget.style.color = '#0284c7';
-                                                  e.currentTarget.style.borderColor = '#bae6fd';
-                                                }}
-                                              >
-                                                <FilePlus size={11} strokeWidth={2.2} />
-                                                <span>+ File</span>
-                                              </button>
+                                              <>
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openAddDocModal(folder, childSub);
+                                                  }}
+                                                  title={`Tambah Dokumen ke "${childSub.name}"`}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    padding: '2px 7px',
+                                                    background: '#f0f9ff',
+                                                    color: '#0284c7',
+                                                    border: '1px solid #bae6fd',
+                                                    borderRadius: '4px',
+                                                    fontSize: '10.5px',
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease',
+                                                  }}
+                                                  onMouseEnter={e => {
+                                                    e.currentTarget.style.background = '#0284c7';
+                                                    e.currentTarget.style.color = '#ffffff';
+                                                    e.currentTarget.style.borderColor = '#0284c7';
+                                                  }}
+                                                  onMouseLeave={e => {
+                                                    e.currentTarget.style.background = '#f0f9ff';
+                                                    e.currentTarget.style.color = '#0284c7';
+                                                    e.currentTarget.style.borderColor = '#bae6fd';
+                                                  }}
+                                                >
+                                                  <FilePlus size={11} strokeWidth={2.2} />
+                                                  <span>+ File</span>
+                                                </button>
+
+                                                <button
+                                                  type="button"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    promptDeleteSubFolder(folder.id, childSub.id, childSub.name);
+                                                  }}
+                                                  title={`Hapus Sub-Folder "${childSub.name}"`}
+                                                  style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    width: '22px',
+                                                    height: '22px',
+                                                    background: '#fef2f2',
+                                                    color: '#dc2626',
+                                                    border: '1px solid #fecaca',
+                                                    borderRadius: '4px',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease',
+                                                  }}
+                                                  onMouseEnter={e => {
+                                                    e.currentTarget.style.background = '#dc2626';
+                                                    e.currentTarget.style.color = '#ffffff';
+                                                    e.currentTarget.style.borderColor = '#dc2626';
+                                                  }}
+                                                  onMouseLeave={e => {
+                                                    e.currentTarget.style.background = '#fef2f2';
+                                                    e.currentTarget.style.color = '#dc2626';
+                                                    e.currentTarget.style.borderColor = '#fecaca';
+                                                  }}
+                                                >
+                                                  <Trash2 size={11} strokeWidth={2} />
+                                                </button>
+                                              </>
                                             )}
                                             {isChildExpanded ? <ChevronDown size={13} color="#64748b" /> : <ChevronRight size={13} color="#64748b" />}
                                           </div>
@@ -1017,6 +1270,37 @@ export default function MasterlistPage() {
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                     <button onClick={() => { setModalTab('info'); setPreviewDoc(cDoc); }} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '4px 8px', color: '#334155', cursor: 'pointer', fontSize: '11px' }}>Lihat</button>
                                                     <button onClick={() => { setModalTab('history'); setPreviewDoc(cDoc); }} style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px', padding: '4px 8px', color: '#0369a1', cursor: 'pointer', fontSize: '11px' }}>Riwayat</button>
+                                                    {isAdmin && (
+                                                      <button
+                                                        type="button"
+                                                        onClick={() => promptDeleteDoc(cDoc, folder.id, childSub.id)}
+                                                        title={`Hapus Dokumen "${cDoc.number}"`}
+                                                        style={{
+                                                          background: '#fef2f2',
+                                                          border: '1px solid #fecaca',
+                                                          borderRadius: '4px',
+                                                          padding: '4px 8px',
+                                                          color: '#dc2626',
+                                                          cursor: 'pointer',
+                                                          fontSize: '11px',
+                                                          display: 'inline-flex',
+                                                          alignItems: 'center',
+                                                          gap: '3px',
+                                                          transition: 'all 0.15s ease',
+                                                        }}
+                                                        onMouseEnter={e => {
+                                                          e.currentTarget.style.background = '#dc2626';
+                                                          e.currentTarget.style.color = '#ffffff';
+                                                        }}
+                                                        onMouseLeave={e => {
+                                                          e.currentTarget.style.background = '#fef2f2';
+                                                          e.currentTarget.style.color = '#dc2626';
+                                                        }}
+                                                      >
+                                                        <Trash2 size={11} strokeWidth={2} />
+                                                        <span>Hapus</span>
+                                                      </button>
+                                                    )}
                                                   </div>
                                                 </div>
                                               ))
@@ -1271,6 +1555,38 @@ export default function MasterlistPage() {
                               >
                                 <Download size={13} />
                               </button>
+
+                              {isAdmin && (
+                                <button
+                                  type="button"
+                                  onClick={() => promptDeleteDoc(doc, folder.id)}
+                                  title={`Hapus Dokumen "${doc.number}"`}
+                                  style={{
+                                    background: '#fef2f2',
+                                    border: '1px solid #fecaca',
+                                    borderRadius: '5px',
+                                    padding: '5px 10px',
+                                    color: '#dc2626',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontSize: '12px',
+                                    transition: 'all 0.15s ease',
+                                  }}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.background = '#dc2626';
+                                    e.currentTarget.style.color = '#ffffff';
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.background = '#fef2f2';
+                                    e.currentTarget.style.color = '#dc2626';
+                                  }}
+                                >
+                                  <Trash2 size={13} strokeWidth={2} />
+                                  <span>Hapus</span>
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -2106,6 +2422,42 @@ export default function MasterlistPage() {
                 background: '#fafafa',
               }}
             >
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    promptDeleteDoc(previewDoc);
+                  }}
+                  title="Hapus dokumen kendali ini"
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    color: '#dc2626',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginRight: 'auto',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#dc2626';
+                    e.currentTarget.style.color = '#ffffff';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = '#fef2f2';
+                    e.currentTarget.style.color = '#dc2626';
+                  }}
+                >
+                  <Trash2 size={13} />
+                  <span>Hapus Dokumen</span>
+                </button>
+              )}
+
               <button
                 onClick={() => setPreviewDoc(null)}
                 style={{
@@ -2142,6 +2494,155 @@ export default function MasterlistPage() {
               >
                 <Download size={13} />
                 Unduh Dokumen Asli ({previewDoc.fileExt.toUpperCase()})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Modal Konfirmasi Hapus (Admin QMS) ─── */}
+      {deleteConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => {
+            if (!isDeleting) setDeleteConfirm(null);
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '460px',
+              width: '100%',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header with Red Icon */}
+            <div style={{ padding: '24px 24px 16px 24px', display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#dc2626',
+                  flexShrink: 0,
+                }}
+              >
+                <Trash2 size={22} strokeWidth={2.2} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                  {deleteConfirm.type === 'folder'
+                    ? 'Hapus Folder Dokumen'
+                    : deleteConfirm.type === 'subfolder'
+                    ? 'Hapus Sub-Folder'
+                    : 'Hapus Dokumen Kendali'}
+                </h3>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                  Apakah Anda yakin ingin menghapus{' '}
+                  <strong style={{ color: '#0f172a' }}>"{deleteConfirm.targetName}"</strong>?
+                  {deleteConfirm.type !== 'document' && (
+                    <span style={{ display: 'block', marginTop: '6px', color: '#b91c1c', fontSize: '12px', fontWeight: 600 }}>
+                      ⚠️ Seluruh sub-folder dan berkas dokumen di dalamnya akan ikut terhapus.
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Warning banner */}
+            <div
+              style={{
+                margin: '0 24px 20px 24px',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                fontSize: '12px',
+                color: '#92400e',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+              <span>Tindakan ini hanya dapat dilakukan oleh Admin QMS.</span>
+            </div>
+
+            {/* Footer Buttons */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                padding: '14px 24px',
+                background: '#f8fafc',
+                borderTop: '1px solid #e2e8f0',
+              }}
+            >
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={() => setDeleteConfirm(null)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isDeleting}
+                onClick={executeDelete}
+                style={{
+                  padding: '8px 18px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: isDeleting ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(220, 38, 38, 0.25)',
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={e => {
+                  if (!isDeleting) e.currentTarget.style.background = '#b91c1c';
+                }}
+                onMouseLeave={e => {
+                  if (!isDeleting) e.currentTarget.style.background = '#dc2626';
+                }}
+              >
+                <Trash2 size={14} />
+                <span>{isDeleting ? 'Menghapus...' : 'Ya, Hapus'}</span>
               </button>
             </div>
           </div>

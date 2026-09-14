@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,12 +10,17 @@ export default function LoginPage() {
   const { loginWithCredentials } = useAuth();
   const router = useRouter();
 
+  const [mounted, setMounted] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -36,6 +41,10 @@ export default function LoginPage() {
     }
   };
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
     <div
       suppressHydrationWarning
@@ -46,11 +55,19 @@ export default function LoginPage() {
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: '#F7F7F5',
-        fontFamily: 'var(--font-sans, Inter, -apple-system, BlinkMacSystemFont, sans-serif)',
+        fontFamily: '"DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         padding: '16px',
         boxSizing: 'border-box',
       }}
     >
+      {/* Scoped font import for Login Page only */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Manrope:wght@500;600;700;800&display=swap"
+        rel="stylesheet"
+      />
+
       {/* ── EXPANDED FULL-HEIGHT FLOATING CARD ── */}
       <motion.div
         initial={{ opacity: 0, y: 14, scale: 0.99 }}
@@ -71,6 +88,7 @@ export default function LoginPage() {
           gap: '32px',
           overflow: 'hidden',
           boxSizing: 'border-box',
+          fontFamily: '"DM Sans", sans-serif',
         }}
       >
         {/* ── LEFT SECTION: LOGIN FORM ── */}
@@ -100,7 +118,7 @@ export default function LoginPage() {
                 src="/thi-logo-official.png"
                 alt="PT Taka Hydrocore Indonesia"
                 style={{
-                  height: '32px',
+                  height: '42px',
                   width: 'auto',
                   display: 'block',
                   objectFit: 'contain',
@@ -112,44 +130,60 @@ export default function LoginPage() {
 
           {/* Form Content Area */}
           <div style={{ maxWidth: '500px', width: '100%', margin: 'auto 0' }}>
-            {/* Breadcrumb / Section Indicator */}
+            {/* Eyebrow / Section Indicator in THI Corporate Style */}
             <div
               style={{
-                fontSize: '12px',
-                fontWeight: 500,
-                color: '#9CA3AF',
-                letterSpacing: '0.04em',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: '#0B2545',
+                letterSpacing: '0.14em',
                 marginBottom: '16px',
+                textTransform: 'uppercase',
+                fontFamily: '"Manrope", sans-serif',
               }}
             >
-              01 / Login
+              <span
+                style={{
+                  width: '24px',
+                  height: '2px',
+                  background: '#D9232E',
+                  borderRadius: '1px',
+                  display: 'inline-block',
+                }}
+              />
+              Document Control Portal
             </div>
 
-            {/* Headline */}
+            {/* Headline in Manrope */}
             <h1
               style={{
-                fontSize: 'clamp(40px, 4.4vw, 54px)',
-                fontWeight: 500,
-                color: '#111827',
+                fontFamily: '"Manrope", sans-serif',
+                fontSize: 'clamp(36px, 4vw, 48px)',
+                fontWeight: 700,
+                color: '#0A192F',
                 letterSpacing: '-0.035em',
-                lineHeight: 1.08,
+                lineHeight: 1.12,
                 margin: '0 0 16px 0',
               }}
             >
-              Welcome back
+              Document Control & Management System
             </h1>
 
-            {/* Supporting Text */}
+            {/* Supporting Text in DM Sans */}
             <p
               style={{
-                fontSize: '15.5px',
-                color: '#6B7280',
-                lineHeight: 1.55,
+                fontFamily: '"DM Sans", sans-serif',
+                fontSize: '15px',
+                color: '#64748B',
+                lineHeight: 1.6,
                 margin: '0 0 38px 0',
                 maxWidth: '460px',
               }}
             >
-              Sign in to access the Document Control Management System.
+              Sign in with your department credentials to manage, verify, and access controlled corporate documentation.
             </p>
 
             {/* Form Fields */}
@@ -215,6 +249,7 @@ export default function LoginPage() {
                     borderBottom: '1px solid #E5E7EB',
                     color: '#111827',
                     fontSize: '15px',
+                    fontFamily: '"DM Sans", sans-serif',
                     outline: 'none',
                     transition: 'border-color 0.15s ease',
                     boxSizing: 'border-box',
@@ -231,9 +266,10 @@ export default function LoginPage() {
                   style={{
                     display: 'block',
                     fontSize: '13px',
-                    fontWeight: 500,
+                    fontWeight: 600,
                     color: '#111827',
                     marginBottom: '8px',
+                    fontFamily: '"DM Sans", sans-serif',
                   }}
                 >
                   Password
@@ -260,6 +296,7 @@ export default function LoginPage() {
                       borderBottom: '1px solid #E5E7EB',
                       color: '#111827',
                       fontSize: '15px',
+                      fontFamily: '"DM Sans", sans-serif',
                       outline: 'none',
                       transition: 'border-color 0.15s ease',
                       boxSizing: 'border-box',
@@ -302,6 +339,7 @@ export default function LoginPage() {
                   fontSize: '13px',
                   color: '#6B7280',
                   marginBottom: '32px',
+                  fontFamily: '"DM Sans", sans-serif',
                 }}
               >
                 <label
@@ -338,15 +376,17 @@ export default function LoginPage() {
                 whileTap={{ scale: 0.985 }}
                 style={{
                   width: 'auto',
-                  minWidth: '140px',
-                  height: '44px',
-                  padding: '0 26px',
+                  minWidth: '150px',
+                  height: '46px',
+                  padding: '0 28px',
                   borderRadius: '8px',
                   border: 'none',
-                  background: '#111827',
+                  background: '#0A192F',
                   color: '#FFFFFF',
                   fontSize: '14px',
-                  fontWeight: 500,
+                  fontFamily: '"Manrope", sans-serif',
+                  fontWeight: 700,
+                  letterSpacing: '0.01em',
                   cursor: loading ? 'not-allowed' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -357,30 +397,17 @@ export default function LoginPage() {
                   marginBottom: '18px',
                 }}
                 onMouseEnter={e => {
-                  if (!loading) e.currentTarget.style.background = '#1F2937';
+                  if (!loading) e.currentTarget.style.background = '#132F4C';
                 }}
                 onMouseLeave={e => {
-                  if (!loading) e.currentTarget.style.background = '#111827';
+                  if (!loading) e.currentTarget.style.background = '#0A192F';
                 }}
               >
-                {loading ? 'Signing in…' : 'Sign in'}
+                {loading ? 'Signing in…' : 'Sign in →'}
               </motion.button>
             </form>
 
-            {/* Subtle Informational Line */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                fontSize: '12.5px',
-                color: '#9CA3AF',
-                marginTop: '4px',
-              }}
-            >
-              <Info size={13} style={{ flexShrink: 0, color: '#9CA3AF' }} />
-              <span>Authorized personnel only.</span>
-            </div>
+
           </div>
 
           {/* Bottom subtle copyright */}

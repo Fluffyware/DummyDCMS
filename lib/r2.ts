@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const accountId = process.env.R2_ACCOUNT_ID || '';
@@ -104,4 +104,24 @@ export async function getPresignedDownloadUrl(
   });
 
   return getSignedUrl(client, command, { expiresIn: expiresInSeconds });
+}
+
+/**
+ * Delete an object from Cloudflare R2
+ */
+export async function deleteObjectFromR2(key: string): Promise<boolean> {
+  const client = getR2Client();
+  if (!client) return false;
+
+  try {
+    const command = new DeleteObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+    await client.send(command);
+    return true;
+  } catch (error) {
+    console.error('Error deleting object from R2:', error);
+    return false;
+  }
 }
