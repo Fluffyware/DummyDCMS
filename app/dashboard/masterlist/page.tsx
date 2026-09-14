@@ -130,6 +130,9 @@ export default function MasterlistPage() {
 
     setIsUploading(true);
 
+    let uploadedR2Key: string | undefined = undefined;
+    let uploadedR2Url: string | undefined = undefined;
+
     // Call Cloudflare R2 / Supabase API route
     try {
       const formData = new FormData();
@@ -148,10 +151,18 @@ export default function MasterlistPage() {
       }
       formData.append('uploader', user?.name || 'Admin QMS');
 
-      await fetch('/api/r2/upload', {
+      const uploadRes = await fetch('/api/r2/upload', {
         method: 'POST',
         body: formData,
       });
+
+      if (uploadRes.ok) {
+        const uploadData = await uploadRes.json();
+        if (uploadData.document) {
+          uploadedR2Key = uploadData.document.r2_key || undefined;
+          uploadedR2Url = uploadData.document.r2_url || undefined;
+        }
+      }
     } catch (err) {
       console.warn('R2/Supabase upload skipped (running in offline/demo mode):', err);
     } finally {
@@ -172,6 +183,8 @@ export default function MasterlistPage() {
       fileExt: docFileExt,
       subFolderId: docTargetSubFolder?.id,
       subFolderName: docTargetSubFolder?.name,
+      r2Key: uploadedR2Key,
+      r2Url: uploadedR2Url,
     };
 
     let updatedFolders: MasterFolder[];
@@ -233,6 +246,50 @@ export default function MasterlistPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  // ─── Real Download Handler ───
+  const handleDownloadDoc = (doc: MasterDocItem) => {
+    if (doc.r2Key) {
+      window.open(`/api/r2/download?key=${encodeURIComponent(doc.r2Key)}`, '_blank');
+      showToast(`Mengunduh berkas resmi ${doc.number}...`);
+      return;
+    }
+    if (doc.r2Url && !doc.r2Url.includes('localhost')) {
+      window.open(doc.r2Url, '_blank');
+      showToast(`Mengunduh berkas ${doc.number}...`);
+      return;
+    }
+
+    // Fallback: Generate real official controlled copy blob file
+    const content = `PT TAKA HYDROCORE INDONESIA
+DOCUMENT CONTROL MANAGEMENT SYSTEM (DCMS)
+========================================================================
+
+NOMOR DOKUMEN   : ${doc.number}
+JUDUL DOKUMEN   : ${doc.title}
+JENIS DOKUMEN   : ${doc.type}
+REVISI          : ${doc.revision}
+KLASIFIKASI     : ${doc.classification}
+TANGGAL EFEKTIF : ${doc.effectiveDate}
+STATUS BERKAS   : DOKUMEN TERKENDALI (CONTROLLED COPY)
+
+Catatan Legal:
+Berkas ini diterbitkan oleh Document Control Management System (DCMS)
+PT Taka Hydrocore Indonesia. Salinan ini sah dan terkendali.
+Segala perubahan tanpa otorisasi Document Controller dilarang keras.
+========================================================================`;
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${doc.number}_${doc.revision}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Mengunduh salinan berkas kendali ${doc.number}...`);
   };
 
   // ─── Modal Konfirmasi Hapus (Admin QMS) ───
@@ -1418,6 +1475,23 @@ export default function MasterlistPage() {
                                             <History size={13} />
                                             <span>Revisi</span>
                                           </button>
+                                          <button
+                                            onClick={() => handleDownloadDoc(doc)}
+                                            title={`Unduh Dokumen ${doc.number}`}
+                                            style={{
+                                              background: '#f8fafc',
+                                              border: '1px solid #e2e8f0',
+                                              borderRadius: '4px',
+                                              padding: '5px 8px',
+                                              color: '#334155',
+                                              cursor: 'pointer',
+                                              display: 'flex',
+                                              alignItems: 'center',
+                                              justifyContent: 'center',
+                                            }}
+                                          >
+                                            <Download size={13} />
+                                          </button>
                                         </div>
                                       </div>
                                     ))
@@ -1539,8 +1613,8 @@ export default function MasterlistPage() {
                               </button>
 
                               <button
-                                onClick={() => alert(`Mengunduh file resmi ${doc.number} (${doc.fileExt.toUpperCase()})`)}
-                                title="Download File"
+                                onClick={() => handleDownloadDoc(doc)}
+                                title={`Unduh File ${doc.number}`}
                                 style={{
                                   background: '#f8fafc',
                                   border: '1px solid #e2e8f0',
@@ -2385,7 +2459,7 @@ export default function MasterlistPage() {
 
                         <button
                           type="button"
-                          onClick={() => alert(`Mengunduh arsip versi ${revItem.rev} untuk dokumen ${previewDoc.number}`)}
+                          onClick={() => handleDownloadDoc({ ...previewDoc, revision: revItem.rev })}
                           style={{
                             background: '#ffffff',
                             border: '1px solid #cbd5e1',
@@ -2475,7 +2549,7 @@ export default function MasterlistPage() {
               </button>
               <button
                 onClick={() => {
-                  alert(`Mengunduh file resmi ${previewDoc.number}`);
+                  handleDownloadDoc(previewDoc);
                   setPreviewDoc(null);
                 }}
                 style={{

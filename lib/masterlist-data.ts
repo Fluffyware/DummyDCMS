@@ -24,6 +24,8 @@ export interface MasterDocItem {
   fileExt: 'pdf' | 'docx' | 'xlsx';
   subFolderId?: string;
   subFolderName?: string;
+  r2Key?: string;
+  r2Url?: string;
 }
 
 export interface MasterSubFolder {
