@@ -7,27 +7,22 @@ import {
   Plus,
   ArrowLeft,
   Search,
-  FileText,
-  Download,
-  Edit,
-  ExternalLink,
   Trash2,
   CheckCircle2,
   AlertCircle,
-  UploadCloud,
   Check,
-  Building2,
-  Folder,
-  FolderOpen,
   FolderPlus,
   RefreshCw,
-  Layers,
-  CornerDownRight,
+  Megaphone,
   ShieldAlert,
   Mail,
   Send,
   X,
   Loader2,
+  Minus,
+  Eye,
+  Bell,
+  ExternalLink,
 } from 'lucide-react';
 import {
   MasterFolder,
@@ -39,78 +34,84 @@ import {
   FlattenedDocItem,
 } from '@/lib/masterlist-data';
 
-/* ─── Type Definitions ────────────────────────────────────────── */
+/* ─── Type Definitions ──────────────────────────────────────────── */
 export interface DistributionDoc {
   no: number;
-  id: string; // e.g. DIS0523.001
-  idRegistrasi: string; // e.g. REG0523.004 or '-'
+  id: string;
+  idRegistrasi: string;
   dept: string;
   jenis: string;
   judul: string;
-  revisi: string; // e.g. '00', '01', '-'
+  revisi: string;
   folder: string;
   groupDoc: 'HEAD_OFFICE' | 'PROJECT';
   fileName: string | null;
   fileSize?: string;
+  fileUrl?: string;
   status: 'Released' | 'Approved' | 'Draft';
   createdAt: string;
+  distType: 'NEW_DOC' | 'REVISION_UPDATE' | 'ANNOUNCEMENT';
 }
 
-/* ─── Distribution Dataset ────────────────────────────────────── */
+interface NewDocEntry {
+  id: string;
+  selectedFolderId: number | '';
+  selectedSubFolderId: string;
+  dept: string;
+  jenis: string;
+  docNumber: string;
+  judulDokumen: string;
+  revisiKe: string;
+  selectedFile: File | null;
+}
+
+interface RevDocEntry {
+  id: string;
+  selectedExistingDocId: string;
+  newRevisionNumber: string;
+  revisionNotes: string;
+  selectedRevFile: File | null;
+}
+
 const INITIAL_DISTRIBUTION: DistributionDoc[] = [];
 
-const DEPT_OPTIONS = [
-  'Finance',
-  'Purchasing',
-  'Human Resources',
-  'General Affairs',
-  'Commercial',
-  'Logistics',
-  'QHSE',
-  'Geotechnical Operation',
-  'Geophysical Operation',
-  'PPEC',
-  'Facility',
-  'Mechanical & Construction',
+const DEPT_OPTIONS_DEFAULT = [
+  'Finance','Purchasing','Human Resources','General Affairs','Commercial',
+  'Logistics','QHSE','Geotechnical Operation','Geophysical Operation',
+  'PPEC','Facility','Mechanical & Construction',
 ];
 
-const JENIS_OPTIONS = [
-  'Kebijakan Manajemen Sistem',
-  'Manual (Manual Sistem Manajemen)',
-  'Prosedur',
-  'Form / Standar',
-  'Standar Operasional Prosedur (SOP)',
-  'Instruksi Kerja (Work Instruction)',
-  'Template',
-  'Pedoman (Guideline)',
-  'Laporan Teknis',
+const JENIS_OPTIONS_DEFAULT = [
+  'Kebijakan Manajemen Sistem','Manual (Manual Sistem Manajemen)','Prosedur',
+  'Form / Standar','Standar Operasional Prosedur (SOP)','Instruksi Kerja (Work Instruction)',
+  'Template','Pedoman (Guideline)','Laporan Teknis',
 ];
 
-const FOLDER_OPTIONS = [
-  'QHSE Manual',
-  'QOP-04 - Risk Register Process',
-  'HOP-01 - Rekrutmen & Seleksi Karyawan',
-  'HOP-02 - Peningkatan & Pengakuan Kompetensi',
-  'HOP-04 - Promosi & Rotasi Karyawan',
-  'LOP-02 - Pemilihan Vendor',
-  'MOP-APMS-1100 - Standar Operasi dan Prosedur Pemeriksaan Power Supply System',
-  'MOP-APMS-1200 Standar Operasi dan Prosedur Perawatan Power Supply System',
-  '1. Standar Sistem Manajemen',
-  '2. Kebijakan Manajemen (Policy)',
-  '3. Struktur Organisasi & Job Description',
-  '4. Prosedur Mutu & K3LH',
-  '5. Instruksi Kerja (Work Instructions)',
-  '6. Formulir & Checklist Operasional',
-  '7. Dokumen Perizinan & Sertifikasi',
-  '8. Laporan Audit & Tinjauan Manajemen',
-  '9. HIRADC & Risk Assessment',
-  '10. Rencana Tanggap Darurat (ERP)',
-  '11. Manual Operasi Kapal & Alat Survey',
-  '12. Kalibrasi Alat & Sertifikat Peralatan',
-  '13. Rekaman Pelatihan & Kompetensi',
-  '14. Pengelolaan Limbah & Lingkungan (B3)',
-  '15. Vendor & Subcontractor Evaluation',
-];
+function makeid() { return Math.random().toString(36).slice(2, 9); }
+
+function makeEmptyNewDoc(): NewDocEntry {
+  return { id: makeid(), selectedFolderId: '', selectedSubFolderId: '', dept: '', jenis: '', docNumber: '', judulDokumen: '', revisiKe: '00', selectedFile: null };
+}
+
+function makeEmptyRevDoc(): RevDocEntry {
+  return { id: makeid(), selectedExistingDocId: '', newRevisionNumber: '', revisionNotes: '', selectedRevFile: null };
+}
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1',
+  fontSize: '13px', color: '#0f172a', background: '#ffffff', outline: 'none',
+  boxSizing: 'border-box', fontFamily: 'inherit',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569',
+  marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em',
+};
+
+const cardStyle: React.CSSProperties = {
+  background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0',
+  boxShadow: '0 2px 10px rgba(7, 28, 44, 0.03)',
+};
 
 export default function DistributionPage() {
   const { user } = useAuth();
@@ -122,545 +123,291 @@ export default function DistributionPage() {
   const [entriesPerPage, setEntriesPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
-  // Masterlist shared folders & docs
   const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
-
-  useEffect(() => {
-    setMasterFolders(loadMasterFolders());
-  }, []);
-
+  useEffect(() => { setMasterFolders(loadMasterFolders()); }, []);
   const flattenedDocs = useMemo(() => getAllFlattenedDocs(masterFolders), [masterFolders]);
 
-  // Form State: Mode (NEW_DOC vs REVISION_UPDATE)
-  const [distMode, setDistMode] = useState<'NEW_DOC' | 'REVISION_UPDATE'>('NEW_DOC');
+  const DEPT_OPTIONS = useMemo(() => {
+    if (typeof window === 'undefined') return DEPT_OPTIONS_DEFAULT;
+    try {
+      const raw = localStorage.getItem('qms_departments');
+      if (raw) { const p = JSON.parse(raw); if (Array.isArray(p) && p.length > 0) return p.map((d: { name: string }) => d.name); }
+    } catch {}
+    return DEPT_OPTIONS_DEFAULT;
+  }, []);
 
-  // Mode 1: Dokumen Baru
-  const [selectedFolderId, setSelectedFolderId] = useState<number | ''>('');
-  const [selectedSubFolderId, setSelectedSubFolderId] = useState<string>('');
-  const [dept, setDept] = useState('');
-  const [jenis, setJenis] = useState('');
-  const [docNumber, setDocNumber] = useState('');
-  const [judulDokumen, setJudulDokumen] = useState('');
-  const [revisiKe, setRevisiKe] = useState('00');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const JENIS_OPTIONS = useMemo(() => {
+    if (typeof window === 'undefined') return JENIS_OPTIONS_DEFAULT;
+    try {
+      const raw = localStorage.getItem('qms_doc_types');
+      if (raw) { const p = JSON.parse(raw); if (Array.isArray(p) && p.length > 0) return p.map((j: { name: string }) => j.name); }
+    } catch {}
+    return JENIS_OPTIONS_DEFAULT;
+  }, []);
 
-  // Mode 2: Update File Revisi
-  const [selectedExistingDocId, setSelectedExistingDocId] = useState<string>('');
-  const [newRevisionNumber, setNewRevisionNumber] = useState<string>('');
-  const [revisionNotes, setRevisionNotes] = useState<string>('');
-  const [selectedRevFile, setSelectedRevFile] = useState<File | null>(null);
-
-  // Email Notification States
+  const [distMode, setDistMode] = useState<'NEW_DOC' | 'REVISION_UPDATE' | 'ANNOUNCEMENT'>('NEW_DOC');
+  const [newDocEntries, setNewDocEntries] = useState<NewDocEntry[]>([makeEmptyNewDoc()]);
+  const [revDocEntries, setRevDocEntries] = useState<RevDocEntry[]>([makeEmptyRevDoc()]);
+  const [announcedDocIds, setAnnouncedDocIds] = useState<string[]>([]);
+  const [announcementNote, setAnnouncementNote] = useState('');
   const [sendEmailNotification, setSendEmailNotification] = useState<boolean>(true);
-  const [recipientEmail, setRecipientEmail] = useState<string>('filayati_akbar@yahoo.com');
+  const [recipientEmail, setRecipientEmail] = useState<string>('');
   const [emailNotes, setEmailNotes] = useState<string>('');
-
-  // Quick Send Email Modal State for Table Rows
   const [emailModalDoc, setEmailModalDoc] = useState<DistributionDoc | null>(null);
-  const [modalRecipient, setModalRecipient] = useState<string>('filayati_akbar@yahoo.com');
+  const [modalRecipient, setModalRecipient] = useState<string>('');
   const [modalNotes, setModalNotes] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
-
   const [errorMessage, setErrorMessage] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const revFileInputRef = useRef<HTMLInputElement>(null);
 
-  // When selectedExistingDocId changes, auto-populate details and suggest next revision
-  const selectedExistingDoc = useMemo(() => {
-    return flattenedDocs.find(d => d.id === selectedExistingDocId) || null;
-  }, [flattenedDocs, selectedExistingDocId]);
-
-  useEffect(() => {
-    if (selectedExistingDoc) {
-      const curNum = parseInt(selectedExistingDoc.revision.replace(/\D/g, ''), 10) || 0;
-      const nextNum = curNum + 1;
-      setNewRevisionNumber(`Rev.${String(nextNum).padStart(2, '0')}`);
-    } else {
-      setNewRevisionNumber('');
-    }
-  }, [selectedExistingDoc]);
-
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage(msg); setToastType(type);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // If user is Staff, block access
   if (user?.role === 'staff') {
     return (
       <div style={{ width: '100%', minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-        <div
-          style={{
-            maxWidth: '520px',
-            width: '100%',
-            background: '#ffffff',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            padding: '36px 32px',
-            textAlign: 'center',
-            boxShadow: '0 10px 25px rgba(7, 28, 44, 0.06)',
-          }}
-        >
-          <div
-            style={{
-              width: '64px',
-              height: '64px',
-              borderRadius: '50%',
-              background: '#fef2f2',
-              color: '#dc2626',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 20px',
-              border: '1px solid #fecaca',
-            }}
-          >
+        <div style={{ maxWidth: '520px', width: '100%', ...cardStyle, padding: '36px 32px', textAlign: 'center' }}>
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '1px solid #fecaca' }}>
             <ShieldAlert size={32} strokeWidth={2} />
           </div>
-
-          <span
-            style={{
-              fontSize: '11px',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              color: '#dc2626',
-              background: '#fef2f2',
-              padding: '4px 10px',
-              borderRadius: '20px',
-              border: '1px solid #fecaca',
-              display: 'inline-block',
-              marginBottom: '12px',
-            }}
-          >
-            Akses Terbatas
-          </span>
-
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#071c2c', margin: '0 0 10px', letterSpacing: '-0.02em' }}>
-            Otoritas Khusus Admin QHSE
-          </h2>
-
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#071c2c', margin: '0 0 10px' }}>Otoritas Khusus Admin QHSE</h2>
           <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6, margin: '0 0 28px' }}>
-            Akun <strong>Staff</strong> tidak memiliki hak akses ke modul <strong>Distribusi Dokumen</strong>. Modul ini diperuntukkan khusus bagi <em>Document Controller / Admin QHSE</em> untuk mengelola dan mendistribusikan salinan dokumen resmi.
+            Akun <strong>Staff</strong> tidak memiliki hak akses ke modul <strong>Distribusi Dokumen</strong>.
           </p>
-
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button
-              onClick={() => router.push('/dashboard')}
-              style={{
-                background: '#071c2c',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '10px 20px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 2px 6px rgba(7, 28, 44, 0.15)',
-                transition: 'background 0.15s ease',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#0d2d47')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#071c2c')}
-            >
-              Kembali ke Dashboard
-            </button>
-
-            <button
-              onClick={() => router.push('/dashboard/masterlist')}
-              style={{
-                background: '#ffffff',
-                color: '#071c2c',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                padding: '10px 20px',
-                fontSize: '13px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-              onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}
-            >
-              Masterlist Dokumen
-            </button>
-          </div>
+          <button onClick={() => router.push('/dashboard')} style={{ background: '#071c2c', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+            Kembali ke Dashboard
+          </button>
         </div>
       </div>
     );
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setErrorMessage('Ukuran file melebihi batas maksimal 2MB.');
-        setSelectedFile(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        return;
-      }
-      setErrorMessage('');
-      setSelectedFile(file);
-    }
-  };
+  const updateNewDoc = (id: string, patch: Partial<NewDocEntry>) =>
+    setNewDocEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+  const addNewDocEntry = () => setNewDocEntries(prev => [...prev, makeEmptyNewDoc()]);
+  const removeNewDocEntry = (id: string) => { if (newDocEntries.length > 1) setNewDocEntries(prev => prev.filter(e => e.id !== id)); };
 
-  const handleRevFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setErrorMessage('Ukuran file melebihi batas maksimal 2MB.');
-        setSelectedRevFile(null);
-        if (revFileInputRef.current) revFileInputRef.current.value = '';
-        return;
-      }
-      setErrorMessage('');
-      setSelectedRevFile(file);
-    }
-  };
+  const updateRevDoc = (id: string, patch: Partial<RevDocEntry>) =>
+    setRevDocEntries(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+  const addRevDocEntry = () => setRevDocEntries(prev => [...prev, makeEmptyRevDoc()]);
+  const removeRevDocEntry = (id: string) => { if (revDocEntries.length > 1) setRevDocEntries(prev => prev.filter(e => e.id !== id)); };
+
+  const toggleAnnouncedDoc = (docId: string) =>
+    setAnnouncedDocIds(prev => prev.includes(docId) ? prev.filter(d => d !== docId) : [...prev, docId]);
 
   const handleResetForm = () => {
-    setSelectedFolderId('');
-    setSelectedSubFolderId('');
-    setDept('');
-    setJenis('');
-    setDocNumber('');
-    setJudulDokumen('');
-    setRevisiKe('00');
-    setSelectedFile(null);
-
-    setSelectedExistingDocId('');
-    setNewRevisionNumber('');
-    setRevisionNotes('');
-    setSelectedRevFile(null);
-
+    setNewDocEntries([makeEmptyNewDoc()]);
+    setRevDocEntries([makeEmptyRevDoc()]);
+    setAnnouncedDocIds([]);
+    setAnnouncementNote('');
+    setRecipientEmail('');
+    setEmailNotes('');
+    setSendEmailNotification(true);
     setErrorMessage('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (revFileInputRef.current) revFileInputRef.current.value = '';
+  };
+
+  const sendEmails = (entries: DistributionDoc[], notes: string) => {
+    if (!sendEmailNotification || !recipientEmail.trim()) return;
+    const emails = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
+    entries.forEach(entry => {
+      emails.forEach(targetEmail => {
+        fetch('/api/distribution/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: targetEmail, documentTitle: entry.judul, documentNumber: entry.id,
+            revision: entry.revisi, department: entry.dept, jenisDokumen: entry.jenis,
+            distributorName: user?.name || 'Admin QMS THI', notes: notes || emailNotes || 'Notifikasi distribusi dokumen.',
+          }),
+        }).catch(console.error);
+      });
+    });
   };
 
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 
     if (distMode === 'NEW_DOC') {
-      if (!selectedFolderId) {
-        setErrorMessage('Silakan pilih Folder Utama.');
-        return;
-      }
-      if (!dept) {
-        setErrorMessage('Silakan pilih Departemen.');
-        return;
-      }
-      if (!jenis) {
-        setErrorMessage('Silakan pilih Jenis dokumen.');
-        return;
-      }
-      if (!judulDokumen.trim()) {
-        setErrorMessage('Silakan isi Judul Dokumen.');
-        return;
+      for (const entry of newDocEntries) {
+        if (!entry.selectedFolderId) { setErrorMessage('Pilih Folder Utama untuk semua dokumen.'); return; }
+        if (!entry.dept) { setErrorMessage('Pilih Departemen untuk semua dokumen.'); return; }
+        if (!entry.jenis) { setErrorMessage('Pilih Jenis Dokumen untuk semua dokumen.'); return; }
+        if (!entry.judulDokumen.trim()) { setErrorMessage('Isi Judul Dokumen untuk semua dokumen.'); return; }
       }
 
-      const folderObj = masterFolders.find(f => f.id === Number(selectedFolderId));
-      
-      // Find subObj or nested childSubObj
-      let subObj: MasterSubFolder | undefined = undefined;
-      for (const s of folderObj?.subfolders || []) {
-        if (s.id === selectedSubFolderId) {
-          subObj = s;
-          break;
+      const newEntries: DistributionDoc[] = [];
+      let updatedFolders = [...masterFolders];
+
+      newDocEntries.forEach((entry, i) => {
+        const folderObj = updatedFolders.find(f => f.id === Number(entry.selectedFolderId));
+        let subObj: MasterSubFolder | undefined;
+        for (const s of folderObj?.subfolders || []) {
+          if (s.id === entry.selectedSubFolderId) { subObj = s; break; }
+          for (const cs of s.subfolders || []) { if (cs.id === entry.selectedSubFolderId) { subObj = cs; break; } }
+          if (subObj) break;
         }
-        for (const cs of s.subfolders || []) {
-          if (cs.id === selectedSubFolderId) {
-            subObj = cs;
-            break;
-          }
-        }
-        if (subObj) break;
-      }
+        const folderDisplay = folderObj ? `${folderObj.name}${subObj ? ' > ' + subObj.name : ''}` : 'General';
+        const seqNum = distributions.length + newEntries.length + 1;
+        const moPad = String(now.getMonth() + 1).padStart(2, '0');
+        const yrShort = String(now.getFullYear()).slice(-2);
+        const formattedId = `DIS${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
+        const finalDocNumber = entry.docNumber.trim() || `THI-${(entry.dept || 'GEN').slice(0, 4).toUpperCase()}-${String(seqNum).padStart(3, '0')}`;
 
-      const targetFolderDisplay = folderObj
-        ? `${folderObj.name}${subObj ? ' > ' + subObj.name : ''}`
-        : 'General Folder';
+        const distEntry: DistributionDoc = {
+          no: seqNum, id: formattedId, idRegistrasi: '-', dept: entry.dept, jenis: entry.jenis,
+          judul: entry.judulDokumen.trim(), revisi: entry.revisiKe.trim() || '00', folder: folderDisplay,
+          groupDoc: 'HEAD_OFFICE', fileName: entry.selectedFile ? entry.selectedFile.name : null,
+          fileSize: entry.selectedFile ? `${(entry.selectedFile.size / 1024).toFixed(0)} KB` : '',
+          status: 'Released', createdAt: dateStr, distType: 'NEW_DOC',
+        };
 
-      const newNum = distributions.length + 1;
-      const formattedId = `DIS0926.${String(newNum).padStart(3, '0')}`;
-      const finalDocNumber = docNumber.trim() || `THI-${dept.slice(0, 4).toUpperCase()}-${String(newNum).padStart(3, '0')}`;
+        const newMasterDoc: MasterDocItem = {
+          id: `d-new-${Date.now()}-${i}`, number: finalDocNumber, title: entry.judulDokumen.trim(),
+          revision: `Rev.${entry.revisiKe.trim() || '00'}`, effectiveDate: dateStr, reviewDate: '01 Jan 2027',
+          status: 'CURRENT', classification: 'INTERNAL', type: entry.jenis,
+          size: entry.selectedFile ? `${(entry.selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '—',
+          fileExt: 'pdf',
+        };
 
-      const newEntry: DistributionDoc = {
-        no: 1,
-        id: formattedId,
-        idRegistrasi: '-',
-        dept,
-        jenis,
-        judul: judulDokumen.trim(),
-        revisi: revisiKe.trim() || '00',
-        folder: targetFolderDisplay,
-        groupDoc: 'HEAD_OFFICE',
-        fileName: selectedFile ? selectedFile.name : null,
-        fileSize: selectedFile ? `${(selectedFile.size / 1024).toFixed(0)} KB` : '',
-        status: 'Released',
-        createdAt: 'Hari Ini',
-      };
-
-      // Add to Masterlist folders state and storage
-      const newMasterDoc: MasterDocItem = {
-        id: `d-new-${Date.now().toString().slice(-5)}`,
-        number: finalDocNumber,
-        title: judulDokumen.trim(),
-        revision: revisiKe.trim().startsWith('Rev.') ? revisiKe.trim() : `Rev.${revisiKe.trim() || '00'}`,
-        effectiveDate: 'Hari Ini',
-        reviewDate: '01 Jan 2027',
-        status: 'CURRENT',
-        classification: 'INTERNAL',
-        type: jenis,
-        size: selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '1.2 MB',
-        fileExt: 'pdf',
-        subFolderId: subObj ? subObj.id : undefined,
-        subFolderName: subObj ? subObj.name : undefined,
-      };
-
-      const updatedFolders = masterFolders.map(f => {
-        if (f.id === Number(selectedFolderId)) {
-          if (selectedSubFolderId && f.subfolders) {
+        updatedFolders = updatedFolders.map(f => {
+          if (f.id !== Number(entry.selectedFolderId)) return f;
+          if (entry.selectedSubFolderId && f.subfolders) {
             return {
-              ...f,
-              subfolders: f.subfolders.map(sub => {
-                if (sub.id === selectedSubFolderId) {
-                  return {
-                    ...sub,
-                    docs: [newMasterDoc, ...(sub.docs || [])],
-                  };
-                }
-                // Check if target is inside nested child subfolders
-                if ((sub.subfolders || []).some(cs => cs.id === selectedSubFolderId)) {
-                  return {
-                    ...sub,
-                    subfolders: (sub.subfolders || []).map(cs => {
-                      if (cs.id === selectedSubFolderId) {
-                        return {
-                          ...cs,
-                          docs: [newMasterDoc, ...(cs.docs || [])],
-                        };
-                      }
-                      return cs;
-                    }),
-                  };
+              ...f, subfolders: f.subfolders.map(sub => {
+                if (sub.id === entry.selectedSubFolderId) return { ...sub, docs: [newMasterDoc, ...(sub.docs || [])] };
+                if ((sub.subfolders || []).some(cs => cs.id === entry.selectedSubFolderId)) {
+                  return { ...sub, subfolders: (sub.subfolders || []).map(cs => cs.id === entry.selectedSubFolderId ? { ...cs, docs: [newMasterDoc, ...(cs.docs || [])] } : cs) };
                 }
                 return sub;
               }),
             };
-          } else {
-            return {
-              ...f,
-              docs: [newMasterDoc, ...(f.docs || [])],
-            };
           }
-        }
-        return f;
+          return { ...f, docs: [newMasterDoc, ...(f.docs || [])] };
+        });
+        newEntries.push(distEntry);
       });
 
       setMasterFolders(updatedFolders);
       saveMasterFolders(updatedFolders);
-
-      const updatedDist = [newEntry, ...distributions].map((item, idx) => ({
-        ...item,
-        no: idx + 1,
-      }));
-
-      setDistributions(updatedDist);
-
-      // Trigger official corporate email notification if enabled
-      if (sendEmailNotification && recipientEmail.trim()) {
-        const emails = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
-        emails.forEach(targetEmail => {
-          fetch('/api/distribution/send-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: targetEmail,
-              documentTitle: newEntry.judul,
-              documentNumber: finalDocNumber,
-              revision: newEntry.revisi,
-              department: newEntry.dept,
-              jenisDokumen: newEntry.jenis,
-              distributorName: user?.name || 'Admin QMS THI',
-              notes: emailNotes || 'Dokumen sistem manajemen terkendali baru telah didistribusikan ke departemen Anda.',
-            }),
-          }).catch(err => console.error('Error sending distribution email:', err));
-        });
-      }
-
+      sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
+      const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
+      setDistributions(updated);
       handleResetForm();
       setViewState('table');
-      const emailNotice = sendEmailNotification && recipientEmail.trim() ? ` & notifikasi email dikirim ke ${recipientEmail}` : '';
-      showToast(`Dokumen "${newEntry.judul}" berhasil didistribusikan${emailNotice}!`);
+      showToast(`${newEntries.length} dokumen baru berhasil didistribusikan!`);
+
+    } else if (distMode === 'REVISION_UPDATE') {
+      for (const entry of revDocEntries) {
+        if (!entry.selectedExistingDocId) { setErrorMessage('Pilih Dokumen yang akan direvisi.'); return; }
+        if (!entry.newRevisionNumber.trim()) { setErrorMessage('Isi Nomor Revisi Baru.'); return; }
+        if (!entry.revisionNotes.trim()) { setErrorMessage('Isi Alasan Revisi.'); return; }
+      }
+
+      const newEntries: DistributionDoc[] = [];
+      let updatedFolders = [...masterFolders];
+
+      revDocEntries.forEach(entry => {
+        const existingDoc = flattenedDocs.find(d => d.id === entry.selectedExistingDocId);
+        if (!existingDoc) return;
+        const revDisplay = entry.newRevisionNumber.trim().startsWith('Rev.') ? entry.newRevisionNumber.trim() : `Rev.${entry.newRevisionNumber.trim()}`;
+        const seqNum = distributions.length + newEntries.length + 1;
+        const moPad = String(now.getMonth() + 1).padStart(2, '0');
+        const yrShort = String(now.getFullYear()).slice(-2);
+        const formattedId = `DIS${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
+
+        const distEntry: DistributionDoc = {
+          no: seqNum, id: formattedId, idRegistrasi: existingDoc.number, dept: existingDoc.type || 'QHSE',
+          jenis: existingDoc.type, judul: existingDoc.title, revisi: revDisplay.replace('Rev.', ''),
+          folder: `${existingDoc.folderName}${existingDoc.subFolderName ? ' > ' + existingDoc.subFolderName : ''}`,
+          groupDoc: 'HEAD_OFFICE', fileName: entry.selectedRevFile ? entry.selectedRevFile.name : `${existingDoc.number}_${revDisplay}.pdf`,
+          fileSize: entry.selectedRevFile ? `${(entry.selectedRevFile.size / 1024).toFixed(0)} KB` : '—',
+          status: 'Released', createdAt: dateStr, distType: 'REVISION_UPDATE',
+        };
+
+        updatedFolders = updatedFolders.map(f => ({
+          ...f,
+          docs: (f.docs || []).map(d => d.id === existingDoc.id ? { ...d, revision: revDisplay, effectiveDate: dateStr } : d),
+          subfolders: (f.subfolders || []).map(sub => ({
+            ...sub,
+            docs: (sub.docs || []).map(d => d.id === existingDoc.id ? { ...d, revision: revDisplay, effectiveDate: dateStr } : d),
+          })),
+        }));
+        newEntries.push(distEntry);
+      });
+
+      setMasterFolders(updatedFolders);
+      saveMasterFolders(updatedFolders);
+      sendEmails(newEntries, `Pembaruan revisi dokumen resmi.`);
+      const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
+      setDistributions(updated);
+      handleResetForm();
+      setViewState('table');
+      showToast(`${newEntries.length} dokumen revisi berhasil dirilis!`);
+
     } else {
-      // REVISION_UPDATE mode
-      if (!selectedExistingDoc) {
-        setErrorMessage('Silakan pilih Dokumen yang ingin direvisi.');
-        return;
-      }
-      if (!newRevisionNumber.trim()) {
-        setErrorMessage('Silakan isi Nomor Revisi Baru.');
-        return;
-      }
-
-      const newNum = distributions.length + 1;
-      const formattedId = `DIS0926.${String(newNum).padStart(3, '0')}`;
-      const revDisplay = newRevisionNumber.trim().startsWith('Rev.') ? newRevisionNumber.trim() : `Rev.${newRevisionNumber.trim()}`;
-
-      const targetFolderDisplay = `${selectedExistingDoc.folderName}${selectedExistingDoc.subFolderName ? ' > ' + selectedExistingDoc.subFolderName : ''}`;
-
-      const newEntry: DistributionDoc = {
-        no: 1,
-        id: formattedId,
-        idRegistrasi: '-',
-        dept: selectedExistingDoc.type || 'QHSE',
-        jenis: selectedExistingDoc.type,
-        judul: selectedExistingDoc.title,
-        revisi: revDisplay.replace('Rev.', ''),
-        folder: targetFolderDisplay,
-        groupDoc: 'HEAD_OFFICE',
-        fileName: selectedRevFile ? selectedRevFile.name : `${selectedExistingDoc.number}_${revDisplay}.pdf`,
-        fileSize: selectedRevFile ? `${(selectedRevFile.size / 1024).toFixed(0)} KB` : '1.5 MB',
-        status: 'Released',
-        createdAt: 'Hari Ini',
-      };
-
-      // Update revision in masterFolders
-      const updatedFolders = masterFolders.map(f => {
-        let folderUpdated = false;
-        const newDirectDocs = (f.docs || []).map(d => {
-          if (d.id === selectedExistingDoc.id) {
-            folderUpdated = true;
-            return { ...d, revision: revDisplay, effectiveDate: 'Hari Ini' };
-          }
-          return d;
+      if (announcedDocIds.length === 0) { setErrorMessage('Pilih minimal satu dokumen untuk diumumkan.'); return; }
+      const newEntries: DistributionDoc[] = [];
+      announcedDocIds.forEach(docId => {
+        const doc = flattenedDocs.find(d => d.id === docId);
+        if (!doc) return;
+        const seqNum = distributions.length + newEntries.length + 1;
+        const moPad = String(now.getMonth() + 1).padStart(2, '0');
+        const yrShort = String(now.getFullYear()).slice(-2);
+        const formattedId = `ANN${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
+        newEntries.push({
+          no: seqNum, id: formattedId, idRegistrasi: doc.number, dept: doc.type || 'QHSE',
+          jenis: doc.type, judul: doc.title, revisi: doc.revision.replace('Rev.', ''),
+          folder: `${doc.folderName}${doc.subFolderName ? ' > ' + doc.subFolderName : ''}`,
+          groupDoc: 'HEAD_OFFICE', fileName: doc.title, fileUrl: doc.r2Url,
+          status: 'Released', createdAt: dateStr, distType: 'ANNOUNCEMENT',
         });
-
-        const newSubs = (f.subfolders || []).map(sub => {
-          const newSubDocs = (sub.docs || []).map(d => {
-            if (d.id === selectedExistingDoc.id) {
-              folderUpdated = true;
-              return { ...d, revision: revDisplay, effectiveDate: 'Hari Ini' };
-            }
-            return d;
-          });
-          return { ...sub, docs: newSubDocs };
-        });
-
-        if (folderUpdated) {
-          return { ...f, docs: newDirectDocs, subfolders: newSubs };
-        }
-        return f;
       });
-
-      setMasterFolders(updatedFolders);
-      saveMasterFolders(updatedFolders);
-
-      const updatedDist = [newEntry, ...distributions].map((item, idx) => ({
-        ...item,
-        no: idx + 1,
-      }));
-
-      setDistributions(updatedDist);
-
-      // Trigger official corporate email notification if enabled
-      if (sendEmailNotification && recipientEmail.trim()) {
-        const emails = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
-        emails.forEach(targetEmail => {
-          fetch('/api/distribution/send-email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              to: targetEmail,
-              documentTitle: newEntry.judul,
-              documentNumber: selectedExistingDoc.number,
-              revision: revDisplay.replace('Rev.', ''),
-              department: newEntry.dept,
-              jenisDokumen: newEntry.jenis,
-              distributorName: user?.name || 'Admin QMS THI',
-              notes: revisionNotes || emailNotes || `Pembaruan revisi dokumen resmi ke ${revDisplay}.`,
-            }),
-          }).catch(err => console.error('Error sending revision email:', err));
-        });
-      }
-
+      sendEmails(newEntries, announcementNote || 'Pengumuman sosialisasi dokumen terkendali resmi.');
+      const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
+      setDistributions(updated);
       handleResetForm();
       setViewState('table');
-      const emailNotice = sendEmailNotification && recipientEmail.trim() ? ` & notifikasi email dikirim ke ${recipientEmail}` : '';
-      showToast(`Revisi ${selectedExistingDoc.number} berhasil diperbarui ke ${revDisplay}${emailNotice}!`);
+      showToast(`${newEntries.length} dokumen berhasil diumumkan!`);
     }
   };
 
   const handleSendQuickEmail = async () => {
     if (!emailModalDoc || !modalRecipient.trim()) return;
     setIsSendingEmail(true);
-
     try {
       const emails = modalRecipient.split(',').map(e => e.trim()).filter(Boolean);
-      let successCount = 0;
-
       for (const em of emails) {
-        const res = await fetch('/api/distribution/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: em,
-            documentTitle: emailModalDoc.judul,
-            documentNumber: emailModalDoc.id,
-            revision: emailModalDoc.revisi,
-            department: emailModalDoc.dept,
-            jenisDokumen: emailModalDoc.jenis,
-            distributorName: user?.name || 'Admin QMS THI',
-            notes: modalNotes || 'Pemberitahuan sosialisasi dokumen terkendali resmi PT Taka Hydrocore Indonesia.',
-          }),
+        await fetch('/api/distribution/send-email', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: em, documentTitle: emailModalDoc.judul, documentNumber: emailModalDoc.id, revision: emailModalDoc.revisi, department: emailModalDoc.dept, jenisDokumen: emailModalDoc.jenis, distributorName: user?.name || 'Admin QMS THI', notes: modalNotes || 'Pemberitahuan sosialisasi dokumen.' }),
         });
-        const data = await res.json();
-        if (data.success) successCount++;
       }
-
-      showToast(`Email notifikasi resmi berhasil dikirim ke ${modalRecipient} dari qms@thi.co.id!`);
-      setEmailModalDoc(null);
-      setModalNotes('');
+      showToast(`Email berhasil dikirim dari qms@thi.co.id!`);
+      setEmailModalDoc(null); setModalNotes('');
     } catch (err: any) {
-      showToast('Gagal mengirim email: ' + (err.message || 'Error'));
-    } finally {
-      setIsSendingEmail(false);
-    }
+      showToast('Gagal mengirim email: ' + (err.message || 'Error'), 'error');
+    } finally { setIsSendingEmail(false); }
   };
 
   const handleDeleteItem = (id: string, title: string) => {
-    if (confirm(`Hapus dokumen distribusi ${id} (${title})?`)) {
-      const filtered = distributions.filter(d => d.id !== id).map((item, idx) => ({
-        ...item,
-        no: idx + 1,
-      }));
+    if (confirm(`Hapus distribusi ${id} (${title})?`)) {
+      const filtered = distributions.filter(d => d.id !== id).map((item, idx) => ({ ...item, no: idx + 1 }));
       setDistributions(filtered);
-      showToast(`Dokumen distribusi ${id} telah dihapus.`);
+      showToast(`Distribusi ${id} telah dihapus.`);
     }
   };
 
-  // Filtered dataset
   const filteredData = useMemo(() => {
     if (!searchTerm.trim()) return distributions;
     const q = searchTerm.toLowerCase();
-    return distributions.filter(
-      d =>
-        d.id.toLowerCase().includes(q) ||
-        d.idRegistrasi.toLowerCase().includes(q) ||
-        d.dept.toLowerCase().includes(q) ||
-        d.jenis.toLowerCase().includes(q) ||
-        d.judul.toLowerCase().includes(q) ||
-        d.revisi.toLowerCase().includes(q) ||
-        d.folder.toLowerCase().includes(q) ||
-        d.status.toLowerCase().includes(q)
-    );
+    return distributions.filter(d => d.id.toLowerCase().includes(q) || d.idRegistrasi.toLowerCase().includes(q) || d.dept.toLowerCase().includes(q) || d.jenis.toLowerCase().includes(q) || d.judul.toLowerCase().includes(q) || d.revisi.toLowerCase().includes(q) || d.folder.toLowerCase().includes(q) || d.status.toLowerCase().includes(q));
   }, [distributions, searchTerm]);
 
-  // Pagination
   const totalEntries = filteredData.length;
   const totalPages = Math.ceil(totalEntries / entriesPerPage) || 1;
   const validPage = Math.min(currentPage, totalPages);
@@ -669,1370 +416,482 @@ export default function DistributionPage() {
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '40px' }}>
-      {/* ── TOAST NOTIFICATION ── */}
+      {/* Toast */}
       {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '24px',
-            right: '24px',
-            zIndex: 9999,
-            background: '#071c2c',
-            color: '#ffffff',
-            padding: '12px 20px',
-            borderRadius: '10px',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            fontSize: '13.5px',
-            fontWeight: 600,
-            border: '1px solid #38bdf8',
-          }}
-        >
-          <CheckCircle2 size={18} style={{ color: '#38bdf8' }} />
+        <div style={{ position: 'fixed', top: '24px', right: '24px', zIndex: 9999, background: toastType === 'success' ? '#071c2c' : '#dc2626', color: '#ffffff', padding: '12px 20px', borderRadius: '10px', boxShadow: '0 10px 30px rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', fontWeight: 600, border: `1px solid ${toastType === 'success' ? '#38bdf8' : '#fca5a5'}` }}>
+          <CheckCircle2 size={18} style={{ color: toastType === 'success' ? '#38bdf8' : '#fca5a5' }} />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* ════════════════════════════════════════════════════════════
-          SCREEN 1: TABLE VIEW (DAFTAR DISTRIBUSI DOKUMEN)
-          ════════════════════════════════════════════════════════════ */}
+      {/* TABLE VIEW */}
       {viewState === 'table' && (
         <>
-          {/* ── PAGE TITLE ── */}
-          <div>
-            <h1
-              style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                color: '#071c2c',
-                margin: 0,
-                fontFamily: 'var(--font-display, inherit)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Distribusi Dokumen
-            </h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#071c2c', margin: 0, letterSpacing: '-0.01em' }}>Distribusi Dokumen</h1>
           </div>
 
-          {/* ── MAIN CARD CONTAINER ── */}
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 2px 10px rgba(7, 28, 44, 0.03)',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            {/* Top Bar with "+ Tambah Baru" Button */}
-            <div
-              style={{
-                padding: '18px 24px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '14px',
-                borderBottom: '1px solid #f1f5f9',
-              }}
-            >
-              {/* + Tambah Baru Button */}
-              <button
-                type="button"
-                onClick={() => setViewState('form')}
-                style={{
-                  background: '#071c2c',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '7px',
-                  boxShadow: '0 1px 3px rgba(7,28,44,0.12)',
-                  transition: 'background 0.15s ease',
-                }}
-                onMouseOver={e => (e.currentTarget.style.background = '#0d2d47')}
-                onMouseOut={e => (e.currentTarget.style.background = '#071c2c')}
-              >
-                <Plus size={14} strokeWidth={2.2} />
-                Tambah Baru
+          <div style={{ ...cardStyle, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid #f1f5f9' }}>
+              <button type="button" onClick={() => { handleResetForm(); setViewState('form'); }} style={{ background: '#071c2c', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px' }} onMouseOver={e => (e.currentTarget.style.background = '#0d2d47')} onMouseOut={e => (e.currentTarget.style.background = '#071c2c')}>
+                <Plus size={14} strokeWidth={2.2} /> Distribusi Baru
               </button>
-
-              {/* Search Box */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>Search:</span>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '4px',
-                    padding: '5px 10px',
-                    width: '220px',
-                  }}
-                >
-                  <Search size={14} style={{ color: '#94a3b8' }} />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={e => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    placeholder=""
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      fontSize: '13px',
-                      width: '100%',
-                      color: '#0f172a',
-                      background: 'transparent',
-                    }}
-                  />
-                  {searchTerm && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchTerm('')}
-                      style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '12px' }}
-                    >
-                      ✕
-                    </button>
-                  )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 10px', width: '200px', background: '#fff' }}>
+                  <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                  <input type="text" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={{ border: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#0f172a', background: 'transparent' }} />
+                  {searchTerm && <button onClick={() => setSearchTerm('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}><X size={12} /></button>}
                 </div>
               </div>
             </div>
 
-            {/* Show Entries Strip */}
-            <div
-              style={{
-                padding: '10px 24px',
-                background: '#fafcff',
-                borderBottom: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                fontSize: '12.5px',
-                color: '#64748b',
-              }}
-            >
+            <div style={{ padding: '8px 20px', background: '#fafcff', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px', color: '#64748b' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span>Show</span>
-                <select
-                  value={entriesPerPage}
-                  onChange={e => {
-                    setEntriesPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  style={{
-                    padding: '3px 8px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '12.5px',
-                    color: '#0f172a',
-                    background: '#ffffff',
-                    cursor: 'pointer',
-                    outline: 'none',
-                  }}
-                >
-                  <option value={5}>5</option>
-                  <option value={9}>9</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                  <option value={50}>50</option>
+                <select value={entriesPerPage} onChange={e => { setEntriesPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#fff', cursor: 'pointer' }}>
+                  {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
                 </select>
                 <span>entries</span>
               </div>
-
-              <div style={{ fontSize: '12px', color: '#8fa0b0' }}>
-                Total <strong>{totalEntries}</strong> Dokumen Distribusi
-              </div>
+              <span>Total <strong>{totalEntries}</strong> dokumen distribusi</span>
             </div>
 
-            {/* Table Content */}
-            <div style={{ width: '100%', overflowX: 'auto' }}>
+            <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e8eef5', color: '#475569', fontSize: '11.5px' }}>
-                    <th style={{ padding: '10px 4px', width: '3%', fontWeight: 700, textAlign: 'center' }}>#</th>
-                    <th style={{ padding: '10px 6px', width: '8.5%', fontWeight: 700 }}>ID</th>
-                    <th style={{ padding: '10px 6px', width: '7.5%', fontWeight: 700 }}>ID Reg</th>
-                    <th style={{ padding: '10px 6px', width: '12%', fontWeight: 700 }}>Departemen</th>
-                    <th style={{ padding: '10px 6px', width: '9%', fontWeight: 700 }}>Jenis</th>
-                    <th style={{ padding: '10px 6px', width: '20.5%', fontWeight: 700 }}>Judul</th>
-                    <th style={{ padding: '10px 4px', width: '4%', fontWeight: 700, textAlign: 'center' }}>Rev</th>
-                    <th style={{ padding: '10px 6px', width: '13%', fontWeight: 700 }}>Folder</th>
-                    <th style={{ padding: '10px 4px', width: '5.5%', fontWeight: 700, textAlign: 'center' }}>File</th>
-                    <th style={{ padding: '10px 4px', width: '8%', fontWeight: 700, textAlign: 'center' }}>Status</th>
-                    <th style={{ padding: '10px 6px', width: '9%', fontWeight: 700, textAlign: 'center' }}>Aksi</th>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e8eef5', color: '#475569', fontSize: '11px' }}>
+                    <th style={{ padding: '10px 8px', width: '3%', textAlign: 'center', fontWeight: 700 }}>#</th>
+                    <th style={{ padding: '10px 8px', width: '9%', fontWeight: 700 }}>ID</th>
+                    <th style={{ padding: '10px 8px', width: '8%', fontWeight: 700 }}>ID Reg</th>
+                    <th style={{ padding: '10px 8px', width: '11%', fontWeight: 700 }}>Departemen</th>
+                    <th style={{ padding: '10px 8px', width: '11%', fontWeight: 700 }}>Jenis</th>
+                    <th style={{ padding: '10px 8px', width: '24%', fontWeight: 700 }}>Judul</th>
+                    <th style={{ padding: '10px 4px', width: '4%', textAlign: 'center', fontWeight: 700 }}>Rev</th>
+                    <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Tipe</th>
+                    <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Status</th>
+                    <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Tanggal</th>
+                    <th style={{ padding: '10px 8px', width: '9%', textAlign: 'center', fontWeight: 700 }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {paginatedData.length > 0 ? (
-                    paginatedData.map((doc, idx) => {
-                      const isEven = idx % 2 === 1;
-                      return (
-                        <tr
-                          key={doc.id}
-                          style={{
-                            background: isEven ? '#fafcff' : '#ffffff',
-                            borderBottom: '1px solid #f1f5f9',
-                            transition: 'background 0.15s ease',
-                          }}
-                          onMouseEnter={e => (e.currentTarget.style.background = '#f0f7ff')}
-                          onMouseLeave={e => (e.currentTarget.style.background = isEven ? '#fafcff' : '#ffffff')}
-                        >
-                          {/* # */}
-                          <td style={{ padding: '10px 6px', textAlign: 'center', color: '#64748b', fontWeight: 600, fontSize: '11.5px' }}>
-                            {startIndex + idx + 1}
-                          </td>
-
-                          {/* ID */}
-                          <td style={{ padding: '10px 6px', wordBreak: 'break-word' }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#071c2c' }}>
-                              {doc.id}
-                            </span>
-                          </td>
-
-                          {/* ID Registrasi */}
-                          <td style={{ padding: '10px 6px', wordBreak: 'break-word' }}>
-                            <span style={{ fontFamily: 'monospace', fontSize: '11px', color: doc.idRegistrasi !== '-' ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>
-                              {doc.idRegistrasi}
-                            </span>
-                          </td>
-
-                          {/* Dept/Sub Dept */}
-                          <td style={{ padding: '10px 6px', color: '#0f172a', fontWeight: 500, fontSize: '11.5px', lineHeight: 1.35, wordBreak: 'break-word' }}>
-                            {doc.dept}
-                          </td>
-
-                          {/* Jenis */}
-                          <td style={{ padding: '10px 6px', color: '#334155', fontSize: '11.5px', lineHeight: 1.35, wordBreak: 'break-word' }}>
-                            {doc.jenis}
-                          </td>
-
-                          {/* Judul */}
-                          <td style={{ padding: '10px 6px', color: '#071c2c', fontWeight: 600, fontSize: '11.5px', lineHeight: 1.35, wordBreak: 'break-word' }}>
-                            {doc.judul}
-                          </td>
-
-                          {/* Revisi */}
-                          <td style={{ padding: '10px 6px', textAlign: 'center', color: '#475569', fontWeight: 700, fontSize: '11.5px' }}>
-                            {doc.revisi}
-                          </td>
-
-                          {/* Folder */}
-                          <td style={{ padding: '10px 6px', color: '#475569', fontSize: '11px', lineHeight: 1.35, wordBreak: 'break-word' }}>
-                            {doc.folder}
-                          </td>
-
-                          {/* Dokumen */}
-                          <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                            {doc.fileName ? (
-                              <button
-                                type="button"
-                                onClick={() => showToast(`Mengunduh dokumen: ${doc.fileName}`)}
-                                title={`Unduh ${doc.fileName} (${doc.fileSize})`}
-                                style={{
-                                  background: '#f0f9ff',
-                                  border: '1px solid #bae6fd',
-                                  borderRadius: '4px',
-                                  padding: '4px',
-                                  cursor: 'pointer',
-                                  color: '#0284c7',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                }}
-                              >
-                                <FileText size={13} />
-                              </button>
-                            ) : (
-                              <span style={{ color: '#cbd5e1', fontSize: '11px' }}>-</span>
-                            )}
-                          </td>
-
-                          {/* Status */}
-                          <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                            <span
-                              style={{
-                                background: '#0284c7',
-                                color: '#ffffff',
-                                padding: '2px 6px',
-                                borderRadius: '12px',
-                                fontSize: '10px',
-                                fontWeight: 700,
-                                display: 'inline-block',
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {doc.status}
-                            </span>
-                          </td>
-
-                          {/* Action */}
-                          <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                              {/* Edit */}
-                              <button
-                                type="button"
-                                onClick={() => showToast(`Edit dokumen ${doc.id}`)}
-                                title="Edit Dokumen"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  color: '#0284c7',
-                                  padding: '2px',
-                                }}
-                              >
-                                <Edit size={13} />
-                              </button>
-
-                              {/* External Link / View */}
-                              <button
-                                type="button"
-                                onClick={() => showToast(`Buka pratinjau dokumen ${doc.id}`)}
-                                title="Buka Pratinjau Dokumen"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  color: '#4a3b7d',
-                                  padding: '2px',
-                                }}
-                              >
-                                <ExternalLink size={13} />
-                              </button>
-
-                              {/* Send Official Email Notification */}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEmailModalDoc(doc);
-                                  setModalRecipient('filayati_akbar@yahoo.com');
-                                }}
-                                title="Kirim Notifikasi Email Resmi via qms@thi.co.id"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  color: '#0284c7',
-                                  padding: '2px',
-                                }}
-                              >
-                                <Mail size={13} />
-                              </button>
-
-                              {/* Delete */}
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteItem(doc.id, doc.judul)}
-                                title="Hapus Dokumen"
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  cursor: 'pointer',
-                                  color: '#ef4444',
-                                  padding: '2px',
-                                }}
-                              >
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={11} style={{ padding: '36px 20px', textAlign: 'center', color: '#94a3b8' }}>
-                        Tidak ada data distribusi dokumen yang ditemukan.
-                      </td>
-                    </tr>
+                  {paginatedData.length > 0 ? paginatedData.map((doc, idx) => {
+                    const isEven = idx % 2 === 1;
+                    const typeColor = doc.distType === 'NEW_DOC' ? '#15803d' : doc.distType === 'REVISION_UPDATE' ? '#0284c7' : '#7c3aed';
+                    const typeBg = doc.distType === 'NEW_DOC' ? '#f0fdf4' : doc.distType === 'REVISION_UPDATE' ? '#f0f9ff' : '#f5f3ff';
+                    const typeLabel = doc.distType === 'NEW_DOC' ? 'Baru' : doc.distType === 'REVISION_UPDATE' ? 'Revisi' : 'Umumkan';
+                    return (
+                      <tr key={doc.id} style={{ background: isEven ? '#fafcff' : '#fff', borderBottom: '1px solid #f1f5f9', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f0f7ff')} onMouseLeave={e => (e.currentTarget.style.background = isEven ? '#fafcff' : '#fff')}>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', color: '#94a3b8', fontWeight: 600, fontSize: '11px' }}>{startIndex + idx + 1}</td>
+                        <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#071c2c' }}>{doc.id}</span></td>
+                        <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', color: doc.idRegistrasi !== '-' ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{doc.idRegistrasi}</span></td>
+                        <td style={{ padding: '9px 8px', color: '#0f172a', fontWeight: 500, fontSize: '11.5px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.dept}</td>
+                        <td style={{ padding: '9px 8px', color: '#334155', fontSize: '11px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.jenis}</td>
+                        <td style={{ padding: '9px 8px', color: '#071c2c', fontWeight: 600, fontSize: '11.5px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.judul}</td>
+                        <td style={{ padding: '9px 4px', textAlign: 'center', color: '#475569', fontWeight: 700, fontSize: '11px' }}>{doc.revisi}</td>
+                        <td style={{ padding: '9px 4px', textAlign: 'center' }}>
+                          <span style={{ background: typeBg, color: typeColor, padding: '2px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 700, whiteSpace: 'nowrap' }}>{typeLabel}</span>
+                        </td>
+                        <td style={{ padding: '9px 4px', textAlign: 'center' }}>
+                          <span style={{ background: '#0284c7', color: '#fff', padding: '2px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>{doc.status}</span>
+                        </td>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', color: '#64748b', fontSize: '11px' }}>{doc.createdAt}</td>
+                        <td style={{ padding: '9px 8px', textAlign: 'center' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                            <button type="button" title="Buka dokumen di tab baru" onClick={() => { if (doc.fileUrl) window.open(doc.fileUrl, '_blank', 'noopener,noreferrer'); else showToast('Tidak ada URL dokumen yang tersedia.', 'error'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', padding: '3px' }}><Eye size={13} /></button>
+                            <button type="button" title="Kirim notifikasi email" onClick={() => { setEmailModalDoc(doc); setModalRecipient(''); setModalNotes(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '3px' }}><Mail size={13} /></button>
+                            <button type="button" title="Hapus" onClick={() => handleDeleteItem(doc.id, doc.judul)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '3px' }}><Trash2 size={13} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }) : (
+                    <tr><td colSpan={11} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Belum ada data distribusi dokumen. Klik <strong>Distribusi Baru</strong> untuk memulai.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
 
-            {/* Bottom Pagination */}
-            <div
-              style={{
-                padding: '14px 24px',
-                borderTop: '1px solid #f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-                fontSize: '12.5px',
-                color: '#64748b',
-                background: '#ffffff',
-              }}
-            >
-              <div>
-                Showing {totalEntries === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + entriesPerPage, totalEntries)} of {totalEntries} entries
-              </div>
-
+            <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', fontSize: '12.5px', color: '#64748b' }}>
+              <div>Showing {totalEntries === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + entriesPerPage, totalEntries)} of {totalEntries} entries</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={validPage === 1}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    background: validPage === 1 ? '#f8fafc' : '#ffffff',
-                    color: validPage === 1 ? '#cbd5e1' : '#334155',
-                    cursor: validPage === 1 ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  Previous
-                </button>
-
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(pageNum => {
-                  const isCurrent = pageNum === validPage;
-                  return (
-                    <button
-                      key={pageNum}
-                      type="button"
-                      onClick={() => setCurrentPage(pageNum)}
-                      style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '4px',
-                        border: isCurrent ? '1px solid #4a3b7d' : '1px solid #cbd5e1',
-                        background: isCurrent ? '#4a3b7d' : '#ffffff',
-                        color: isCurrent ? '#ffffff' : '#334155',
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                        fontSize: '12.5px',
-                      }}
-                    >
-                      {pageNum}
-                    </button>
-                  );
-                })}
-
-                {totalPages > 5 && <span style={{ padding: '0 4px', color: '#94a3b8' }}>...</span>}
-                {totalPages > 5 && (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentPage(totalPages)}
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '4px',
-                      border: validPage === totalPages ? '1px solid #4a3b7d' : '1px solid #cbd5e1',
-                      background: validPage === totalPages ? '#4a3b7d' : '#ffffff',
-                      color: validPage === totalPages ? '#ffffff' : '#334155',
-                      cursor: 'pointer',
-                      fontWeight: 700,
-                      fontSize: '12.5px',
-                    }}
-                  >
-                    {totalPages}
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={validPage === totalPages || totalPages === 0}
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '4px',
-                    border: '1px solid #cbd5e1',
-                    background: validPage === totalPages || totalPages === 0 ? '#f8fafc' : '#ffffff',
-                    color: validPage === totalPages || totalPages === 0 ? '#cbd5e1' : '#334155',
-                    cursor: validPage === totalPages || totalPages === 0 ? 'not-allowed' : 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  Next
-                </button>
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={validPage === 1} style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', background: validPage === 1 ? '#f8fafc' : '#fff', color: validPage === 1 ? '#cbd5e1' : '#334155', cursor: validPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '12px' }}>Previous</button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(pn => (
+                  <button key={pn} onClick={() => setCurrentPage(pn)} style={{ width: '30px', height: '30px', borderRadius: '4px', border: pn === validPage ? '1px solid #071c2c' : '1px solid #cbd5e1', background: pn === validPage ? '#071c2c' : '#fff', color: pn === validPage ? '#fff' : '#334155', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>{pn}</button>
+                ))}
+                {totalPages > 5 && <><span style={{ color: '#94a3b8' }}>...</span><button onClick={() => setCurrentPage(totalPages)} style={{ width: '30px', height: '30px', borderRadius: '4px', border: validPage === totalPages ? '1px solid #071c2c' : '1px solid #cbd5e1', background: validPage === totalPages ? '#071c2c' : '#fff', color: validPage === totalPages ? '#fff' : '#334155', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>{totalPages}</button></>}
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={validPage === totalPages || totalPages === 0} style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', background: (validPage === totalPages || totalPages === 0) ? '#f8fafc' : '#fff', color: (validPage === totalPages || totalPages === 0) ? '#cbd5e1' : '#334155', cursor: (validPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '12px' }}>Next</button>
               </div>
             </div>
           </div>
         </>
       )}
 
-      {/* ════════════════════════════════════════════════════════════
-          SCREEN 2: FORM TAMBAH BARU (DISTRIBUSI DOKUMEN)
-          ════════════════════════════════════════════════════════════ */}
+      {/* FORM VIEW */}
       {viewState === 'form' && (
         <>
-          {/* ── PAGE TITLE ── */}
-          <div>
-            <h1
-              style={{
-                fontSize: '22px',
-                fontWeight: 800,
-                color: '#071c2c',
-                margin: 0,
-                fontFamily: 'var(--font-display, inherit)',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              Distribusi Dokumen
-            </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button type="button" onClick={() => setViewState('table')} style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <ArrowLeft size={14} /> Kembali
+            </button>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#071c2c', margin: 0, letterSpacing: '-0.01em' }}>Distribusi Dokumen Baru</h1>
           </div>
 
-          {/* ── CARD CONTAINER ── */}
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 2px 10px rgba(7, 28, 44, 0.03)',
-              padding: '24px 28px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '18px',
-            }}
-          >
-            {/* Back Button */}
-            <div>
-              <button
-                type="button"
-                onClick={() => setViewState('table')}
-                style={{
-                  background: '#071c2c',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 18px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 1px 3px rgba(7,28,44,0.12)',
-                  transition: 'background 0.15s ease',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#0d2d47')}
-                onMouseLeave={e => (e.currentTarget.style.background = '#071c2c')}
-              >
-                <ArrowLeft size={14} />
-                <span>Back</span>
-              </button>
+          {errorMessage && (
+            <div style={{ padding: '10px 14px', borderRadius: '6px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <AlertCircle size={16} /><span>{errorMessage}</span>
             </div>
+          )}
 
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+            {([
+              { key: 'NEW_DOC', icon: <FolderPlus size={16} />, label: 'Dokumen Baru', sub: 'Pilih Folder & Sub Folder', color: '#15803d', bg: '#f0fdf4' },
+              { key: 'REVISION_UPDATE', icon: <RefreshCw size={16} />, label: 'Update Revisi', sub: 'Pilih Berkas Terdaftar', color: '#0284c7', bg: '#f0f9ff' },
+              { key: 'ANNOUNCEMENT', icon: <Megaphone size={16} />, label: 'Pengumuman', sub: 'Sosialisasi Ulang Dokumen', color: '#7c3aed', bg: '#f5f3ff' },
+            ] as const).map(tab => {
+              const isActive = distMode === tab.key;
+              return (
+                <button key={tab.key} type="button" onClick={() => { setDistMode(tab.key as typeof distMode); setErrorMessage(''); }} style={{ padding: '12px 16px', borderRadius: '8px', border: isActive ? `2px solid ${tab.color}` : '1px solid #e2e8f0', background: isActive ? tab.bg : '#fff', color: isActive ? tab.color : '#64748b', fontSize: '13px', fontWeight: isActive ? 700 : 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s ease', textAlign: 'left' }}>
+                  <span style={{ color: isActive ? tab.color : '#94a3b8', flexShrink: 0 }}>{tab.icon}</span>
+                  <span><span style={{ display: 'block', fontWeight: 700, fontSize: '13px' }}>{tab.label}</span><span style={{ display: 'block', fontSize: '11px', color: isActive ? tab.color : '#94a3b8', fontWeight: 400 }}>{tab.sub}</span></span>
+                </button>
+              );
+            })}
+          </div>
 
-
-            {/* Error Message */}
-            {errorMessage && (
-              <div
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: '6px',
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  color: '#dc2626',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <AlertCircle size={16} />
-                <span>{errorMessage}</span>
+          <form onSubmit={handleSubmitForm} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {distMode === 'NEW_DOC' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {newDocEntries.map((entry, idx) => (
+                  <NewDocEntryRow key={entry.id} entry={entry} index={idx} totalCount={newDocEntries.length} masterFolders={masterFolders} deptOptions={DEPT_OPTIONS} jenisOptions={JENIS_OPTIONS} onUpdate={patch => updateNewDoc(entry.id, patch)} onRemove={() => removeNewDocEntry(entry.id)} />
+                ))}
+                <button type="button" onClick={addNewDocEntry} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 16px', border: '1.5px dashed #cbd5e1', borderRadius: '8px', background: '#fafcff', color: '#475569', fontSize: '13px', fontWeight: 600, cursor: 'pointer', width: '100%', justifyContent: 'center' }} onMouseOver={e => { e.currentTarget.style.borderColor = '#071c2c'; e.currentTarget.style.color = '#071c2c'; }} onMouseOut={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}>
+                  <Plus size={14} /> Tambah Dokumen Lagi
+                </button>
               </div>
             )}
 
-            {/* Mode Switcher Tabs */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '12px',
-                borderBottom: '1px solid #e2e8f0',
-                paddingBottom: '16px',
-                marginBottom: '6px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setDistMode('NEW_DOC');
-                  setErrorMessage('');
-                }}
-                style={{
-                  flex: 1,
-                  minWidth: '220px',
-                  padding: '11px 16px',
-                  borderRadius: '8px',
-                  border: distMode === 'NEW_DOC' ? '2px solid #071c2c' : '1px solid #e2e8f0',
-                  background: distMode === 'NEW_DOC' ? '#f0f5fa' : '#ffffff',
-                  color: distMode === 'NEW_DOC' ? '#071c2c' : '#64748b',
-                  fontSize: '13px',
-                  fontWeight: distMode === 'NEW_DOC' ? 700 : 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <FolderPlus size={16} color={distMode === 'NEW_DOC' ? '#0284c7' : '#94a3b8'} />
-                <span>Dokumen Baru (Pilih Folder &amp; Sub Folder)</span>
-              </button>
+            {distMode === 'REVISION_UPDATE' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {revDocEntries.map((entry, idx) => (
+                  <RevDocEntryRow key={entry.id} entry={entry} index={idx} totalCount={revDocEntries.length} flattenedDocs={flattenedDocs} onUpdate={patch => updateRevDoc(entry.id, patch)} onRemove={() => removeRevDocEntry(entry.id)} />
+                ))}
+                <button type="button" onClick={addRevDocEntry} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 16px', border: '1.5px dashed #cbd5e1', borderRadius: '8px', background: '#fafcff', color: '#475569', fontSize: '13px', fontWeight: 600, cursor: 'pointer', width: '100%', justifyContent: 'center' }} onMouseOver={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.color = '#0284c7'; }} onMouseOut={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569'; }}>
+                  <Plus size={14} /> Tambah Dokumen Revisi Lagi
+                </button>
+              </div>
+            )}
 
-              <button
-                type="button"
-                onClick={() => {
-                  setDistMode('REVISION_UPDATE');
-                  setErrorMessage('');
-                }}
-                style={{
-                  flex: 1,
-                  minWidth: '220px',
-                  padding: '11px 16px',
-                  borderRadius: '8px',
-                  border: distMode === 'REVISION_UPDATE' ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                  background: distMode === 'REVISION_UPDATE' ? '#f0f9ff' : '#ffffff',
-                  color: distMode === 'REVISION_UPDATE' ? '#0284c7' : '#64748b',
-                  fontSize: '13px',
-                  fontWeight: distMode === 'REVISION_UPDATE' ? 700 : 500,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <RefreshCw size={16} color={distMode === 'REVISION_UPDATE' ? '#0284c7' : '#94a3b8'} />
-                <span>Update Dokumen Revisi (Pilih Berkas Terdaftar)</span>
-              </button>
+            {distMode === 'ANNOUNCEMENT' && (
+              <div style={{ ...cardStyle, padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <Megaphone size={18} style={{ color: '#7c3aed' }} />
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#071c2c' }}>Pilih Dokumen yang Akan Diumumkan</div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>Centang satu atau lebih dokumen dari masterlist untuk didistribusikan ulang</div>
+                  </div>
+                </div>
+                <AnnDocSelector flattenedDocs={flattenedDocs} selectedIds={announcedDocIds} onToggle={toggleAnnouncedDoc} />
+                <div>
+                  <label style={labelStyle}>Catatan Pengumuman <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(opsional)</span></label>
+                  <textarea rows={3} value={announcementNote} onChange={e => setAnnouncementNote(e.target.value)} placeholder="Tuliskan catatan sosialisasi atau instruksi tindak lanjut..." style={{ ...inputStyle, resize: 'vertical' }} />
+                </div>
+              </div>
+            )}
+
+            <div style={{ ...cardStyle, padding: '18px 20px', borderLeft: '3px solid #0284c7' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#eff6ff', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Bell size={16} /></div>
+                  <div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#071c2c' }}>Notifikasi Email</div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>Kirim notifikasi otomatis via <strong>qms@thi.co.id</strong></div>
+                  </div>
+                </div>
+                <label style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', cursor: 'pointer', flexShrink: 0 }}>
+                  <input type="checkbox" checked={sendEmailNotification} onChange={e => setSendEmailNotification(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: '#0284c7', cursor: 'pointer' }} />
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Aktifkan</span>
+                </label>
+              </div>
+              {sendEmailNotification && (
+                <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <label style={labelStyle}>Email Penerima <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(pisahkan dengan koma)</span></label>
+                    <input type="text" value={recipientEmail} onChange={e => setRecipientEmail(e.target.value)} placeholder="contoh: user@thi.co.id, hr.ga@thi.co.id" style={inputStyle} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Catatan Email <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(opsional)</span></label>
+                    <textarea rows={2} value={emailNotes} onChange={e => setEmailNotes(e.target.value)} placeholder="Instruksi atau catatan sosialisasi tambahan..." style={{ ...inputStyle, resize: 'vertical' }} />
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleSubmitForm} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* MODE 1: DOKUMEN BARU */}
-              {distMode === 'NEW_DOC' && (
-                <>
-                  {/* Field 1: Folder Dokumen Utama */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Pilih Folder Utama <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <select
-                      value={selectedFolderId}
-                      onChange={e => {
-                        setSelectedFolderId(e.target.value ? Number(e.target.value) : '');
-                        setSelectedSubFolderId('');
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '13px',
-                        color: selectedFolderId ? '#0f172a' : '#94a3b8',
-                        background: '#ffffff',
-                        outline: 'none',
-                      }}
-                      required
-                    >
-                      <option value="">-- Pilih Folder Utama Masterlist --</option>
-                      {masterFolders.map(f => (
-                        <option key={f.id} value={f.id} style={{ color: '#0f172a' }}>
-                          📁 {f.name} ({f.docs?.length || 0} docs, {f.subfolders?.length || 0} sub)
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Field 2: Sub Folder Dokumen (Bertingkat) */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Pilih Sub Folder (Bertingkat / Opsional)
-                    </label>
-                    <select
-                      value={selectedSubFolderId}
-                      onChange={e => setSelectedSubFolderId(e.target.value)}
-                      disabled={!selectedFolderId}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '13px',
-                        color: selectedSubFolderId ? '#0f172a' : '#64748b',
-                        background: !selectedFolderId ? '#f8fafc' : '#ffffff',
-                        outline: 'none',
-                      }}
-                    >
-                      <option value="">-Root Folder (Tanpa Sub Folder)-</option>
-                      {selectedFolderId &&
-                        (masterFolders.find(f => f.id === Number(selectedFolderId))?.subfolders || []).map(sub => (
-                          <React.Fragment key={sub.id}>
-                            <option value={sub.id} style={{ color: '#0f172a', fontWeight: 600 }}>
-                              📁 {sub.name} ({sub.docs?.length || 0} docs)
-                            </option>
-                            {(sub.subfolders || []).map(cs => (
-                              <option key={cs.id} value={cs.id} style={{ color: '#0369a1' }}>
-                                &nbsp;&nbsp;&nbsp;&nbsp;↳ 📂 {cs.name} ({cs.docs?.length || 0} docs)
-                              </option>
-                            ))}
-                          </React.Fragment>
-                        ))}
-                    </select>
-                    {selectedFolderId && (masterFolders.find(f => f.id === Number(selectedFolderId))?.subfolders || []).length === 0 && (
-                      <span style={{ display: 'block', fontSize: '11.5px', color: '#94a3b8', marginTop: '4px' }}>
-                        Folder ini belum memiliki sub-folder. Berkas akan dimasukkan langsung ke folder utama.
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Field 3: Departemen & Jenis */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                        Departemen <span style={{ color: '#dc2626' }}>*</span>
-                      </label>
-                      <select
-                        value={dept}
-                        onChange={e => setDept(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '13px',
-                          color: dept ? '#0f172a' : '#94a3b8',
-                          background: '#ffffff',
-                          outline: 'none',
-                        }}
-                        required
-                      >
-                        <option value="">-Pilih Departemen-</option>
-                        {DEPT_OPTIONS.map(d => (
-                          <option key={d} value={d} style={{ color: '#0f172a' }}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                        Jenis Dokumen <span style={{ color: '#dc2626' }}>*</span>
-                      </label>
-                      <select
-                        value={jenis}
-                        onChange={e => setJenis(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '13px',
-                          color: jenis ? '#0f172a' : '#94a3b8',
-                          background: '#ffffff',
-                          outline: 'none',
-                        }}
-                        required
-                      >
-                        <option value="">-Pilih Jenis-</option>
-                        {JENIS_OPTIONS.map(j => (
-                          <option key={j} value={j} style={{ color: '#0f172a' }}>
-                            {j}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Field 4: Nomor Dokumen & Revisi */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                        Nomor Dokumen (Opsional / Otomatis)
-                      </label>
-                      <input
-                        type="text"
-                        value={docNumber}
-                        onChange={e => setDocNumber(e.target.value)}
-                        placeholder="Contoh: THI-QHSSE-SOP-009"
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '13px',
-                          color: '#0f172a',
-                          background: '#ffffff',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                        Revisi Ke
-                      </label>
-                      <input
-                        type="text"
-                        value={revisiKe}
-                        onChange={e => setRevisiKe(e.target.value)}
-                        placeholder="00"
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '13px',
-                          color: '#0f172a',
-                          background: '#ffffff',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Field 5: Judul Dokumen */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Judul Dokumen <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={judulDokumen}
-                      onChange={e => setJudulDokumen(e.target.value)}
-                      placeholder="Masukkan nama judul lengkap dokumen..."
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '13px',
-                        color: '#0f172a',
-                        background: '#ffffff',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                      required
-                    />
-                  </div>
-
-                  {/* Field 6: Upload Dokumen */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Upload Berkas Dokumen (PDF/Word/Excel, Max: 2MB)
-                    </label>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      onChange={handleFileChange}
-                      accept=".pdf,.doc,.docx,.xls,.xlsx"
-                      style={{ fontSize: '13px', color: '#475569' }}
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* MODE 2: UPDATE REVISI DOKUMEN TERDAFTAR */}
-              {distMode === 'REVISION_UPDATE' && (
-                <>
-                  {/* Field 1: Pilih Dokumen Masterlist */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Pilih Dokumen dari Masterlist yang Akan Direvisi <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <select
-                      value={selectedExistingDocId}
-                      onChange={e => setSelectedExistingDocId(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '13px',
-                        color: selectedExistingDocId ? '#0f172a' : '#94a3b8',
-                        background: '#ffffff',
-                        outline: 'none',
-                      }}
-                      required
-                    >
-                      <option value="">-- Pilih Dokumen Terdaftar --</option>
-                      {flattenedDocs.map(doc => (
-                        <option key={doc.id} value={doc.id} style={{ color: '#0f172a' }}>
-                          [{doc.number}] {doc.title} — Current: {doc.revision} ({doc.folderName})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Document Summary Card if selected */}
-                  {selectedExistingDoc && (
-                    <div
-                      style={{
-                        background: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderLeft: '4px solid #0284c7',
-                        borderRadius: '6px',
-                        padding: '14px 16px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px',
-                        fontSize: '12.5px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                        <span style={{ fontWeight: 700, color: '#071c2c', fontSize: '13.5px' }}>
-                          {selectedExistingDoc.number} · {selectedExistingDoc.title}
-                        </span>
-                        <span
-                          style={{
-                            fontFamily: 'var(--font-mono)',
-                            fontWeight: 700,
-                            color: '#0284c7',
-                            background: '#e0f2fe',
-                            padding: '2px 8px',
-                            borderRadius: '4px',
-                          }}
-                        >
-                          Revisi Terdaftar: {selectedExistingDoc.revision}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748b', fontSize: '12px' }}>
-                        <span>📁 Folder: <strong>{selectedExistingDoc.folderName}</strong></span>
-                        {selectedExistingDoc.subFolderName && (
-                          <span>📂 Sub Folder: <strong>{selectedExistingDoc.subFolderName}</strong></span>
-                        )}
-                        <span>Tipe: <strong>{selectedExistingDoc.type}</strong></span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Field 2: Nomor Revisi Baru */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Nomor Revisi Baru <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={newRevisionNumber}
-                      onChange={e => setNewRevisionNumber(e.target.value)}
-                      placeholder="Contoh: Rev.04"
-                      style={{
-                        width: '100%',
-                        maxWidth: '240px',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '13px',
-                        fontWeight: 700,
-                        color: '#0284c7',
-                        background: '#f0f9ff',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                      required
-                    />
-                    <span style={{ display: 'block', fontSize: '11.5px', color: '#64748b', marginTop: '4px' }}>
-                      Sistem secara otomatis menaikkan nomor revisi berikutnya. Anda dapat menyesuaikannya bila perlu.
-                    </span>
-                  </div>
-
-                  {/* Field 3: Catatan Perubahan Revisi */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Catatan Perubahan / Alasan Revisi (Change Notes) <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      value={revisionNotes}
-                      onChange={e => setRevisionNotes(e.target.value)}
-                      placeholder="Jelaskan ringkasan bagian atau klausul apa saja yang diperbarui pada revisi ini..."
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        fontSize: '13px',
-                        color: '#0f172a',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                        fontFamily: 'inherit',
-                      }}
-                      required
-                    />
-                  </div>
-
-                  {/* Field 4: Upload File Revisi Baru */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                      Upload Berkas File Revisi Terbaru (PDF/Word/Excel, Max: 2MB) <span style={{ color: '#dc2626' }}>*</span>
-                    </label>
-                    <input
-                      ref={revFileInputRef}
-                      type="file"
-                      onChange={handleRevFileChange}
-                      accept=".pdf,.doc,.docx,.xls,.xlsx"
-                      style={{ fontSize: '13px', color: '#475569' }}
-                      required
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* ── NOTIFIKASI EMAIL DISTRIBUSI (CORPORATE MAIL) ── */}
-              <div
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #bfdbfe',
-                  borderRadius: '10px',
-                  padding: '18px 20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '14px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
-                        background: '#eff6ff',
-                        color: '#0284c7',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Mail size={18} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#071c2c' }}>
-                        Notifikasi Email Distribusi Otomatis
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#64748b' }}>
-                        Kirim salinan pengumuman resmi ke email departemen via server <strong>qms@thi.co.id</strong>
-                      </div>
-                    </div>
-                  </div>
-
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={sendEmailNotification}
-                      onChange={e => setSendEmailNotification(e.target.checked)}
-                      style={{ width: '16px', height: '16px', accentColor: '#0284c7', cursor: 'pointer' }}
-                    />
-                    <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>Aktifkan</span>
-                  </label>
-                </div>
-
-                {sendEmailNotification && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                        Alamat Email Penerima <span style={{ fontSize: '11px', color: '#64748b' }}>(pisahkan dengan tanda koma jika lebih dari satu)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={recipientEmail}
-                        onChange={e => setRecipientEmail(e.target.value)}
-                        placeholder="contoh: filayati_akbar@yahoo.com, hr.ga@thi.co.id"
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '13px',
-                          color: '#0f172a',
-                          background: '#ffffff',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                        Catatan Sosialisasi / Instruksi Khusus <span style={{ fontSize: '11px', color: '#94a3b8' }}>(opsional)</span>
-                      </label>
-                      <textarea
-                        rows={2}
-                        value={emailNotes}
-                        onChange={e => setEmailNotes(e.target.value)}
-                        placeholder="Tuliskan catatan sosialisasi atau instruksi tindak lanjut untuk personil di lapangan..."
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          borderRadius: '6px',
-                          border: '1px solid #cbd5e1',
-                          fontSize: '13px',
-                          color: '#0f172a',
-                          outline: 'none',
-                          boxSizing: 'border-box',
-                          fontFamily: 'inherit',
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Form Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
-                <button
-                  type="submit"
-                  style={{
-                    padding: '9px 24px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: '#071c2c',
-                    color: '#ffffff',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 6px rgba(7, 28, 44, 0.2)',
-                  }}
-                >
-                  <Check size={14} />
-                  <span>{distMode === 'NEW_DOC' ? 'Distribusikan Dokumen Baru' : 'Rilis Berkas Revisi'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetForm}
-                  style={{
-                    padding: '9px 20px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#64748b',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Reset Form
-                </button>
-              </div>
-            </form>
-          </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '8px' }}>
+              <button type="button" onClick={handleResetForm} style={{ padding: '9px 20px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Reset</button>
+              <button type="submit" style={{ padding: '9px 24px', borderRadius: '6px', border: 'none', background: '#071c2c', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(7,28,44,0.2)' }} onMouseOver={e => (e.currentTarget.style.background = '#0d2d47')} onMouseOut={e => (e.currentTarget.style.background = '#071c2c')}>
+                <Send size={14} />
+                {distMode === 'NEW_DOC' ? 'Distribusikan Dokumen' : distMode === 'REVISION_UPDATE' ? 'Rilis Revisi' : 'Umumkan Dokumen'}
+              </button>
+            </div>
+          </form>
         </>
       )}
 
-      {/* ── MODAL KIRIM EMAIL NOTIFIKASI CEPAT ── */}
+      {/* Quick Email Modal */}
       {emailModalDoc && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            backgroundColor: 'rgba(7, 28, 44, 0.55)',
-            backdropFilter: 'blur(3px)',
-            animation: 'fadeIn 0.2s ease',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '540px',
-              backgroundColor: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #e2e8f0',
-              boxShadow: '0 20px 40px rgba(7, 28, 44, 0.2)',
-              overflow: 'hidden',
-            }}
-          >
-            {/* Modal Header */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '16px 20px',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#071c2c',
-                color: '#ffffff',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Mail size={18} style={{ color: '#38bdf8' }} />
-                <span style={{ fontSize: '14px', fontWeight: 700 }}>
-                  Kirim Notifikasi Email Resmi
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEmailModalDoc(null)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: '4px',
-                }}
-              >
-                <X size={16} />
-              </button>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backgroundColor: 'rgba(7,28,44,0.55)', backdropFilter: 'blur(3px)' }}>
+          <div style={{ width: '100%', maxWidth: '520px', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 20px 40px rgba(7,28,44,0.2)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid #e2e8f0', background: '#071c2c', color: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Mail size={16} style={{ color: '#38bdf8' }} /><span style={{ fontSize: '13.5px', fontWeight: 700 }}>Kirim Notifikasi Email</span></div>
+              <button onClick={() => setEmailModalDoc(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}><X size={16} /></button>
             </div>
-
-            {/* Modal Body */}
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #e2e8f0',
-                  borderLeft: '4px solid #0284c7',
-                  borderRadius: '6px',
-                  padding: '12px 14px',
-                  fontSize: '12.5px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                }}
-              >
-                <div style={{ color: '#64748b' }}>
-                  Dokumen: <strong style={{ color: '#0f172a' }}>{emailModalDoc.id} — {emailModalDoc.judul}</strong>
-                </div>
-                <div style={{ color: '#64748b' }}>
-                  Departemen: <strong style={{ color: '#0f172a' }}>{emailModalDoc.dept}</strong> | Revisi: <strong style={{ color: '#15803d' }}>Rev.{emailModalDoc.revisi}</strong>
-                </div>
-                <div style={{ color: '#64748b' }}>
-                  Server Pengirim: <strong style={{ color: '#0284c7' }}>qms@thi.co.id (PT Taka Hydrocore Indonesia)</strong>
-                </div>
+            <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderLeft: '4px solid #0284c7', borderRadius: '6px', padding: '12px 14px', fontSize: '12.5px' }}>
+                <div style={{ color: '#64748b' }}>Dokumen: <strong style={{ color: '#0f172a' }}>{emailModalDoc.id} — {emailModalDoc.judul}</strong></div>
+                <div style={{ color: '#64748b', marginTop: '4px' }}>Dept: <strong>{emailModalDoc.dept}</strong> | Rev: <strong style={{ color: '#15803d' }}>Rev.{emailModalDoc.revisi}</strong></div>
+                <div style={{ color: '#64748b', marginTop: '4px' }}>Pengirim: <strong style={{ color: '#0284c7' }}>qms@thi.co.id</strong></div>
               </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Kirim ke Alamat Email:
-                </label>
-                <input
-                  type="text"
-                  value={modalRecipient}
-                  onChange={e => setModalRecipient(e.target.value)}
-                  placeholder="contoh: filayati_akbar@yahoo.com, hr.ga@thi.co.id"
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    color: '#0f172a',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Pesan / Catatan Sosialisasi Tambahan:
-                </label>
-                <textarea
-                  rows={3}
-                  value={modalNotes}
-                  onChange={e => setModalNotes(e.target.value)}
-                  placeholder="Tuliskan catatan sosialisasi bagi personil departemen..."
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    color: '#0f172a',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    fontFamily: 'inherit',
-                  }}
-                />
-              </div>
+              <div><label style={labelStyle}>Email Penerima</label><input type="text" value={modalRecipient} onChange={e => setModalRecipient(e.target.value)} placeholder="contoh: user@thi.co.id" style={inputStyle} /></div>
+              <div><label style={labelStyle}>Catatan <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(opsional)</span></label><textarea rows={3} value={modalNotes} onChange={e => setModalNotes(e.target.value)} placeholder="Catatan sosialisasi..." style={{ ...inputStyle, resize: 'vertical' }} /></div>
             </div>
-
-            {/* Modal Footer */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '10px',
-                padding: '12px 20px',
-                borderTop: '1px solid #e2e8f0',
-                background: '#f8fafc',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setEmailModalDoc(null)}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#64748b',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                disabled={isSendingEmail}
-                onClick={handleSendQuickEmail}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: isSendingEmail ? '#94a3b8' : '#0284c7',
-                  color: '#ffffff',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  cursor: isSendingEmail ? 'not-allowed' : 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
-                }}
-              >
-                {isSendingEmail ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>Mengirim...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send size={14} />
-                    <span>Kirim Email Resmi</span>
-                  </>
-                )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', padding: '12px 20px', borderTop: '1px solid #e2e8f0', background: '#f8fafc' }}>
+              <button onClick={() => setEmailModalDoc(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer' }}>Batal</button>
+              <button disabled={isSendingEmail} onClick={handleSendQuickEmail} style={{ padding: '8px 20px', borderRadius: '6px', border: 'none', background: isSendingEmail ? '#94a3b8' : '#0284c7', color: '#fff', fontSize: '12.5px', fontWeight: 700, cursor: isSendingEmail ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(2,132,199,0.3)' }}>
+                {isSendingEmail ? <><Loader2 size={14} className="animate-spin" /> Mengirim...</> : <><Send size={14} /> Kirim Email</>}
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ── NewDocEntryRow ── */
+interface NewDocEntryRowProps {
+  entry: NewDocEntry;
+  index: number;
+  totalCount: number;
+  masterFolders: MasterFolder[];
+  deptOptions: string[];
+  jenisOptions: string[];
+  onUpdate: (patch: Partial<NewDocEntry>) => void;
+  onRemove: () => void;
+}
+
+const inputStyle2: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1',
+  fontSize: '13px', color: '#0f172a', background: '#ffffff', outline: 'none',
+  boxSizing: 'border-box', fontFamily: 'inherit',
+};
+const labelStyle2: React.CSSProperties = {
+  display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569',
+  marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.04em',
+};
+
+function NewDocEntryRow({ entry, index, totalCount, masterFolders, deptOptions, jenisOptions, onUpdate, onRemove }: NewDocEntryRowProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const selectedFolder = masterFolders.find(f => f.id === Number(entry.selectedFolderId));
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('File melebihi 10MB.'); if (fileRef.current) fileRef.current.value = ''; return; }
+    onUpdate({ selectedFile: file });
+  };
+  return (
+    <div style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#071c2c', color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{index + 1}</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#071c2c' }}>Dokumen #{index + 1}</span>
+        </div>
+        {totalCount > 1 && <button type="button" onClick={onRemove} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}><Minus size={12} /> Hapus</button>}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+        <div>
+          <label style={labelStyle2}>Folder Utama <span style={{ color: '#dc2626' }}>*</span></label>
+          <select value={entry.selectedFolderId} onChange={e => onUpdate({ selectedFolderId: e.target.value ? Number(e.target.value) : '', selectedSubFolderId: '' })} style={{ ...inputStyle2, color: entry.selectedFolderId ? '#0f172a' : '#94a3b8' }} required>
+            <option value="">— Pilih Folder Utama —</option>
+            {masterFolders.map(f => <option key={f.id} value={f.id} style={{ color: '#0f172a' }}>{f.name}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle2}>Sub Folder <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(opsional)</span></label>
+          <select value={entry.selectedSubFolderId} onChange={e => onUpdate({ selectedSubFolderId: e.target.value })} disabled={!entry.selectedFolderId} style={{ ...inputStyle2, background: !entry.selectedFolderId ? '#f8fafc' : '#fff', color: entry.selectedSubFolderId ? '#0f172a' : '#64748b' }}>
+            <option value="">— Root Folder —</option>
+            {selectedFolder && (selectedFolder.subfolders || []).map(sub => (
+              <React.Fragment key={sub.id}>
+                <option value={sub.id} style={{ color: '#0f172a', fontWeight: 600 }}>📁 {sub.name}</option>
+                {(sub.subfolders || []).map(cs => <option key={cs.id} value={cs.id} style={{ color: '#0369a1' }}>&nbsp;&nbsp;&nbsp;↳ {cs.name}</option>)}
+              </React.Fragment>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+        <div>
+          <label style={labelStyle2}>Departemen <span style={{ color: '#dc2626' }}>*</span></label>
+          <select value={entry.dept} onChange={e => onUpdate({ dept: e.target.value })} style={{ ...inputStyle2, color: entry.dept ? '#0f172a' : '#94a3b8' }} required>
+            <option value="">— Pilih Departemen —</option>
+            {deptOptions.map(d => <option key={d} value={d} style={{ color: '#0f172a' }}>{d}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={labelStyle2}>Jenis Dokumen <span style={{ color: '#dc2626' }}>*</span></label>
+          <select value={entry.jenis} onChange={e => onUpdate({ jenis: e.target.value })} style={{ ...inputStyle2, color: entry.jenis ? '#0f172a' : '#94a3b8' }} required>
+            <option value="">— Pilih Jenis —</option>
+            {jenisOptions.map(j => <option key={j} value={j} style={{ color: '#0f172a' }}>{j}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px', marginBottom: '14px' }}>
+        <div>
+          <label style={labelStyle2}>Judul Dokumen <span style={{ color: '#dc2626' }}>*</span></label>
+          <input type="text" value={entry.judulDokumen} onChange={e => onUpdate({ judulDokumen: e.target.value })} placeholder="Masukkan judul lengkap dokumen..." style={inputStyle2} required />
+        </div>
+        <div>
+          <label style={labelStyle2}>Revisi Ke</label>
+          <input type="text" value={entry.revisiKe} onChange={e => onUpdate({ revisiKe: e.target.value })} placeholder="00" style={inputStyle2} />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+        <div>
+          <label style={labelStyle2}>Nomor Dokumen <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(opsional)</span></label>
+          <input type="text" value={entry.docNumber} onChange={e => onUpdate({ docNumber: e.target.value })} placeholder="Contoh: THI-QHSSE-SOP-009" style={inputStyle2} />
+        </div>
+        <div>
+          <label style={labelStyle2}>Upload Berkas <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(max 10MB)</span></label>
+          <input ref={fileRef} type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx" style={{ fontSize: '12.5px', color: '#475569' }} />
+          {entry.selectedFile && <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', display: 'block' }}>✓ {entry.selectedFile.name} ({(entry.selectedFile.size / 1024).toFixed(0)} KB)</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── RevDocEntryRow ── */
+interface RevDocEntryRowProps {
+  entry: RevDocEntry;
+  index: number;
+  totalCount: number;
+  flattenedDocs: FlattenedDocItem[];
+  onUpdate: (patch: Partial<RevDocEntry>) => void;
+  onRemove: () => void;
+}
+
+function RevDocEntryRow({ entry, index, totalCount, flattenedDocs, onUpdate, onRemove }: RevDocEntryRowProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const selectedDoc = flattenedDocs.find(d => d.id === entry.selectedExistingDocId) || null;
+  useEffect(() => {
+    if (selectedDoc) {
+      const curNum = parseInt(selectedDoc.revision.replace(/\D/g, ''), 10) || 0;
+      onUpdate({ newRevisionNumber: `Rev.${String(curNum + 1).padStart(2, '0')}` });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entry.selectedExistingDocId]);
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('File melebihi 10MB.'); if (fileRef.current) fileRef.current.value = ''; return; }
+    onUpdate({ selectedRevFile: file });
+  };
+  return (
+    <div style={{ background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#0284c7', color: '#fff', fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{index + 1}</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#071c2c' }}>Revisi #{index + 1}</span>
+        </div>
+        {totalCount > 1 && <button type="button" onClick={onRemove} style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', color: '#dc2626', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600 }}><Minus size={12} /> Hapus</button>}
+      </div>
+      <div style={{ marginBottom: '14px' }}>
+        <label style={labelStyle2}>Pilih Dokumen Terdaftar <span style={{ color: '#dc2626' }}>*</span></label>
+        <select value={entry.selectedExistingDocId} onChange={e => onUpdate({ selectedExistingDocId: e.target.value })} style={{ ...inputStyle2, color: entry.selectedExistingDocId ? '#0f172a' : '#94a3b8' }} required>
+          <option value="">— Pilih Dokumen dari Masterlist —</option>
+          {flattenedDocs.map(doc => <option key={doc.id} value={doc.id} style={{ color: '#0f172a' }}>[{doc.number}] {doc.title} — {doc.revision} ({doc.folderName})</option>)}
+        </select>
+      </div>
+      {selectedDoc && (
+        <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '12px 14px', marginBottom: '14px', fontSize: '12.5px' }}>
+          <div style={{ fontWeight: 700, color: '#071c2c', marginBottom: '4px' }}>{selectedDoc.number} · {selectedDoc.title}</div>
+          <div style={{ display: 'flex', gap: '12px', color: '#475569', fontSize: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <span>📁 {selectedDoc.folderName}</span>
+            {selectedDoc.subFolderName && <span>📂 {selectedDoc.subFolderName}</span>}
+            <span style={{ background: '#dbeafe', color: '#1d4ed8', fontWeight: 700, padding: '1px 8px', borderRadius: '10px' }}>Revisi Aktif: {selectedDoc.revision}</span>
+            {selectedDoc.r2Url && <button type="button" onClick={() => window.open(selectedDoc.r2Url, '_blank', 'noopener,noreferrer')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', fontSize: '12px', fontWeight: 600, padding: 0, display: 'flex', alignItems: 'center', gap: '4px' }}><ExternalLink size={12} /> Buka Dokumen</button>}
+          </div>
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+        <div>
+          <label style={labelStyle2}>Nomor Revisi Baru <span style={{ color: '#dc2626' }}>*</span></label>
+          <input type="text" value={entry.newRevisionNumber} onChange={e => onUpdate({ newRevisionNumber: e.target.value })} placeholder="Contoh: Rev.04" style={{ ...inputStyle2, fontWeight: 700, color: '#0284c7', background: '#f0f9ff' }} required />
+        </div>
+        <div>
+          <label style={labelStyle2}>Upload Berkas Revisi <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(max 10MB)</span></label>
+          <input ref={fileRef} type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx" style={{ fontSize: '12.5px', color: '#475569' }} />
+          {entry.selectedRevFile && <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', display: 'block' }}>✓ {entry.selectedRevFile.name}</span>}
+        </div>
+      </div>
+      <div>
+        <label style={labelStyle2}>Alasan / Catatan Revisi <span style={{ color: '#dc2626' }}>*</span></label>
+        <textarea rows={3} value={entry.revisionNotes} onChange={e => onUpdate({ revisionNotes: e.target.value })} placeholder="Jelaskan bagian/klausul apa yang diperbarui pada revisi ini..." style={{ ...inputStyle2, resize: 'vertical' }} required />
+      </div>
+    </div>
+  );
+}
+
+/* ── AnnDocSelector ── */
+interface AnnDocSelectorProps {
+  flattenedDocs: FlattenedDocItem[];
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+}
+
+function AnnDocSelector({ flattenedDocs, selectedIds, onToggle }: AnnDocSelectorProps) {
+  const [search, setSearch] = useState('');
+  const filtered = useMemo(() => {
+    if (!search.trim()) return flattenedDocs;
+    const q = search.toLowerCase();
+    return flattenedDocs.filter(d => d.title.toLowerCase().includes(q) || d.number.toLowerCase().includes(q) || d.folderName.toLowerCase().includes(q));
+  }, [flattenedDocs, search]);
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '7px 12px', background: '#fff', marginBottom: '10px' }}>
+        <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari dokumen dari masterlist..." style={{ border: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#0f172a', background: 'transparent' }} />
+        {search && <button onClick={() => setSearch('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}><X size={12} /></button>}
+      </div>
+      {selectedIds.length > 0 && <div style={{ fontSize: '12px', color: '#7c3aed', fontWeight: 600, marginBottom: '8px' }}>✓ {selectedIds.length} dokumen dipilih</div>}
+      <div style={{ maxHeight: '320px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc' }}>
+        {flattenedDocs.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Belum ada dokumen di Masterlist.</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Tidak ada dokumen cocok dengan pencarian.</div>
+        ) : filtered.map(doc => {
+          const isSelected = selectedIds.includes(doc.id);
+          return (
+            <div key={doc.id} onClick={() => onToggle(doc.id)} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 14px', borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: isSelected ? '#f5f3ff' : '#fff', transition: 'background 0.12s' }} onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#fafcff'; }} onMouseLeave={e => { e.currentTarget.style.background = isSelected ? '#f5f3ff' : '#fff'; }}>
+              <div style={{ width: '18px', height: '18px', borderRadius: '4px', flexShrink: 0, marginTop: '1px', background: isSelected ? '#7c3aed' : '#fff', border: isSelected ? '2px solid #7c3aed' : '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isSelected && <Check size={11} strokeWidth={3} color="#fff" />}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#071c2c', lineHeight: 1.3 }}>{doc.title}</div>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px', display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span style={{ fontFamily: 'monospace', color: '#0284c7', fontWeight: 600 }}>{doc.number}</span>
+                  <span>📁 {doc.folderName}</span>
+                  <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '8px', fontWeight: 600 }}>{doc.revision}</span>
+                </div>
+              </div>
+              {doc.r2Url && (
+                <button type="button" title="Buka dokumen di tab baru" onClick={ev => { ev.stopPropagation(); window.open(doc.r2Url, '_blank', 'noopener,noreferrer'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '2px', flexShrink: 0 }}><ExternalLink size={13} /></button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
