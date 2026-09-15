@@ -24,6 +24,10 @@ import {
   Layers,
   CornerDownRight,
   ShieldAlert,
+  Mail,
+  Send,
+  X,
+  Loader2,
 } from 'lucide-react';
 import {
   MasterFolder,
@@ -146,6 +150,17 @@ export default function DistributionPage() {
   const [newRevisionNumber, setNewRevisionNumber] = useState<string>('');
   const [revisionNotes, setRevisionNotes] = useState<string>('');
   const [selectedRevFile, setSelectedRevFile] = useState<File | null>(null);
+
+  // Email Notification States
+  const [sendEmailNotification, setSendEmailNotification] = useState<boolean>(true);
+  const [recipientEmail, setRecipientEmail] = useState<string>('filayati_akbar@yahoo.com');
+  const [emailNotes, setEmailNotes] = useState<string>('');
+
+  // Quick Send Email Modal State for Table Rows
+  const [emailModalDoc, setEmailModalDoc] = useState<DistributionDoc | null>(null);
+  const [modalRecipient, setModalRecipient] = useState<string>('filayati_akbar@yahoo.com');
+  const [modalNotes, setModalNotes] = useState<string>('');
+  const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
 
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -455,9 +470,32 @@ export default function DistributionPage() {
       }));
 
       setDistributions(updatedDist);
+
+      // Trigger official corporate email notification if enabled
+      if (sendEmailNotification && recipientEmail.trim()) {
+        const emails = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
+        emails.forEach(targetEmail => {
+          fetch('/api/distribution/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: targetEmail,
+              documentTitle: newEntry.judul,
+              documentNumber: finalDocNumber,
+              revision: newEntry.revisi,
+              department: newEntry.dept,
+              jenisDokumen: newEntry.jenis,
+              distributorName: user?.name || 'Admin QMS THI',
+              notes: emailNotes || 'Dokumen sistem manajemen terkendali baru telah didistribusikan ke departemen Anda.',
+            }),
+          }).catch(err => console.error('Error sending distribution email:', err));
+        });
+      }
+
       handleResetForm();
       setViewState('table');
-      showToast(`Dokumen "${newEntry.judul}" berhasil didistribusikan ke ${targetFolderDisplay}!`);
+      const emailNotice = sendEmailNotification && recipientEmail.trim() ? ` & notifikasi email dikirim ke ${recipientEmail}` : '';
+      showToast(`Dokumen "${newEntry.judul}" berhasil didistribusikan${emailNotice}!`);
     } else {
       // REVISION_UPDATE mode
       if (!selectedExistingDoc) {
@@ -528,9 +566,69 @@ export default function DistributionPage() {
       }));
 
       setDistributions(updatedDist);
+
+      // Trigger official corporate email notification if enabled
+      if (sendEmailNotification && recipientEmail.trim()) {
+        const emails = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
+        emails.forEach(targetEmail => {
+          fetch('/api/distribution/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: targetEmail,
+              documentTitle: newEntry.judul,
+              documentNumber: selectedExistingDoc.number,
+              revision: revDisplay.replace('Rev.', ''),
+              department: newEntry.dept,
+              jenisDokumen: newEntry.jenis,
+              distributorName: user?.name || 'Admin QMS THI',
+              notes: revisionNotes || emailNotes || `Pembaruan revisi dokumen resmi ke ${revDisplay}.`,
+            }),
+          }).catch(err => console.error('Error sending revision email:', err));
+        });
+      }
+
       handleResetForm();
       setViewState('table');
-      showToast(`Revisi ${selectedExistingDoc.number} berhasil diperbarui ke ${revDisplay} dan didistribusikan!`);
+      const emailNotice = sendEmailNotification && recipientEmail.trim() ? ` & notifikasi email dikirim ke ${recipientEmail}` : '';
+      showToast(`Revisi ${selectedExistingDoc.number} berhasil diperbarui ke ${revDisplay}${emailNotice}!`);
+    }
+  };
+
+  const handleSendQuickEmail = async () => {
+    if (!emailModalDoc || !modalRecipient.trim()) return;
+    setIsSendingEmail(true);
+
+    try {
+      const emails = modalRecipient.split(',').map(e => e.trim()).filter(Boolean);
+      let successCount = 0;
+
+      for (const em of emails) {
+        const res = await fetch('/api/distribution/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: em,
+            documentTitle: emailModalDoc.judul,
+            documentNumber: emailModalDoc.id,
+            revision: emailModalDoc.revisi,
+            department: emailModalDoc.dept,
+            jenisDokumen: emailModalDoc.jenis,
+            distributorName: user?.name || 'Admin QMS THI',
+            notes: modalNotes || 'Pemberitahuan sosialisasi dokumen terkendali resmi PT Taka Hydrocore Indonesia.',
+          }),
+        });
+        const data = await res.json();
+        if (data.success) successCount++;
+      }
+
+      showToast(`Email notifikasi resmi berhasil dikirim ke ${modalRecipient} dari qms@thi.co.id!`);
+      setEmailModalDoc(null);
+      setModalNotes('');
+    } catch (err: any) {
+      showToast('Gagal mengirim email: ' + (err.message || 'Error'));
+    } finally {
+      setIsSendingEmail(false);
     }
   };
 
@@ -914,6 +1012,25 @@ export default function DistributionPage() {
                                 }}
                               >
                                 <ExternalLink size={13} />
+                              </button>
+
+                              {/* Send Official Email Notification */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEmailModalDoc(doc);
+                                  setModalRecipient('filayati_akbar@yahoo.com');
+                                }}
+                                title="Kirim Notifikasi Email Resmi via qms@thi.co.id"
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  color: '#0284c7',
+                                  padding: '2px',
+                                }}
+                              >
+                                <Mail size={13} />
                               </button>
 
                               {/* Delete */}
@@ -1577,6 +1694,106 @@ export default function DistributionPage() {
                 </>
               )}
 
+              {/* ── NOTIFIKASI EMAIL DISTRIBUSI (CORPORATE MAIL) ── */}
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #bfdbfe',
+                  borderRadius: '10px',
+                  padding: '18px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '14px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        background: '#eff6ff',
+                        color: '#0284c7',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Mail size={18} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#071c2c' }}>
+                        Notifikasi Email Distribusi Otomatis
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>
+                        Kirim salinan pengumuman resmi ke email departemen via server <strong>qms@thi.co.id</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={sendEmailNotification}
+                      onChange={e => setSendEmailNotification(e.target.checked)}
+                      style={{ width: '16px', height: '16px', accentColor: '#0284c7', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#334155' }}>Aktifkan</span>
+                  </label>
+                </div>
+
+                {sendEmailNotification && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        Alamat Email Penerima <span style={{ fontSize: '11px', color: '#64748b' }}>(pisahkan dengan tanda koma jika lebih dari satu)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={recipientEmail}
+                        onChange={e => setRecipientEmail(e.target.value)}
+                        placeholder="contoh: filayati_akbar@yahoo.com, hr.ga@thi.co.id"
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '13px',
+                          color: '#0f172a',
+                          background: '#ffffff',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                        Catatan Sosialisasi / Instruksi Khusus <span style={{ fontSize: '11px', color: '#94a3b8' }}>(opsional)</span>
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={emailNotes}
+                        onChange={e => setEmailNotes(e.target.value)}
+                        placeholder="Tuliskan catatan sosialisasi atau instruksi tindak lanjut untuk personil di lapangan..."
+                        style={{
+                          width: '100%',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #cbd5e1',
+                          fontSize: '13px',
+                          color: '#0f172a',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          fontFamily: 'inherit',
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Form Action Buttons */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
                 <button
@@ -1619,6 +1836,202 @@ export default function DistributionPage() {
             </form>
           </div>
         </>
+      )}
+
+      {/* ── MODAL KIRIM EMAIL NOTIFIKASI CEPAT ── */}
+      {emailModalDoc && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            backgroundColor: 'rgba(7, 28, 44, 0.55)',
+            backdropFilter: 'blur(3px)',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '540px',
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 20px 40px rgba(7, 28, 44, 0.2)',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                background: '#071c2c',
+                color: '#ffffff',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Mail size={18} style={{ color: '#38bdf8' }} />
+                <span style={{ fontSize: '14px', fontWeight: 700 }}>
+                  Kirim Notifikasi Email Resmi
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailModalDoc(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '4px',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div
+                style={{
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderLeft: '4px solid #0284c7',
+                  borderRadius: '6px',
+                  padding: '12px 14px',
+                  fontSize: '12.5px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
+              >
+                <div style={{ color: '#64748b' }}>
+                  Dokumen: <strong style={{ color: '#0f172a' }}>{emailModalDoc.id} — {emailModalDoc.judul}</strong>
+                </div>
+                <div style={{ color: '#64748b' }}>
+                  Departemen: <strong style={{ color: '#0f172a' }}>{emailModalDoc.dept}</strong> | Revisi: <strong style={{ color: '#15803d' }}>Rev.{emailModalDoc.revisi}</strong>
+                </div>
+                <div style={{ color: '#64748b' }}>
+                  Server Pengirim: <strong style={{ color: '#0284c7' }}>qms@thi.co.id (PT Taka Hydrocore Indonesia)</strong>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Kirim ke Alamat Email:
+                </label>
+                <input
+                  type="text"
+                  value={modalRecipient}
+                  onChange={e => setModalRecipient(e.target.value)}
+                  placeholder="contoh: filayati_akbar@yahoo.com, hr.ga@thi.co.id"
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    color: '#0f172a',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Pesan / Catatan Sosialisasi Tambahan:
+                </label>
+                <textarea
+                  rows={3}
+                  value={modalNotes}
+                  onChange={e => setModalNotes(e.target.value)}
+                  placeholder="Tuliskan catatan sosialisasi bagi personil departemen..."
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    color: '#0f172a',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                padding: '12px 20px',
+                borderTop: '1px solid #e2e8f0',
+                background: '#f8fafc',
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setEmailModalDoc(null)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#64748b',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={isSendingEmail}
+                onClick={handleSendQuickEmail}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: isSendingEmail ? '#94a3b8' : '#0284c7',
+                  color: '#ffffff',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: isSendingEmail ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
+                }}
+              >
+                {isSendingEmail ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Mengirim...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} />
+                    <span>Kirim Email Resmi</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
