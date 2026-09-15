@@ -153,286 +153,310 @@ export default function DashboardPage() {
 
       {/* ── 2. THREE CORE FEATURE TILES (QUICK ACCESS) ── */}
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px' }}>
 
-          {/* Tile 2: Distribusi Dokumen (Admin QHSE Only) */}
+          {/* Tile 1: Distribusi Dokumen (Admin QHSE Only) */}
           {user?.role !== 'staff' && (
             <div
               onClick={() => router.push('/dashboard/distribution')}
               style={{
                 background: '#ffffff',
-                borderRadius: '14px',
+                borderRadius: '12px',
                 border: '1px solid #e2e8f0',
-                padding: '24px',
+                padding: '16px 20px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(7, 28, 44, 0.04)',
+                boxShadow: '0 1px 3px rgba(7, 28, 44, 0.04)',
                 display: 'flex',
-                flexDirection: 'column',
+                alignItems: 'center',
                 justifyContent: 'space-between',
-                transition: 'all 0.22s ease',
-                position: 'relative',
-                overflow: 'hidden',
+                gap: '14px',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.transform = 'translateY(-3px)';
-                e.currentTarget.style.borderColor = '#16a34a';
-                e.currentTarget.style.boxShadow = '0 12px 24px rgba(22, 163, 74, 0.12)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.borderColor = '#0284c7';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(2, 132, 199, 0.09)';
+                const iconBox = e.currentTarget.querySelector('.tile-icon-box') as HTMLElement;
+                if (iconBox) {
+                  iconBox.style.background = '#f0f9ff';
+                  iconBox.style.borderColor = '#bae6fd';
+                  iconBox.style.color = '#0284c7';
+                }
+                const arrowBox = e.currentTarget.querySelector('.tile-arrow-box') as HTMLElement;
+                if (arrowBox) {
+                  arrowBox.style.background = '#0284c7';
+                  arrowBox.style.borderColor = '#0284c7';
+                  arrowBox.style.color = '#ffffff';
+                  arrowBox.style.transform = 'translateX(3px)';
+                }
               }}
               onMouseLeave={e => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.borderColor = '#e2e8f0';
-                e.currentTarget.style.boxShadow = '0 4px 14px rgba(7, 28, 44, 0.04)';
+                e.currentTarget.style.boxShadow = '0 1px 3px rgba(7, 28, 44, 0.04)';
+                const iconBox = e.currentTarget.querySelector('.tile-icon-box') as HTMLElement;
+                if (iconBox) {
+                  iconBox.style.background = '#f8fafc';
+                  iconBox.style.borderColor = '#e2e8f0';
+                  iconBox.style.color = '#071c2c';
+                }
+                const arrowBox = e.currentTarget.querySelector('.tile-arrow-box') as HTMLElement;
+                if (arrowBox) {
+                  arrowBox.style.background = '#f8fafc';
+                  arrowBox.style.borderColor = '#e2e8f0';
+                  arrowBox.style.color = '#64748b';
+                  arrowBox.style.transform = 'translateX(0)';
+                }
               }}
             >
-              {/* Top Accent Strip */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#16a34a' }} />
-
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                  <div
-                    style={{
-                      width: '44px',
-                      height: '44px',
-                      borderRadius: '10px',
-                      background: '#f0fdf4',
-                      color: '#16a34a',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1px solid #bbf7d0',
-                    }}
-                  >
-                    <Share2 size={22} strokeWidth={2.2} />
-                  </div>
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.06em',
-                      color: '#15803d',
-                      background: '#f0fdf4',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      border: '1px solid #dcfce7',
-                    }}
-                  >
-                    Tanda Terima
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+                <div
+                  className="tile-icon-box"
+                  style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    color: '#071c2c',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Share2 size={20} strokeWidth={2} />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                    Distribusi Dokumen
+                  </h3>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                    Buka Hub Distribusi
                   </span>
                 </div>
-
-                <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 800, color: '#071c2c' }}>
-                  Distribusi Dokumen
-                </h3>
-
-                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-                  Kelola penyebaran dokumen resmi ke divisi terkait, pangkalan kapal survei, laboratorium, serta tracking acknowledgement pegawai.
-                </p>
               </div>
-
               <div
+                className="tile-arrow-box"
                 style={{
-                  marginTop: '18px',
-                  paddingTop: '14px',
-                  borderTop: '1px solid #f1f5f9',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#64748b',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  color: '#16a34a',
-                  fontSize: '12.5px',
-                  fontWeight: 700,
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease',
                 }}
               >
-                <span>Buka Distribusi Hub</span>
-                <ArrowRight size={15} />
+                <ArrowRight size={14} strokeWidth={2.2} />
               </div>
             </div>
           )}
 
-          {/* Tile 3: Masterlist Dokumen */}
+          {/* Tile 2: Masterlist Dokumen */}
           <div
             onClick={() => router.push('/dashboard/masterlist')}
             style={{
               background: '#ffffff',
-              borderRadius: '14px',
+              borderRadius: '12px',
               border: '1px solid #e2e8f0',
-              padding: '24px',
+              padding: '16px 20px',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(7, 28, 44, 0.04)',
+              boxShadow: '0 1px 3px rgba(7, 28, 44, 0.04)',
               display: 'flex',
-              flexDirection: 'column',
+              alignItems: 'center',
               justifyContent: 'space-between',
-              transition: 'all 0.22s ease',
-              position: 'relative',
-              overflow: 'hidden',
+              gap: '14px',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.borderColor = '#4a3b7d';
-              e.currentTarget.style.boxShadow = '0 12px 24px rgba(74, 59, 125, 0.12)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = '#0284c7';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(2, 132, 199, 0.09)';
+              const iconBox = e.currentTarget.querySelector('.tile-icon-box') as HTMLElement;
+              if (iconBox) {
+                iconBox.style.background = '#f0f9ff';
+                iconBox.style.borderColor = '#bae6fd';
+                iconBox.style.color = '#0284c7';
+              }
+              const arrowBox = e.currentTarget.querySelector('.tile-arrow-box') as HTMLElement;
+              if (arrowBox) {
+                arrowBox.style.background = '#0284c7';
+                arrowBox.style.borderColor = '#0284c7';
+                arrowBox.style.color = '#ffffff';
+                arrowBox.style.transform = 'translateX(3px)';
+              }
             }}
             onMouseLeave={e => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.borderColor = '#e2e8f0';
-              e.currentTarget.style.boxShadow = '0 4px 14px rgba(7, 28, 44, 0.04)';
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(7, 28, 44, 0.04)';
+              const iconBox = e.currentTarget.querySelector('.tile-icon-box') as HTMLElement;
+              if (iconBox) {
+                iconBox.style.background = '#f8fafc';
+                iconBox.style.borderColor = '#e2e8f0';
+                iconBox.style.color = '#071c2c';
+              }
+              const arrowBox = e.currentTarget.querySelector('.tile-arrow-box') as HTMLElement;
+              if (arrowBox) {
+                arrowBox.style.background = '#f8fafc';
+                arrowBox.style.borderColor = '#e2e8f0';
+                arrowBox.style.color = '#64748b';
+                arrowBox.style.transform = 'translateX(0)';
+              }
             }}
           >
-            {/* Top Accent Strip */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#4a3b7d' }} />
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '10px',
-                    background: '#f5f3ff',
-                    color: '#4a3b7d',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #ddd6fe',
-                  }}
-                >
-                  <FolderOpen size={22} strokeWidth={2.2} />
-                </div>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: '#4a3b7d',
-                    background: '#f5f3ff',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #ede9fe',
-                  }}
-                >
-                  15 Folder Aktif
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+              <div
+                className="tile-icon-box"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#071c2c',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <FolderOpen size={20} strokeWidth={2} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                  Masterlist Dokumen
+                </h3>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                  Eksplorasi Masterlist
                 </span>
               </div>
-
-              <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 800, color: '#071c2c' }}>
-                Masterlist Dokumen
-              </h3>
-
-              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-                Akses repositori terpusat 15 folder dokumen ISO &amp; maritim, riwayat revisi, status berlaku, dan berkas terverifikasi.
-              </p>
             </div>
-
             <div
+              className="tile-arrow-box"
               style={{
-                marginTop: '18px',
-                paddingTop: '14px',
-                borderTop: '1px solid #f1f5f9',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                color: '#64748b',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                color: '#4a3b7d',
-                fontSize: '12.5px',
-                fontWeight: 700,
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'all 0.2s ease',
               }}
             >
-              <span>Eksplorasi Masterlist</span>
-              <ArrowRight size={15} />
+              <ArrowRight size={14} strokeWidth={2.2} />
             </div>
           </div>
 
-          {/* Tile 4: Saran & Ide Perbaikan */}
+          {/* Tile 3: Saran & Ide Perbaikan */}
           <div
             onClick={() => router.push('/dashboard/suggestions')}
             style={{
               background: '#ffffff',
-              borderRadius: '14px',
+              borderRadius: '12px',
               border: '1px solid #e2e8f0',
-              padding: '24px',
+              padding: '16px 20px',
               cursor: 'pointer',
-              boxShadow: '0 4px 14px rgba(7, 28, 44, 0.04)',
+              boxShadow: '0 1px 3px rgba(7, 28, 44, 0.04)',
               display: 'flex',
-              flexDirection: 'column',
+              alignItems: 'center',
               justifyContent: 'space-between',
-              transition: 'all 0.22s ease',
-              position: 'relative',
-              overflow: 'hidden',
+              gap: '14px',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
             onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-3px)';
-              e.currentTarget.style.borderColor = '#f59e0b';
-              e.currentTarget.style.boxShadow = '0 12px 24px rgba(245, 158, 11, 0.12)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.borderColor = '#0284c7';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(2, 132, 199, 0.09)';
+              const iconBox = e.currentTarget.querySelector('.tile-icon-box') as HTMLElement;
+              if (iconBox) {
+                iconBox.style.background = '#f0f9ff';
+                iconBox.style.borderColor = '#bae6fd';
+                iconBox.style.color = '#0284c7';
+              }
+              const arrowBox = e.currentTarget.querySelector('.tile-arrow-box') as HTMLElement;
+              if (arrowBox) {
+                arrowBox.style.background = '#0284c7';
+                arrowBox.style.borderColor = '#0284c7';
+                arrowBox.style.color = '#ffffff';
+                arrowBox.style.transform = 'translateX(3px)';
+              }
             }}
             onMouseLeave={e => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.borderColor = '#e2e8f0';
-              e.currentTarget.style.boxShadow = '0 4px 14px rgba(7, 28, 44, 0.04)';
+              e.currentTarget.style.boxShadow = '0 1px 3px rgba(7, 28, 44, 0.04)';
+              const iconBox = e.currentTarget.querySelector('.tile-icon-box') as HTMLElement;
+              if (iconBox) {
+                iconBox.style.background = '#f8fafc';
+                iconBox.style.borderColor = '#e2e8f0';
+                iconBox.style.color = '#071c2c';
+              }
+              const arrowBox = e.currentTarget.querySelector('.tile-arrow-box') as HTMLElement;
+              if (arrowBox) {
+                arrowBox.style.background = '#f8fafc';
+                arrowBox.style.borderColor = '#e2e8f0';
+                arrowBox.style.color = '#64748b';
+                arrowBox.style.transform = 'translateX(0)';
+              }
             }}
           >
-            {/* Top Accent Strip */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: '#f59e0b' }} />
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                <div
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '10px',
-                    background: '#fffbeb',
-                    color: '#f59e0b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #fde68a',
-                  }}
-                >
-                  <Lightbulb size={22} strokeWidth={2.2} />
-                </div>
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                    color: '#a16207',
-                    background: '#fffbeb',
-                    padding: '3px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #fef3c7',
-                  }}
-                >
-                  {user?.role === 'staff' ? 'Kirim Saran' : 'Inbox Saran'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+              <div
+                className="tile-icon-box"
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '10px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  color: '#071c2c',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Lightbulb size={20} strokeWidth={2} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c', letterSpacing: '-0.01em', lineHeight: 1.3 }}>
+                  Saran &amp; Ide Perbaikan
+                </h3>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                  {user?.role === 'staff' ? 'Tulis Saran Baru' : 'Lihat Saran Masuk'}
                 </span>
               </div>
-
-              <h3 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: 800, color: '#071c2c' }}>
-                Saran & Ide Perbaikan
-              </h3>
-
-              <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
-                {user?.role === 'staff'
-                  ? 'Sampaikan saran dan ide perbaikan untuk meningkatkan proses kerja dan operasional perusahaan.'
-                  : 'Tinjau dan kelola saran perbaikan dari seluruh staff untuk peningkatan kinerja.'
-                }
-              </p>
             </div>
-
             <div
+              className="tile-arrow-box"
               style={{
-                marginTop: '18px',
-                paddingTop: '14px',
-                borderTop: '1px solid #f1f5f9',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                color: '#64748b',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between',
-                color: '#f59e0b',
-                fontSize: '12.5px',
-                fontWeight: 700,
+                justifyContent: 'center',
+                flexShrink: 0,
+                transition: 'all 0.2s ease',
               }}
             >
-              <span>{user?.role === 'staff' ? 'Tulis Saran Baru' : 'Lihat Saran Masuk'}</span>
-              <ArrowRight size={15} />
+              <ArrowRight size={14} strokeWidth={2.2} />
             </div>
           </div>
         </div>
