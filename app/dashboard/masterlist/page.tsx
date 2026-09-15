@@ -294,6 +294,21 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     showToast(`Mengunduh salinan berkas kendali ${doc.number}...`);
   };
 
+  // ─── Inline View Handler (opens file in new tab, no download) ───
+  const handleViewDoc = (doc: MasterDocItem) => {
+    if (doc.r2Key) {
+      window.open(`/api/r2/view?key=${encodeURIComponent(doc.r2Key)}`, '_blank', 'noopener,noreferrer');
+      showToast(`Membuka berkas ${doc.number} di tab baru...`);
+      return;
+    }
+    if (doc.r2Url && !doc.r2Url.includes('localhost')) {
+      window.open(doc.r2Url, '_blank', 'noopener,noreferrer');
+      showToast(`Membuka berkas ${doc.number} di tab baru...`);
+      return;
+    }
+    showToast(`Berkas ${doc.number} belum diunggah ke server. Silakan upload terlebih dahulu.`);
+  };
+
   // ─── Modal Konfirmasi Hapus (Admin QMS) ───
   const [deleteConfirm, setDeleteConfirm] = useState<{
     type: 'folder' | 'subfolder' | 'document';
@@ -2650,7 +2665,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
 
                         <button
                           type="button"
-                          onClick={() => handleDownloadDoc({ ...previewDoc, revision: revItem.rev })}
+                          onClick={() => handleViewDoc({ ...previewDoc, revision: revItem.rev })}
                           style={{
                             background: '#ffffff',
                             border: '1px solid #cbd5e1',
@@ -2739,6 +2754,27 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                 Tutup
               </button>
               <button
+                onClick={() => handleViewDoc(previewDoc)}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  color: '#334155',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.color = '#0284c7'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#334155'; }}
+              >
+                <Eye size={13} />
+                Lihat Dokumen
+              </button>
+              <button
                 onClick={() => {
                   handleDownloadDoc(previewDoc);
                   setPreviewDoc(null);
@@ -2758,7 +2794,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                 }}
               >
                 <Download size={13} />
-                Unduh Dokumen Asli ({previewDoc.fileExt.toUpperCase()})
+                Unduh ({previewDoc.fileExt.toUpperCase()})
               </button>
             </div>
           </div>
