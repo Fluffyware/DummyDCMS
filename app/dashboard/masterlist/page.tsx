@@ -32,6 +32,8 @@ import {
   CornerDownRight,
   Trash2,
   AlertTriangle,
+  ChevronsUpDown,
+  ChevronsDownUp,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -829,38 +831,66 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
           })}
         </div>
 
-        {/* Quick expand/collapse controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Quick expand/collapse controls (Icon & shortened) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
             onClick={handleExpandAll}
+            title="Buka Semua Folder"
             style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '12px',
-              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              background: '#f0f9ff',
+              border: '1px solid #bae6fd',
+              borderRadius: '6px',
               color: '#0284c7',
               cursor: 'pointer',
-              padding: '2px 6px',
-              borderRadius: '4px',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = '#0284c7';
+              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.borderColor = '#0284c7';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = '#f0f9ff';
+              e.currentTarget.style.color = '#0284c7';
+              e.currentTarget.style.borderColor = '#bae6fd';
             }}
           >
-            Buka Semua
+            <ChevronsUpDown size={14} strokeWidth={2.2} />
           </button>
-          <span style={{ color: '#cbd5e1' }}>|</span>
+
           <button
             onClick={handleCollapseAll}
+            title="Tutup Semua Folder"
             style={{
-              background: 'transparent',
-              border: 'none',
-              fontSize: '12px',
-              fontWeight: 600,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '28px',
+              height: '28px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '6px',
               color: '#64748b',
               cursor: 'pointer',
-              padding: '2px 6px',
-              borderRadius: '4px',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = '#64748b';
+              e.currentTarget.style.color = '#ffffff';
+              e.currentTarget.style.borderColor = '#64748b';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = '#f8fafc';
+              e.currentTarget.style.color = '#64748b';
+              e.currentTarget.style.borderColor = '#e2e8f0';
             }}
           >
-            Tutup Semua
+            <ChevronsDownUp size={14} strokeWidth={2.2} />
           </button>
         </div>
       </div>
@@ -986,18 +1016,17 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                             e.stopPropagation();
                             openAddDocModal(folder);
                           }}
-                          title={`Tambah Dokumen langsung ke "${folder.name}"`}
+                          title={`Tambah Dokumen ke "${folder.name}"`}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '5px',
-                            padding: '4px 10px',
+                            justifyContent: 'center',
+                            width: '28px',
+                            height: '28px',
                             background: '#f0f9ff',
                             color: '#0284c7',
                             border: '1px solid #bae6fd',
                             borderRadius: '6px',
-                            fontSize: '11.5px',
-                            fontWeight: 700,
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
@@ -1012,8 +1041,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                             e.currentTarget.style.borderColor = '#bae6fd';
                           }}
                         >
-                          <FilePlus size={13} strokeWidth={2.2} />
-                          <span>+ Tambah File</span>
+                          <FilePlus size={14} strokeWidth={2.2} />
                         </button>
 
                         <button
@@ -1127,14 +1155,13 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                         style={{
                                           display: 'inline-flex',
                                           alignItems: 'center',
-                                          gap: '4px',
-                                          padding: '3px 8px',
+                                          justifyContent: 'center',
+                                          width: '24px',
+                                          height: '24px',
                                           background: '#f0f9ff',
                                           color: '#0284c7',
                                           border: '1px solid #bae6fd',
                                           borderRadius: '5px',
-                                          fontSize: '11px',
-                                          fontWeight: 600,
                                           cursor: 'pointer',
                                           transition: 'all 0.15s ease',
                                         }}
@@ -1150,7 +1177,6 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                         }}
                                       >
                                         <FilePlus size={12} strokeWidth={2.2} />
-                                        <span>+ File</span>
                                       </button>
 
                                       <button
@@ -1233,14 +1259,13 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                                   style={{
                                                     display: 'inline-flex',
                                                     alignItems: 'center',
-                                                    gap: '4px',
-                                                    padding: '2px 7px',
+                                                    justifyContent: 'center',
+                                                    width: '22px',
+                                                    height: '22px',
                                                     background: '#f0f9ff',
                                                     color: '#0284c7',
                                                     border: '1px solid #bae6fd',
                                                     borderRadius: '4px',
-                                                    fontSize: '10.5px',
-                                                    fontWeight: 600,
                                                     cursor: 'pointer',
                                                     transition: 'all 0.15s ease',
                                                   }}
@@ -1256,7 +1281,6 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                                   }}
                                                 >
                                                   <FilePlus size={11} strokeWidth={2.2} />
-                                                  <span>+ File</span>
                                                 </button>
 
                                                 <button
@@ -1327,9 +1351,91 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                                       {cDoc.revision}
                                                     </span>
                                                   </div>
-                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <button onClick={() => { setModalTab('info'); setPreviewDoc(cDoc); }} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '4px 8px', color: '#334155', cursor: 'pointer', fontSize: '11px' }}>Lihat</button>
-                                                    <button onClick={() => { setModalTab('history'); setPreviewDoc(cDoc); }} style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '4px', padding: '4px 8px', color: '#0369a1', cursor: 'pointer', fontSize: '11px' }}>Riwayat</button>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <button
+                                                      onClick={() => { setModalTab('info'); setPreviewDoc(cDoc); }}
+                                                      title={`Lihat Dokumen ${cDoc.number}`}
+                                                      style={{
+                                                        background: '#ffffff',
+                                                        border: '1px solid #e2e8f0',
+                                                        borderRadius: '4px',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#334155',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease',
+                                                      }}
+                                                      onMouseEnter={e => {
+                                                        e.currentTarget.style.borderColor = '#0284c7';
+                                                        e.currentTarget.style.color = '#0284c7';
+                                                      }}
+                                                      onMouseLeave={e => {
+                                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                                        e.currentTarget.style.color = '#334155';
+                                                      }}
+                                                    >
+                                                      <Eye size={12} />
+                                                    </button>
+
+                                                    <button
+                                                      onClick={() => { setModalTab('history'); setPreviewDoc(cDoc); }}
+                                                      title={`Riwayat Revisi ${cDoc.number}`}
+                                                      style={{
+                                                        background: '#f0f9ff',
+                                                        border: '1px solid #bae6fd',
+                                                        borderRadius: '4px',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#0284c7',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease',
+                                                      }}
+                                                      onMouseEnter={e => {
+                                                        e.currentTarget.style.background = '#0284c7';
+                                                        e.currentTarget.style.color = '#ffffff';
+                                                      }}
+                                                      onMouseLeave={e => {
+                                                        e.currentTarget.style.background = '#f0f9ff';
+                                                        e.currentTarget.style.color = '#0284c7';
+                                                      }}
+                                                    >
+                                                      <History size={12} />
+                                                    </button>
+
+                                                    <button
+                                                      onClick={() => handleDownloadDoc(cDoc)}
+                                                      title={`Unduh Dokumen ${cDoc.number}`}
+                                                      style={{
+                                                        background: '#f8fafc',
+                                                        border: '1px solid #e2e8f0',
+                                                        borderRadius: '4px',
+                                                        width: '24px',
+                                                        height: '24px',
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        color: '#334155',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.15s ease',
+                                                      }}
+                                                      onMouseEnter={e => {
+                                                        e.currentTarget.style.borderColor = '#0284c7';
+                                                        e.currentTarget.style.color = '#0284c7';
+                                                      }}
+                                                      onMouseLeave={e => {
+                                                        e.currentTarget.style.borderColor = '#e2e8f0';
+                                                        e.currentTarget.style.color = '#334155';
+                                                      }}
+                                                    >
+                                                      <Download size={12} />
+                                                    </button>
+
                                                     {isAdmin && (
                                                       <button
                                                         type="button"
@@ -1339,13 +1445,13 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                                           background: '#fef2f2',
                                                           border: '1px solid #fecaca',
                                                           borderRadius: '4px',
-                                                          padding: '4px 8px',
+                                                          width: '24px',
+                                                          height: '24px',
                                                           color: '#dc2626',
                                                           cursor: 'pointer',
-                                                          fontSize: '11px',
                                                           display: 'inline-flex',
                                                           alignItems: 'center',
-                                                          gap: '3px',
+                                                          justifyContent: 'center',
                                                           transition: 'all 0.15s ease',
                                                         }}
                                                         onMouseEnter={e => {
@@ -1358,7 +1464,6 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                                         }}
                                                       >
                                                         <Trash2 size={11} strokeWidth={2} />
-                                                        <span>Hapus</span>
                                                       </button>
                                                     )}
                                                   </div>
@@ -1439,22 +1544,30 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                               setModalTab('info');
                                               setPreviewDoc(doc);
                                             }}
-                                            title="Pratinjau Dokumen"
+                                            title={`Lihat Dokumen ${doc.number}`}
                                             style={{
                                               background: '#ffffff',
                                               border: '1px solid #e2e8f0',
-                                              borderRadius: '4px',
-                                              padding: '5px 8px',
+                                              borderRadius: '5px',
+                                              width: '26px',
+                                              height: '26px',
                                               color: '#334155',
                                               cursor: 'pointer',
-                                              display: 'flex',
+                                              display: 'inline-flex',
                                               alignItems: 'center',
-                                              gap: '4px',
-                                              fontSize: '11.5px',
+                                              justifyContent: 'center',
+                                              transition: 'all 0.15s ease',
+                                            }}
+                                            onMouseEnter={e => {
+                                              e.currentTarget.style.borderColor = '#0284c7';
+                                              e.currentTarget.style.color = '#0284c7';
+                                            }}
+                                            onMouseLeave={e => {
+                                              e.currentTarget.style.borderColor = '#e2e8f0';
+                                              e.currentTarget.style.color = '#334155';
                                             }}
                                           >
                                             <Eye size={13} />
-                                            <span>Lihat</span>
                                           </button>
                                           <button
                                             onClick={() => {
@@ -1465,32 +1578,51 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                             style={{
                                               background: '#f0f9ff',
                                               border: '1px solid #bae6fd',
-                                              borderRadius: '4px',
-                                              padding: '5px 8px',
+                                              borderRadius: '5px',
+                                              width: '26px',
+                                              height: '26px',
                                               color: '#0284c7',
                                               cursor: 'pointer',
-                                              display: 'flex',
+                                              display: 'inline-flex',
                                               alignItems: 'center',
-                                              gap: '4px',
-                                              fontSize: '11.5px',
+                                              justifyContent: 'center',
+                                              transition: 'all 0.15s ease',
+                                            }}
+                                            onMouseEnter={e => {
+                                              e.currentTarget.style.background = '#0284c7';
+                                              e.currentTarget.style.color = '#ffffff';
+                                            }}
+                                            onMouseLeave={e => {
+                                              e.currentTarget.style.background = '#f0f9ff';
+                                              e.currentTarget.style.color = '#0284c7';
                                             }}
                                           >
                                             <History size={13} />
-                                            <span>Revisi</span>
                                           </button>
+
                                           <button
                                             onClick={() => handleDownloadDoc(doc)}
                                             title={`Unduh Dokumen ${doc.number}`}
                                             style={{
                                               background: '#f8fafc',
                                               border: '1px solid #e2e8f0',
-                                              borderRadius: '4px',
-                                              padding: '5px 8px',
+                                              borderRadius: '5px',
+                                              width: '26px',
+                                              height: '26px',
                                               color: '#334155',
                                               cursor: 'pointer',
-                                              display: 'flex',
+                                              display: 'inline-flex',
                                               alignItems: 'center',
                                               justifyContent: 'center',
+                                              transition: 'all 0.15s ease',
+                                            }}
+                                            onMouseEnter={e => {
+                                              e.currentTarget.style.borderColor = '#0284c7';
+                                              e.currentTarget.style.color = '#0284c7';
+                                            }}
+                                            onMouseLeave={e => {
+                                              e.currentTarget.style.borderColor = '#e2e8f0';
+                                              e.currentTarget.style.color = '#334155';
                                             }}
                                           >
                                             <Download size={13} />
@@ -1504,11 +1636,12 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                               style={{
                                                 background: '#fef2f2',
                                                 border: '1px solid #fecaca',
-                                                borderRadius: '4px',
-                                                padding: '5px 8px',
+                                                borderRadius: '5px',
+                                                width: '26px',
+                                                height: '26px',
                                                 color: '#dc2626',
                                                 cursor: 'pointer',
-                                                display: 'flex',
+                                                display: 'inline-flex',
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 transition: 'all 0.12s ease',
@@ -1598,28 +1731,36 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                               </div>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                               <button
                                 onClick={() => {
                                   setModalTab('info');
                                   setPreviewDoc(doc);
                                 }}
-                                title="Pratinjau Dokumen"
+                                title={`Lihat Dokumen ${doc.number}`}
                                 style={{
                                   background: '#ffffff',
                                   border: '1px solid #e2e8f0',
                                   borderRadius: '5px',
-                                  padding: '5px 10px',
+                                  width: '26px',
+                                  height: '26px',
                                   color: '#334155',
                                   cursor: 'pointer',
-                                  display: 'flex',
+                                  display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '5px',
-                                  fontSize: '12px',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.borderColor = '#0284c7';
+                                  e.currentTarget.style.color = '#0284c7';
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.borderColor = '#e2e8f0';
+                                  e.currentTarget.style.color = '#334155';
                                 }}
                               >
                                 <Eye size={13} />
-                                <span>Lihat</span>
                               </button>
 
                               <button
@@ -1627,22 +1768,30 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                   setModalTab('history');
                                   setPreviewDoc(doc);
                                 }}
-                                title="Lihat Riwayat Revisi & Change Log"
+                                title="Riwayat Revisi & Change Log"
                                 style={{
                                   background: '#f0f9ff',
                                   border: '1px solid #bae6fd',
                                   borderRadius: '5px',
-                                  padding: '5px 10px',
-                                  color: '#0369a1',
+                                  width: '26px',
+                                  height: '26px',
+                                  color: '#0284c7',
                                   cursor: 'pointer',
-                                  display: 'flex',
+                                  display: 'inline-flex',
                                   alignItems: 'center',
-                                  gap: '5px',
-                                  fontSize: '12px',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.background = '#0284c7';
+                                  e.currentTarget.style.color = '#ffffff';
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.background = '#f0f9ff';
+                                  e.currentTarget.style.color = '#0284c7';
                                 }}
                               >
                                 <History size={13} />
-                                <span>Riwayat</span>
                               </button>
 
                               <button
@@ -1652,12 +1801,22 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                   background: '#f8fafc',
                                   border: '1px solid #e2e8f0',
                                   borderRadius: '5px',
-                                  padding: '6px',
+                                  width: '26px',
+                                  height: '26px',
                                   color: '#334155',
                                   cursor: 'pointer',
-                                  display: 'flex',
+                                  display: 'inline-flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
+                                  transition: 'all 0.15s ease',
+                                }}
+                                onMouseEnter={e => {
+                                  e.currentTarget.style.borderColor = '#0284c7';
+                                  e.currentTarget.style.color = '#0284c7';
+                                }}
+                                onMouseLeave={e => {
+                                  e.currentTarget.style.borderColor = '#e2e8f0';
+                                  e.currentTarget.style.color = '#334155';
                                 }}
                               >
                                 <Download size={13} />
@@ -1672,14 +1831,14 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                     background: '#fef2f2',
                                     border: '1px solid #fecaca',
                                     borderRadius: '5px',
-                                    padding: '5px 10px',
+                                    width: '26px',
+                                    height: '26px',
                                     color: '#dc2626',
                                     cursor: 'pointer',
-                                    display: 'flex',
+                                    display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: '5px',
-                                    fontSize: '12px',
-                                    transition: 'all 0.15s ease',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.12s ease',
                                   }}
                                   onMouseEnter={e => {
                                     e.currentTarget.style.background = '#dc2626';
@@ -1691,7 +1850,6 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                   }}
                                 >
                                   <Trash2 size={13} strokeWidth={2} />
-                                  <span>Hapus</span>
                                 </button>
                               )}
                             </div>
