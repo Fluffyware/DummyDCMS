@@ -793,25 +793,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 background: '#ef4444', border: '1.5px solid #071c2c',
               }} />
             </button>
-
-            <button
-              onClick={logout}
-              title={`${activeUser.name} (${ROLE_LABELS[activeUser.role]}) — Click to sign out`}
-              style={{
-                width: 32, height: 32, borderRadius: 8,
-                border: '1px solid rgba(255, 255, 255, 0.22)',
-                background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', fontSize: 11.5, fontWeight: 800, color: '#ffffff',
-                letterSpacing: '0.05em', fontFamily: 'var(--font-display)',
-                outline: 'none', transition: 'all 0.15s',
-                boxShadow: '0 2px 6px rgba(2, 132, 199, 0.3)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.6)')}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 2px 6px rgba(2, 132, 199, 0.3)')}
-            >
-              {initials}
-            </button>
           </div>
         </header>
 
