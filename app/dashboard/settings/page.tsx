@@ -14,6 +14,8 @@ import {
   ChevronDown,
   Plus,
   Edit2,
+  Trash2,
+  AlertTriangle,
   ToggleLeft,
   ToggleRight,
   CornerDownRight,
@@ -29,8 +31,22 @@ import {
 
 type SetupTab = 'folder-dokumen' | 'jenis-dokumen' | 'departemen' | 'user-approval' | 'standar-approval';
 
+export interface DocTypeItem {
+  id: number;
+  name: string;
+  prefix: string;
+  active: boolean;
+}
+
+export interface DepartmentItem {
+  id: number;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
 /* ── Data ─────────────────────────────────────────────────── */
-const DOC_TYPES = [
+const INITIAL_DOC_TYPES: DocTypeItem[] = [
   { id: 1, name: 'Standar Operasional Prosedur', prefix: 'SOP', active: true },
   { id: 2, name: 'Kebijakan (Policy)', prefix: 'POL', active: true },
   { id: 3, name: 'Manual', prefix: 'MAN', active: true },
@@ -42,7 +58,7 @@ const DOC_TYPES = [
   { id: 9, name: 'Laporan (Report)', prefix: 'RPT', active: true },
 ];
 
-const DEPARTMENTS = [
+const INITIAL_DEPARTMENTS: DepartmentItem[] = [
   { id: 1, name: 'QHSE & QMS', code: 'QHSE', active: true },
   { id: 2, name: 'Geotechnical', code: 'GEO', active: true },
   { id: 3, name: 'Operations', code: 'OPS', active: true },
@@ -96,6 +112,21 @@ const BTN_EDIT = {
   transition: 'all 0.15s ease',
 } as const;
 
+const BTN_DELETE = {
+  background: 'transparent',
+  border: '1px solid #fecaca',
+  borderRadius: '6px',
+  padding: '4px 10px',
+  fontSize: '11.5px',
+  fontWeight: 600,
+  color: '#dc2626',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: '5px',
+  transition: 'all 0.15s ease',
+} as const;
+
 const BADGE_ACTIVE = {
   fontSize: '10.5px',
   fontWeight: 700,
@@ -116,15 +147,33 @@ const BADGE_INACTIVE = {
   border: '1px solid #e2e8f0',
 } as const;
 
-/* ── Setup tab config ──────────────────────────────────────── */
-const TABS: { id: SetupTab; label: string; icon: React.ReactNode; count?: number }[] = [
-  { id: 'folder-dokumen',   label: 'Folder Dokumen',  icon: <FolderOpen size={15} strokeWidth={1.75} /> },
-  { id: 'jenis-dokumen',    label: 'Jenis Dokumen',   icon: <FileText size={15} strokeWidth={1.75} />, count: 9 },
-  { id: 'departemen',       label: 'Departemen',      icon: <Building2 size={15} strokeWidth={1.75} />, count: 9 },
-];
-
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SetupTab>('folder-dokumen');
+
+  // Jenis Dokumen & Departemen State (with persistence)
+  const [docTypes, setDocTypes] = useState<DocTypeItem[]>(INITIAL_DOC_TYPES);
+  const [departments, setDepartments] = useState<DepartmentItem[]>(INITIAL_DEPARTMENTS);
+
+  // Modal State: Jenis Dokumen
+  const [isDocTypeModalOpen, setIsDocTypeModalOpen] = useState(false);
+  const [editingDocTypeId, setEditingDocTypeId] = useState<number | null>(null);
+  const [docTypeName, setDocTypeName] = useState('');
+  const [docTypePrefix, setDocTypePrefix] = useState('');
+  const [docTypeActive, setDocTypeActive] = useState(true);
+
+  // Modal State: Departemen
+  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
+  const [editingDeptId, setEditingDeptId] = useState<number | null>(null);
+  const [deptName, setDeptName] = useState('');
+  const [deptCode, setDeptCode] = useState('');
+  const [deptActive, setDeptActive] = useState(true);
+
+  // Delete Confirmation State
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{
+    type: 'doc-type' | 'dept';
+    id: number;
+    name: string;
+  } | null>(null);
 
   // Master folders state (live persistence)
   const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
@@ -154,7 +203,201 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMasterFolders(loadMasterFolders());
+
+    try {
+      const savedDocTypes = localStorage.getItem('qms_doc_types');
+      if (savedDocTypes) {
+        const parsed = JSON.parse(savedDocTypes);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDocTypes(parsed);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load doc types from storage', err);
+    }
+
+    try {
+      const savedDepts = localStorage.getItem('qms_departments');
+      if (savedDepts) {
+        const parsed = JSON.parse(savedDepts);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setDepartments(parsed);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load departments from storage', err);
+    }
   }, []);
+
+  const persistDocTypes = (newTypes: DocTypeItem[]) => {
+    setDocTypes(newTypes);
+    try {
+      localStorage.setItem('qms_doc_types', JSON.stringify(newTypes));
+    } catch (err) {
+      console.error('Failed to save doc types', err);
+    }
+  };
+
+  const persistDepartments = (newDepts: DepartmentItem[]) => {
+    setDepartments(newDepts);
+    try {
+      localStorage.setItem('qms_departments', JSON.stringify(newDepts));
+    } catch (err) {
+      console.error('Failed to save departments', err);
+    }
+  };
+
+  // ── Jenis Dokumen Handlers ──
+  const openAddDocTypeModal = () => {
+    setEditingDocTypeId(null);
+    setDocTypeName('');
+    setDocTypePrefix('');
+    setDocTypeActive(true);
+    setIsDocTypeModalOpen(true);
+  };
+
+  const openEditDocTypeModal = (item: DocTypeItem) => {
+    setEditingDocTypeId(item.id);
+    setDocTypeName(item.name);
+    setDocTypePrefix(item.prefix);
+    setDocTypeActive(item.active);
+    setIsDocTypeModalOpen(true);
+  };
+
+  const handleSaveDocType = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docTypeName.trim() || !docTypePrefix.trim()) return;
+
+    if (editingDocTypeId !== null) {
+      const updated = docTypes.map(t =>
+        t.id === editingDocTypeId
+          ? { ...t, name: docTypeName.trim(), prefix: docTypePrefix.trim().toUpperCase(), active: docTypeActive }
+          : t
+      );
+      persistDocTypes(updated);
+      showToast(`Jenis dokumen "${docTypeName.trim()}" berhasil diperbarui!`);
+    } else {
+      const nextId = docTypes.length > 0 ? Math.max(...docTypes.map(t => t.id)) + 1 : 1;
+      const newItem: DocTypeItem = {
+        id: nextId,
+        name: docTypeName.trim(),
+        prefix: docTypePrefix.trim().toUpperCase(),
+        active: docTypeActive,
+      };
+      const updated = [...docTypes, newItem];
+      persistDocTypes(updated);
+      showToast(`Jenis dokumen baru "${newItem.name}" (${newItem.prefix}) berhasil ditambahkan!`);
+    }
+
+    setIsDocTypeModalOpen(false);
+  };
+
+  const promptDeleteDocType = (item: DocTypeItem) => {
+    setDeleteConfirmation({
+      type: 'doc-type',
+      id: item.id,
+      name: `${item.name} (${item.prefix})`,
+    });
+  };
+
+  const toggleDocTypeActive = (id: number) => {
+    const updated = docTypes.map(t => {
+      if (t.id === id) {
+        const nextActive = !t.active;
+        showToast(`Status "${t.name}" diubah menjadi ${nextActive ? 'Aktif' : 'Nonaktif'}.`);
+        return { ...t, active: nextActive };
+      }
+      return t;
+    });
+    persistDocTypes(updated);
+  };
+
+  // ── Departemen Handlers ──
+  const openAddDeptModal = () => {
+    setEditingDeptId(null);
+    setDeptName('');
+    setDeptCode('');
+    setDeptActive(true);
+    setIsDeptModalOpen(true);
+  };
+
+  const openEditDeptModal = (item: DepartmentItem) => {
+    setEditingDeptId(item.id);
+    setDeptName(item.name);
+    setDeptCode(item.code);
+    setDeptActive(item.active);
+    setIsDeptModalOpen(true);
+  };
+
+  const handleSaveDept = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deptName.trim() || !deptCode.trim()) return;
+
+    if (editingDeptId !== null) {
+      const updated = departments.map(d =>
+        d.id === editingDeptId
+          ? { ...d, name: deptName.trim(), code: deptCode.trim().toUpperCase(), active: deptActive }
+          : d
+      );
+      persistDepartments(updated);
+      showToast(`Departemen "${deptName.trim()}" berhasil diperbarui!`);
+    } else {
+      const nextId = departments.length > 0 ? Math.max(...departments.map(d => d.id)) + 1 : 1;
+      const newItem: DepartmentItem = {
+        id: nextId,
+        name: deptName.trim(),
+        code: deptCode.trim().toUpperCase(),
+        active: deptActive,
+      };
+      const updated = [...departments, newItem];
+      persistDepartments(updated);
+      showToast(`Departemen baru "${newItem.name}" (${newItem.code}) berhasil ditambahkan!`);
+    }
+
+    setIsDeptModalOpen(false);
+  };
+
+  const promptDeleteDept = (item: DepartmentItem) => {
+    setDeleteConfirmation({
+      type: 'dept',
+      id: item.id,
+      name: `${item.name} (${item.code})`,
+    });
+  };
+
+  const toggleDeptActive = (id: number) => {
+    const updated = departments.map(d => {
+      if (d.id === id) {
+        const nextActive = !d.active;
+        showToast(`Status "${d.name}" diubah menjadi ${nextActive ? 'Aktif' : 'Nonaktif'}.`);
+        return { ...d, active: nextActive };
+      }
+      return d;
+    });
+    persistDepartments(updated);
+  };
+
+  const handleExecuteDelete = () => {
+    if (!deleteConfirmation) return;
+
+    if (deleteConfirmation.type === 'doc-type') {
+      const updated = docTypes.filter(t => t.id !== deleteConfirmation.id);
+      persistDocTypes(updated);
+      showToast(`Jenis dokumen "${deleteConfirmation.name}" berhasil dihapus!`);
+    } else if (deleteConfirmation.type === 'dept') {
+      const updated = departments.filter(d => d.id !== deleteConfirmation.id);
+      persistDepartments(updated);
+      showToast(`Departemen "${deleteConfirmation.name}" berhasil dihapus!`);
+    }
+
+    setDeleteConfirmation(null);
+  };
+
+  const tabs: { id: SetupTab; label: string; icon: React.ReactNode; count?: number }[] = [
+    { id: 'folder-dokumen',   label: 'Folder Dokumen',  icon: <FolderOpen size={15} strokeWidth={1.75} /> },
+    { id: 'jenis-dokumen',    label: 'Jenis Dokumen',   icon: <FileText size={15} strokeWidth={1.75} />, count: docTypes.length },
+    { id: 'departemen',       label: 'Departemen',      icon: <Building2 size={15} strokeWidth={1.75} />, count: departments.length },
+  ];
 
   const toggleFolderExpand = (folderId: number) => {
     setExpandedFolderIds(prev =>
@@ -312,7 +555,7 @@ export default function SettingsPage() {
           }}>
             Konfigurasi
           </div>
-          {TABS.map(tab => {
+          {tabs.map(tab => {
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -708,45 +951,69 @@ export default function SettingsPage() {
               <SectionHeader
                 title="Jenis Dokumen"
                 description="Tipe-tipe dokumen yang digunakan dalam sistem kendali dokumen. Setiap jenis memiliki awalan (prefix) penomoran unik."
-                action={<AddButton label="Tambah Jenis" id="add-doc-type" />}
+                action={<AddButton label="Tambah Jenis" id="add-doc-type" onClick={openAddDocTypeModal} />}
               />
               <div style={{ background: '#ffffff', border: '1px solid #e8eef5', borderRadius: '10px', overflow: 'hidden' }}>
-                {DOC_TYPES.map((t, i) => (
-                  <div
-                    key={t.id}
-                    style={{ ...ROW, borderTop: i === 0 ? '1px solid #e8eef5' : undefined }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <FileText size={14} strokeWidth={1.75} color={t.active ? '#0284c7' : '#94a3b8'} style={{ flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <span style={{ fontSize: '13px', fontWeight: 500, color: t.active ? '#1e293b' : '#94a3b8' }}>{t.name}</span>
-                    </div>
-                    <span style={{
-                      fontFamily: 'var(--font-mono, monospace)',
-                      fontSize: '11.5px', fontWeight: 700,
-                      color: '#071c2c', background: '#f1f5f9',
-                      padding: '2px 8px', borderRadius: '4px',
-                      letterSpacing: '0.04em', width: '60px', textAlign: 'center',
-                    }}>
-                      {t.prefix}
-                    </span>
-                    <span style={{ width: '80px', textAlign: 'center' }}>
-                      <span style={t.active ? BADGE_ACTIVE : BADGE_INACTIVE}>{t.active ? 'Aktif' : 'Nonaktif'}</span>
-                    </span>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', width: '80px' }}>
-                      <button
-                        id={`edit-type-${t.id}`}
-                        style={BTN_EDIT}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.color = '#0284c7'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#334155'; }}
-                      >
-                        <Edit2 size={11} />
-                        Edit
-                      </button>
-                    </div>
+                <TableHead cols={['Nama Jenis Dokumen', 'Prefix', 'Status', 'Aksi']} />
+                {docTypes.length === 0 ? (
+                  <div style={{ padding: '32px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                    Belum ada jenis dokumen. Klik tombol <strong>&quot;Tambah Jenis&quot;</strong> di atas untuk menambahkan jenis baru.
                   </div>
-                ))}
+                ) : (
+                  docTypes.map((t, i) => (
+                    <div
+                      key={t.id}
+                      style={{ ...ROW, borderTop: i === 0 ? '1px solid #e8eef5' : undefined }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <FileText size={14} strokeWidth={1.75} color={t.active ? '#0284c7' : '#94a3b8'} style={{ flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: t.active ? '#1e293b' : '#94a3b8' }}>{t.name}</span>
+                      </div>
+                      <span style={{
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: '11.5px', fontWeight: 700,
+                        color: '#071c2c', background: '#f1f5f9',
+                        padding: '2px 8px', borderRadius: '4px',
+                        letterSpacing: '0.04em', width: '60px', textAlign: 'center', flexShrink: 0,
+                      }}>
+                        {t.prefix}
+                      </span>
+                      <span
+                        style={{ width: '80px', textAlign: 'center', cursor: 'pointer', flexShrink: 0 }}
+                        onClick={() => toggleDocTypeActive(t.id)}
+                        title="Klik untuk mengubah status aktif/nonaktif"
+                      >
+                        <span style={t.active ? BADGE_ACTIVE : BADGE_INACTIVE}>{t.active ? 'Aktif' : 'Nonaktif'}</span>
+                      </span>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', width: '130px', flexShrink: 0 }}>
+                        <button
+                          id={`edit-type-${t.id}`}
+                          onClick={() => openEditDocTypeModal(t)}
+                          style={BTN_EDIT}
+                          title="Edit Jenis Dokumen"
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.color = '#0284c7'; e.currentTarget.style.background = '#f0f9ff'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#334155'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Edit2 size={11} />
+                          Edit
+                        </button>
+                        <button
+                          id={`delete-type-${t.id}`}
+                          onClick={() => promptDeleteDocType(t)}
+                          style={BTN_DELETE}
+                          title="Hapus Jenis Dokumen"
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.background = '#dc2626'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#fecaca'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Trash2 size={11} />
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -757,45 +1024,69 @@ export default function SettingsPage() {
               <SectionHeader
                 title="Departemen"
                 description="Daftar departemen dan unit kerja yang terdaftar dalam sistem manajemen dokumen perusahaan."
-                action={<AddButton label="Tambah Departemen" id="add-department" />}
+                action={<AddButton label="Tambah Departemen" id="add-department" onClick={openAddDeptModal} />}
               />
               <div style={{ background: '#ffffff', border: '1px solid #e8eef5', borderRadius: '10px', overflow: 'hidden' }}>
-                {DEPARTMENTS.map((d, i) => (
-                  <div
-                    key={d.id}
-                    style={{ ...ROW, borderTop: i === 0 ? '1px solid #e8eef5' : undefined }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <Building2 size={14} strokeWidth={1.75} color={d.active ? '#0369a1' : '#94a3b8'} style={{ flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 600, color: d.active ? '#1e293b' : '#94a3b8' }}>{d.name}</div>
-                    </div>
-                    <span style={{
-                      fontFamily: 'var(--font-mono, monospace)',
-                      fontSize: '11px', fontWeight: 700,
-                      color: '#071c2c', background: '#f1f5f9',
-                      padding: '2px 8px', borderRadius: '4px',
-                      letterSpacing: '0.04em', width: '70px', textAlign: 'center',
-                    }}>
-                      {d.code}
-                    </span>
-                    <span style={{ width: '80px', textAlign: 'center' }}>
-                      <span style={d.active ? BADGE_ACTIVE : BADGE_INACTIVE}>{d.active ? 'Aktif' : 'Nonaktif'}</span>
-                    </span>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', width: '80px' }}>
-                      <button
-                        id={`edit-dept-${d.id}`}
-                        style={BTN_EDIT}
-                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.color = '#0284c7'; }}
-                        onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#334155'; }}
-                      >
-                        <Edit2 size={11} />
-                        Edit
-                      </button>
-                    </div>
+                <TableHead cols={['Nama Departemen', 'Kode', 'Status', 'Aksi']} />
+                {departments.length === 0 ? (
+                  <div style={{ padding: '32px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>
+                    Belum ada departemen. Klik tombol <strong>&quot;Tambah Departemen&quot;</strong> di atas untuk menambahkan departemen baru.
                   </div>
-                ))}
+                ) : (
+                  departments.map((d, i) => (
+                    <div
+                      key={d.id}
+                      style={{ ...ROW, borderTop: i === 0 ? '1px solid #e8eef5' : undefined }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <Building2 size={14} strokeWidth={1.75} color={d.active ? '#0369a1' : '#94a3b8'} style={{ flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: d.active ? '#1e293b' : '#94a3b8' }}>{d.name}</div>
+                      </div>
+                      <span style={{
+                        fontFamily: 'var(--font-mono, monospace)',
+                        fontSize: '11px', fontWeight: 700,
+                        color: '#071c2c', background: '#f1f5f9',
+                        padding: '2px 8px', borderRadius: '4px',
+                        letterSpacing: '0.04em', width: '70px', textAlign: 'center', flexShrink: 0,
+                      }}>
+                        {d.code}
+                      </span>
+                      <span
+                        style={{ width: '80px', textAlign: 'center', cursor: 'pointer', flexShrink: 0 }}
+                        onClick={() => toggleDeptActive(d.id)}
+                        title="Klik untuk mengubah status aktif/nonaktif"
+                      >
+                        <span style={d.active ? BADGE_ACTIVE : BADGE_INACTIVE}>{d.active ? 'Aktif' : 'Nonaktif'}</span>
+                      </span>
+                      <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', width: '130px', flexShrink: 0 }}>
+                        <button
+                          id={`edit-dept-${d.id}`}
+                          onClick={() => openEditDeptModal(d)}
+                          style={BTN_EDIT}
+                          title="Edit Departemen"
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.color = '#0284c7'; e.currentTarget.style.background = '#f0f9ff'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.color = '#334155'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Edit2 size={11} />
+                          Edit
+                        </button>
+                        <button
+                          id={`delete-dept-${d.id}`}
+                          onClick={() => promptDeleteDept(d)}
+                          style={BTN_DELETE}
+                          title="Hapus Departemen"
+                          onMouseEnter={e => { e.currentTarget.style.borderColor = '#ef4444'; e.currentTarget.style.color = '#ffffff'; e.currentTarget.style.background = '#dc2626'; }}
+                          onMouseLeave={e => { e.currentTarget.style.borderColor = '#fecaca'; e.currentTarget.style.color = '#dc2626'; e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          <Trash2 size={11} />
+                          Hapus
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -1253,6 +1544,321 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL: TAMBAH / EDIT JENIS DOKUMEN ────────────────── */}
+      {isDocTypeModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(7, 28, 44, 0.45)', backdropFilter: 'blur(3px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '480px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)', border: '1px solid #e2e8f0',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 20px', borderBottom: '1px solid #e8eef5', background: '#071c2c', color: '#ffffff',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileText size={18} color="#38bdf8" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>
+                  {editingDocTypeId !== null ? 'Edit Jenis Dokumen' : 'Tambah Jenis Dokumen Baru'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsDocTypeModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDocType}>
+              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Nama Jenis Dokumen *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Standar Operasional Prosedur"
+                    value={docTypeName}
+                    onChange={e => setDocTypeName(e.target.value)}
+                    required
+                    style={{
+                      width: '100%', padding: '9px 12px', fontSize: '13px',
+                      border: '1px solid #cbd5e1', borderRadius: '7px', outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Awalan (Prefix) Penomoran *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: SOP, POL, WI, MAN"
+                    value={docTypePrefix}
+                    onChange={e => setDocTypePrefix(e.target.value.toUpperCase())}
+                    required
+                    maxLength={10}
+                    style={{
+                      width: '100%', padding: '9px 12px', fontSize: '13px',
+                      border: '1px solid #cbd5e1', borderRadius: '7px', outline: 'none',
+                      boxSizing: 'border-box', fontFamily: 'var(--font-mono, monospace)', fontWeight: 700,
+                    }}
+                  />
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+                    Awalan digunakan dalam format kode penomoran resmi (misal: SOP-001).
+                  </div>
+                </div>
+
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0',
+                }}>
+                  <input
+                    id="chk-doc-type-active"
+                    type="checkbox"
+                    checked={docTypeActive}
+                    onChange={e => setDocTypeActive(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="chk-doc-type-active" style={{ fontSize: '12.5px', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+                    Status Aktif (dapat digunakan dalam registrasi dan penomoran dokumen baru)
+                  </label>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '14px 20px', borderTop: '1px solid #e8eef5', background: '#f8fafc',
+                display: 'flex', justifyContent: 'flex-end', gap: '10px',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setIsDocTypeModalOpen(false)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                    background: '#ffffff', color: '#475569', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!docTypeName.trim() || !docTypePrefix.trim()}
+                  style={{
+                    padding: '8px 18px', borderRadius: '6px', border: 'none',
+                    background: (!docTypeName.trim() || !docTypePrefix.trim()) ? '#94a3b8' : '#071c2c',
+                    color: '#ffffff', fontSize: '12.5px', fontWeight: 600,
+                    cursor: (!docTypeName.trim() || !docTypePrefix.trim()) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {editingDocTypeId !== null ? 'Simpan Perubahan' : 'Tambah Jenis Dokumen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: TAMBAH / EDIT DEPARTEMEN ───────────────────── */}
+      {isDeptModalOpen && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1000,
+          background: 'rgba(7, 28, 44, 0.45)', backdropFilter: 'blur(3px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '480px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)', border: '1px solid #e2e8f0',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 20px', borderBottom: '1px solid #e8eef5', background: '#071c2c', color: '#ffffff',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Building2 size={18} color="#38bdf8" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>
+                  {editingDeptId !== null ? 'Edit Departemen' : 'Tambah Departemen Baru'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsDeptModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDept}>
+              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Nama Departemen *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: QHSE & QMS, Geotechnical"
+                    value={deptName}
+                    onChange={e => setDeptName(e.target.value)}
+                    required
+                    style={{
+                      width: '100%', padding: '9px 12px', fontSize: '13px',
+                      border: '1px solid #cbd5e1', borderRadius: '7px', outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '5px' }}>
+                    Kode Singkatan Departemen *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: QHSE, GEO, ENG, HR"
+                    value={deptCode}
+                    onChange={e => setDeptCode(e.target.value.toUpperCase())}
+                    required
+                    maxLength={10}
+                    style={{
+                      width: '100%', padding: '9px 12px', fontSize: '13px',
+                      border: '1px solid #cbd5e1', borderRadius: '7px', outline: 'none',
+                      boxSizing: 'border-box', fontFamily: 'var(--font-mono, monospace)', fontWeight: 700,
+                    }}
+                  />
+                </div>
+
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '10px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0',
+                }}>
+                  <input
+                    id="chk-dept-active"
+                    type="checkbox"
+                    checked={deptActive}
+                    onChange={e => setDeptActive(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="chk-dept-active" style={{ fontSize: '12.5px', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>
+                    Status Aktif dalam unit organisasi perusahaan
+                  </label>
+                </div>
+              </div>
+
+              <div style={{
+                padding: '14px 20px', borderTop: '1px solid #e8eef5', background: '#f8fafc',
+                display: 'flex', justifyContent: 'flex-end', gap: '10px',
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setIsDeptModalOpen(false)}
+                  style={{
+                    padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                    background: '#ffffff', color: '#475569', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={!deptName.trim() || !deptCode.trim()}
+                  style={{
+                    padding: '8px 18px', borderRadius: '6px', border: 'none',
+                    background: (!deptName.trim() || !deptCode.trim()) ? '#94a3b8' : '#071c2c',
+                    color: '#ffffff', fontSize: '12.5px', fontWeight: 600,
+                    cursor: (!deptName.trim() || !deptCode.trim()) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {editingDeptId !== null ? 'Simpan Perubahan' : 'Tambah Departemen'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: KONFIRMASI HAPUS (GENERIC) ─────────────────── */}
+      {deleteConfirmation && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 1100,
+          background: 'rgba(7, 28, 44, 0.55)', backdropFilter: 'blur(3px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
+        }}>
+          <div style={{
+            background: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '440px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)', border: '1px solid #fecaca',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px 20px', borderBottom: '1px solid #fee2e2', background: '#fef2f2',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#dc2626' }}>
+                <AlertTriangle size={18} strokeWidth={2.2} />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700 }}>
+                  Konfirmasi Hapus {deleteConfirmation.type === 'doc-type' ? 'Jenis Dokumen' : 'Departemen'}
+                </h3>
+              </div>
+              <button
+                onClick={() => setDeleteConfirmation(null)}
+                style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <p style={{ margin: '0 0 12px', fontSize: '13.5px', color: '#334155', lineHeight: 1.5 }}>
+                Apakah Anda yakin ingin menghapus {deleteConfirmation.type === 'doc-type' ? 'jenis dokumen' : 'departemen'} berikut?
+              </p>
+              <div style={{
+                padding: '12px 14px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0',
+                fontSize: '13px', fontWeight: 700, color: '#071c2c',
+              }}>
+                {deleteConfirmation.name}
+              </div>
+              <p style={{ margin: '10px 0 0', fontSize: '11.5px', color: '#dc2626' }}>
+                * Tindakan ini bersifat permanen dan tidak dapat dibatalkan.
+              </p>
+            </div>
+
+            <div style={{
+              padding: '14px 20px', borderTop: '1px solid #e8eef5', background: '#f8fafc',
+              display: 'flex', justifyContent: 'flex-end', gap: '10px',
+            }}>
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmation(null)}
+                style={{
+                  padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1',
+                  background: '#ffffff', color: '#475569', fontSize: '12.5px', fontWeight: 600, cursor: 'pointer',
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleExecuteDelete}
+                style={{
+                  padding: '8px 18px', borderRadius: '6px', border: 'none',
+                  background: '#dc2626', color: '#ffffff', fontSize: '12.5px', fontWeight: 600,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                }}
+              >
+                <Trash2 size={13} />
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1273,10 +1879,12 @@ function SectionHeader({ title, description, action }: { title: string; descript
   );
 }
 
-function AddButton({ label, id }: { label: string; id: string }) {
+function AddButton({ label, id, onClick }: { label: string; id: string; onClick?: () => void }) {
   return (
     <button
       id={id}
+      type="button"
+      onClick={onClick}
       style={{
         background: '#071c2c', color: '#ffffff',
         border: 'none', borderRadius: '8px',
