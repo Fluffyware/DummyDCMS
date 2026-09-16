@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 
+export type DistributionType = 'NEW_DOC' | 'REVISION_UPDATE' | 'ANNOUNCEMENT';
+
 export interface EmailDistributionPayload {
   to: string; // e.g. 'filayati_akbar@yahoo.com'
   documentTitle: string;
@@ -8,6 +10,8 @@ export interface EmailDistributionPayload {
   revision: string;
   department: string;
   jenisDokumen?: string;
+  distributionType?: DistributionType;
+  customSubject?: string;
   fileUrl?: string | null;
   fileName?: string | null;
   distributorName?: string;
@@ -23,6 +27,8 @@ export interface BatchEmailDoc {
 export interface BatchEmailPayload {
   to: string;
   category: string; // e.g. "Corporate Policies"
+  distributionType?: DistributionType;
+  customSubject?: string;
   documents: BatchEmailDoc[];
   distributorName?: string;
   notes?: string;
@@ -30,7 +36,7 @@ export interface BatchEmailPayload {
 
 /**
  * Generate a batch HTML email listing multiple documents in one email.
- * Format: "Dear All, Here i attach new document for [Category]: 1. Title: URL..."
+ * Format: "Dear All, Here i attach [new/revised/socialization] document for [Category]: 1. Title: URL..."
  */
 export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): string {
   const docListHtml = data.documents
@@ -39,12 +45,19 @@ export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): str
       <p style="margin: 0 0 18px; font-size: 14px; color: #1e293b; line-height: 1.8;">
         <strong>${idx + 1}. ${doc.title}:</strong><br>
         ${doc.fileUrl
-          ? `<a href="${doc.fileUrl}" target="_blank" style="display: inline-block; margin-top: 6px; padding: 7px 16px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;">🔗 Buka / Download Dokumen</a>`
+          ? `<a href="${doc.fileUrl}" target="_blank" style="display: inline-block; margin-top: 6px; padding: 7px 16px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;">Download Dokumen</a>`
           : `<span style="color: #64748b; font-size: 13px;">—</span>`
         }
       </p>`
     )
     .join('');
+
+  let introLine = `Here i attach new document for <strong>${data.category}</strong>:`;
+  if (data.distributionType === 'REVISION_UPDATE') {
+    introLine = `Here i attach revised document for <strong>${data.category}</strong>:`;
+  } else if (data.distributionType === 'ANNOUNCEMENT') {
+    introLine = `Here i attach controlled document for socialization:`;
+  }
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -63,7 +76,7 @@ export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): str
             <td style="padding: 36px 40px 28px;">
               <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.8; color: #1e293b;">Dear All</p>
               <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.8; color: #1e293b;">
-                Here i attach new document for <strong>${data.category}</strong>:
+                ${introLine}
               </p>
               ${docListHtml}
               <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.9; color: #1e293b;">
@@ -101,18 +114,31 @@ export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): str
  * Generate single-document HTML email (delegates to batch template for consistency).
  */
 export function generateDistributionEmailHtml(data: EmailDistributionPayload): string {
+  const docTitle = data.distributionType === 'REVISION_UPDATE'
+    ? `${data.documentNumber ? data.documentNumber + ' ' : ''}(Rev.${data.revision}) ${data.documentTitle}`
+    : `${data.documentNumber ? data.documentNumber + ' ' : ''}${data.documentTitle}`;
+
   return generateBatchDistributionEmailHtml({
     to: data.to,
     category: data.jenisDokumen || 'Corporate Documents',
+    distributionType: data.distributionType,
+    customSubject: data.customSubject,
     documents: [
       {
-        title: `${data.documentNumber ? data.documentNumber + ' ' : ''}${data.documentTitle}`,
+        title: docTitle,
         fileUrl: data.fileUrl,
       },
     ],
     distributorName: data.distributorName,
     notes: data.notes,
   });
+}
+
+function resolveDistributionSubject(type?: DistributionType, custom?: string): string {
+  if (custom) return custom;
+  if (type === 'REVISION_UPDATE') return 'Taka Hydrocore - Released Revised Document';
+  if (type === 'ANNOUNCEMENT') return 'Taka Hydrocore - Document Socialization';
+  return 'Taka Hydrocore - Released New Document';
 }
 
 /**
@@ -125,7 +151,7 @@ export async function sendBatchDistributionEmail(payload: BatchEmailPayload): Pr
   error?: string;
 }> {
   const htmlContent = generateBatchDistributionEmailHtml(payload);
-  const subject = `Taka Hydrocore - Released New Document`;
+  const subject = resolveDistributionSubject(payload.distributionType, payload.customSubject);
   return _sendEmail(payload.to, subject, htmlContent);
 }
 
@@ -139,7 +165,7 @@ export async function sendDistributionEmail(payload: EmailDistributionPayload): 
   error?: string;
 }> {
   const htmlContent = generateDistributionEmailHtml(payload);
-  const subject = `Taka Hydrocore - Released New Document`;
+  const subject = resolveDistributionSubject(payload.distributionType, payload.customSubject);
   return _sendEmail(payload.to, subject, htmlContent);
 }
 

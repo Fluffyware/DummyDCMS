@@ -213,7 +213,11 @@ export default function DistributionPage() {
     setErrorMessage('');
   };
 
-  const sendEmails = async (entries: DistributionDoc[], notes: string): Promise<{ sent: number; failed: number; failedAddresses: string[] }> => {
+  const sendEmails = async (
+    entries: DistributionDoc[],
+    notes: string,
+    mode: 'NEW_DOC' | 'REVISION_UPDATE' | 'ANNOUNCEMENT' = 'NEW_DOC'
+  ): Promise<{ sent: number; failed: number; failedAddresses: string[] }> => {
     if (!sendEmailNotification || !recipientEmail.trim()) return { sent: 0, failed: 0, failedAddresses: [] };
     const emailList = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
     if (emailList.length === 0) return { sent: 0, failed: 0, failedAddresses: [] };
@@ -224,13 +228,25 @@ export default function DistributionPage() {
     // Build document list for batch email
     // Convert relative /api/r2/view URLs to absolute so they work in email clients
     const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
-    const documents = entries.map(entry => ({
-      title: entry.judul,
-      number: entry.idRegistrasi !== '-' ? entry.idRegistrasi : undefined,
-      fileUrl: entry.fileUrl
-        ? (entry.fileUrl.startsWith('/') ? `${appOrigin}${entry.fileUrl}` : entry.fileUrl)
-        : null,
-    }));
+    const documents = entries.map(entry => {
+      let titleFormatted = entry.judul;
+      if (mode === 'REVISION_UPDATE') {
+        const revPart = entry.revisi ? ` (Rev.${entry.revisi})` : '';
+        const numPart = entry.idRegistrasi && entry.idRegistrasi !== '-' ? `${entry.idRegistrasi} ` : '';
+        titleFormatted = `${numPart}${revPart} ${entry.judul}`.replace(/\s+/g, ' ').trim();
+      } else {
+        const numPart = entry.idRegistrasi && entry.idRegistrasi !== '-' ? `${entry.idRegistrasi} ` : '';
+        titleFormatted = `${numPart}${entry.judul}`.trim();
+      }
+
+      return {
+        title: titleFormatted,
+        number: entry.idRegistrasi !== '-' ? entry.idRegistrasi : undefined,
+        fileUrl: entry.fileUrl
+          ? (entry.fileUrl.startsWith('/') ? `${appOrigin}${entry.fileUrl}` : entry.fileUrl)
+          : null,
+      };
+    });
 
     let sent = 0;
     let failed = 0;
@@ -246,6 +262,7 @@ export default function DistributionPage() {
             batch: true,
             to: targetEmail,
             category,
+            distributionType: mode,
             documents,
             distributorName: user?.name || 'QMS THI',
             notes: notes || emailNotes || '',
@@ -384,7 +401,7 @@ export default function DistributionPage() {
         saveMasterFolders(updatedFolders);
 
         setSubmitStatusText('Mengirimkan notifikasi email...');
-        const emailResult = await sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
+        const emailResult = await sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.', 'NEW_DOC');
 
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
@@ -481,13 +498,18 @@ export default function DistributionPage() {
         saveMasterFolders(updatedFolders);
 
         setSubmitStatusText('Mengirimkan notifikasi email revisi...');
-        await sendEmails(newEntries, `Pembaruan revisi dokumen resmi.`);
+        const emailResult = await sendEmails(newEntries, `Pembaruan revisi dokumen resmi.`, 'REVISION_UPDATE');
 
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
         saveDistributions(updated);
         handleResetForm();
         showToast(`${newEntries.length} dokumen revisi berhasil dirilis!`);
+        if (emailResult && emailResult.sent > 0) {
+          showToast(`Email terkirim ke ${emailResult.sent} penerima!`);
+        } else if (emailResult && emailResult.failed > 0) {
+          showToast(`Distribusi berhasil, tapi email gagal dikirim ke: ${emailResult.failedAddresses.join(', ')}. Silakan periksa konfigurasi email.`, 'error');
+        }
       } catch (err: any) {
         console.error('Distribusi revisi error:', err);
         setErrorMessage(err.message || 'Terjadi kesalahan saat merilis revisi.');
@@ -520,13 +542,18 @@ export default function DistributionPage() {
         });
 
         setSubmitStatusText('Mengirimkan email pengumuman dokumen...');
-        await sendEmails(newEntries, announcementNote || 'Pengumuman sosialisasi dokumen terkendali resmi.');
+        const emailResult = await sendEmails(newEntries, announcementNote || 'Pengumuman sosialisasi dokumen terkendali resmi.', 'ANNOUNCEMENT');
 
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
         saveDistributions(updated);
         handleResetForm();
         showToast(`${newEntries.length} dokumen berhasil diumumkan!`);
+        if (emailResult && emailResult.sent > 0) {
+          showToast(`Email terkirim ke ${emailResult.sent} penerima!`);
+        } else if (emailResult && emailResult.failed > 0) {
+          showToast(`Distribusi berhasil, tapi email gagal dikirim ke: ${emailResult.failedAddresses.join(', ')}. Silakan periksa konfigurasi email.`, 'error');
+        }
       } catch (err: any) {
         console.error('Pengumuman error:', err);
         setErrorMessage(err.message || 'Terjadi kesalahan saat mengumumkan dokumen.');
@@ -552,6 +579,7 @@ export default function DistributionPage() {
             revision: emailModalDoc.revisi,
             department: emailModalDoc.dept,
             jenisDokumen: emailModalDoc.jenis,
+            distributionType: emailModalDoc.distType === 'REVISION_UPDATE' ? 'REVISION_UPDATE' : emailModalDoc.distType === 'ANNOUNCEMENT' ? 'ANNOUNCEMENT' : 'NEW_DOC',
             distributorName: user?.name || 'QMS THI',
             fileUrl: emailModalDoc.fileUrl,
             notes: modalNotes || 'Pemberitahuan sosialisasi dokumen.',
