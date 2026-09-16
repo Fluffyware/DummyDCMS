@@ -2723,8 +2723,8 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                             gap: '4px',
                           }}
                         >
-                          <Download size={11} />
-                          <span>Unduh Berkas {revItem.rev}</span>
+                          <Eye size={11} />
+                          <span>Lihat Berkas {revItem.rev}</span>
                         </button>
                       </div>
                     </div>

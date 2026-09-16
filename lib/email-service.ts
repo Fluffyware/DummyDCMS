@@ -63,7 +63,7 @@ export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): str
       <p style="margin: 0 0 18px; font-size: 14px; color: #1e293b; line-height: 1.8;">
         <strong>${idx + 1}. ${doc.title}:</strong><br>
         ${doc.fileUrl
-          ? `<a href="${doc.fileUrl}" target="_blank" style="display: inline-block; margin-top: 6px; padding: 8px 18px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">Download Dokumen</a>`
+          ? `<a href="${doc.fileUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-block; margin-top: 6px; padding: 8px 18px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">Lihat Dokumen</a>`
           : `<span style="color: #64748b; font-size: 13px;">—</span>`
         }
       </p>`
