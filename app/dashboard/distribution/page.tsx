@@ -49,6 +49,7 @@ interface NewDocEntry {
   docNumber: string;
   judulDokumen: string;
   revisiKe: string;
+  docUrl: string;
   selectedFile: File | null;
 }
 
@@ -77,7 +78,7 @@ const JENIS_OPTIONS_DEFAULT = [
 function makeid() { return Math.random().toString(36).slice(2, 9); }
 
 function makeEmptyNewDoc(): NewDocEntry {
-  return { id: makeid(), selectedFolderId: '', selectedSubFolderId: '', dept: '', jenis: '', docNumber: '', judulDokumen: '', revisiKe: '00', selectedFile: null };
+  return { id: makeid(), selectedFolderId: '', selectedSubFolderId: '', dept: '', jenis: '', docNumber: '', judulDokumen: '', revisiKe: '00', docUrl: '', selectedFile: null };
 }
 
 function makeEmptyRevDoc(): RevDocEntry {
@@ -279,6 +280,7 @@ export default function DistributionPage() {
           judul: entry.judulDokumen.trim(), revisi: entry.revisiKe.trim() || '00', folder: folderDisplay,
           groupDoc: 'HEAD_OFFICE', fileName: entry.selectedFile ? entry.selectedFile.name : null,
           fileSize: entry.selectedFile ? `${(entry.selectedFile.size / 1024).toFixed(0)} KB` : '',
+          fileUrl: entry.docUrl.trim() || undefined,
           status: 'Released', createdAt: dateStr, distType: 'NEW_DOC',
         };
 
@@ -809,6 +811,10 @@ function NewDocEntryRow({ entry, index, totalCount, masterFolders, deptOptions, 
           <input ref={fileRef} type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx" style={{ fontSize: '12.5px', color: '#475569' }} />
           {entry.selectedFile && <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', display: 'block' }}>✓ {entry.selectedFile.name} ({(entry.selectedFile.size / 1024).toFixed(0)} KB)</span>}
         </div>
+      </div>
+      <div>
+        <label style={labelStyle2}>URL Dokumen <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(Google Drive / link — untuk notifikasi email)</span></label>
+        <input type="url" value={entry.docUrl} onChange={e => onUpdate({ docUrl: e.target.value })} placeholder="https://drive.google.com/file/d/..." style={inputStyle2} />
       </div>
     </div>
   );

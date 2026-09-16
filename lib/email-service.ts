@@ -83,8 +83,7 @@ export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): str
 
           <tr>
             <td style="background-color: #f8fafc; padding: 20px 40px; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0 0 4px; font-size: 13.5px; color: #475569; line-height: 1.7;">Best Regards,</p>
-              <br>
+              <p style="margin: 0 0 6px; font-size: 13.5px; color: #475569; line-height: 1.7;">Best Regards,</p>
               <p style="margin: 0 0 2px; font-size: 14px; font-weight: 700; color: #071c2c;">Quality Management System</p>
               <p style="margin: 0; font-size: 11px; color: #94a3b8;">PT Taka Hydrocore Indonesia &mdash; QHSE &amp; QMS Division</p>
             </td>
