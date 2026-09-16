@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import nodemailer from 'nodemailer';
 import { Resend } from 'resend';
 
@@ -44,14 +46,14 @@ export interface BatchEmailPayload {
  */
 export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): string {
   let logoUrl = data.logoUrl;
-  if (!logoUrl) {
-    const origin = data.appOrigin || (typeof window !== 'undefined' ? window.location.origin : '');
-    if (origin) {
-      logoUrl = `${origin}/thi-logo-official.png`;
-    } else if (process.env.VERCEL_URL) {
+  if (!logoUrl || logoUrl.includes('localhost') || logoUrl.startsWith('/')) {
+    if (data.appOrigin && !data.appOrigin.includes('localhost')) {
+      logoUrl = `${data.appOrigin}/thi-logo-official.png`;
+    } else if (process.env.VERCEL_URL && !process.env.VERCEL_URL.includes('localhost')) {
       logoUrl = `https://${process.env.VERCEL_URL}/thi-logo-official.png`;
     } else {
-      logoUrl = '/thi-logo-official.png';
+      // Public CDN hosted logo URL (ensures image loads in Gmail / Outlook even when testing from localhost)
+      logoUrl = 'https://raw.githubusercontent.com/Fluffyware/DummyDCMS/main/public/thi-logo-official.png';
     }
   }
 
@@ -239,12 +241,29 @@ async function _sendEmail(to: string, subject: string, htmlContent: string): Pro
         },
       });
 
-      const info = await transporter.sendMail({
+      const logoPath = path.join(process.cwd(), 'public/thi-logo-official.png');
+      const hasLogo = fs.existsSync(logoPath);
+
+      const mailOptions: any = {
         from: smtpFrom,
         to,
         subject,
-        html: htmlContent,
-      });
+        html: hasLogo
+          ? htmlContent.replace(/src="[^"]*thi-logo-official\.png[^"]*"/g, 'src="cid:thi-logo-official"')
+          : htmlContent,
+      };
+
+      if (hasLogo) {
+        mailOptions.attachments = [
+          {
+            filename: 'thi-logo-official.png',
+            path: logoPath,
+            cid: 'thi-logo-official',
+          },
+        ];
+      }
+
+      const info = await transporter.sendMail(mailOptions);
 
       return {
         success: true,
