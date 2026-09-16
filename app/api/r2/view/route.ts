@@ -274,6 +274,7 @@ export async function GET(req: NextRequest) {
     const key = searchParams.get('key');
     const token = searchParams.get('token');
     const isRaw = searchParams.get('raw') === 'true';
+    const isJson = searchParams.get('format') === 'json' || req.headers.get('accept')?.includes('application/json');
 
     if (!key) {
       return NextResponse.json({ error: 'Parameter key berkas diperlukan.' }, { status: 400 });
@@ -342,6 +343,14 @@ export async function GET(req: NextRequest) {
     if ((ext === 'docx' || ext === 'doc') && !isRaw) {
       try {
         const mammothResult = await mammoth.convertToHtml({ buffer: Buffer.from(body) });
+        if (isJson) {
+          return NextResponse.json({
+            success: true,
+            fileName,
+            ext,
+            contentHtml: mammothResult.value || '<p>Dokumen kosong.</p>',
+          });
+        }
         const pageHtml = renderDocxViewerHtml({
           fileName,
           key,
@@ -359,6 +368,16 @@ export async function GET(req: NextRequest) {
       } catch (convErr) {
         console.warn('Mammoth conversion error, falling back to raw:', convErr);
       }
+    }
+
+    if (isJson) {
+      return NextResponse.json({
+        success: true,
+        fileName,
+        ext,
+        isPdf: ext === 'pdf',
+        viewUrl: `/api/r2/view?key=${encodeURIComponent(key)}&raw=true`,
+      });
     }
 
     const mimeType = getMimeType(key);

@@ -15,6 +15,8 @@ import {
   AlertCircle,
   Eye,
   Download,
+  Printer,
+  Loader2,
   Building2,
   Ship,
   HardHat,
@@ -98,7 +100,71 @@ export default function MasterlistPage() {
 
   // Selected document for preview modal
   const [previewDoc, setPreviewDoc] = useState<MasterDocItem | null>(null);
-  const [modalTab, setModalTab] = useState<'info' | 'history'>('info');
+  const [modalTab, setModalTab] = useState<'doc' | 'info' | 'history'>('doc');
+  const [docContentLoading, setDocContentLoading] = useState(false);
+  const [docContentHtml, setDocContentHtml] = useState<string | null>(null);
+  const [docContentError, setDocContentError] = useState<string | null>(null);
+  const [docIsPdf, setDocIsPdf] = useState(false);
+  const [docPdfUrl, setDocPdfUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!previewDoc) {
+      setDocContentHtml(null);
+      setDocContentError(null);
+      setDocPdfUrl(null);
+      setDocIsPdf(false);
+      return;
+    }
+
+    setModalTab('doc');
+
+    const key = previewDoc.r2Key || (previewDoc.r2Url && previewDoc.r2Url.includes('key=')
+      ? new URL(previewDoc.r2Url, 'http://localhost').searchParams.get('key')
+      : null);
+
+    if (!key) {
+      setDocContentLoading(false);
+      setDocContentHtml(null);
+      setDocContentError('Berkas naskah asli belum diunggah ke server penyimpanan.');
+      return;
+    }
+
+    let isMounted = true;
+    const fetchContent = async () => {
+      setDocContentLoading(true);
+      setDocContentError(null);
+      try {
+        const res = await fetch(`/api/r2/view?key=${encodeURIComponent(key)}&format=json`);
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => ({}));
+          throw new Error(errJson.error || `Gagal mengambil naskah berkas (${res.status})`);
+        }
+        const data = await res.json();
+        if (!isMounted) return;
+
+        if (data.isPdf) {
+          setDocIsPdf(true);
+          setDocPdfUrl(data.viewUrl || `/api/r2/view?key=${encodeURIComponent(key)}&raw=true`);
+        } else if (data.contentHtml) {
+          setDocIsPdf(false);
+          setDocContentHtml(data.contentHtml);
+        } else {
+          setDocIsPdf(false);
+          setDocContentHtml('<p>Dokumen tidak memiliki isi teks yang dapat ditampilkan.</p>');
+        }
+      } catch (err: any) {
+        if (!isMounted) return;
+        setDocContentError(err.message || 'Gagal memuat naskah dokumen.');
+      } finally {
+        if (isMounted) setDocContentLoading(false);
+      }
+    };
+
+    fetchContent();
+    return () => {
+      isMounted = false;
+    };
+  }, [previewDoc]);
 
   // Modal Tambah Folder
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
@@ -326,18 +392,8 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
   };
 
   const handleViewDoc = (doc: MasterDocItem) => {
-    if (doc.r2Key) {
-      window.open(`/api/r2/view?key=${encodeURIComponent(doc.r2Key)}`, '_blank', 'noopener,noreferrer');
-      showToast(`Membuka berkas ${doc.number} di tab baru...`);
-      return;
-    }
-    // For r2Url: use as-is if it's a proxy path, skip direct r2.dev (blocked by ISP)
-    if (doc.r2Url && doc.r2Url.startsWith('/api/r2')) {
-      window.open(doc.r2Url, '_blank', 'noopener,noreferrer');
-      showToast(`Membuka berkas ${doc.number} di tab baru...`);
-      return;
-    }
-    showToast(`Berkas ${doc.number} belum diunggah ke server. Silakan upload terlebih dahulu.`);
+    setPreviewDoc(doc);
+    setModalTab('doc');
   };
 
   // ─── Modal Konfirmasi Hapus (Admin QMS) ───
@@ -1411,7 +1467,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                                   </div>
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <button
-                                                      onClick={() => { setModalTab('info'); setPreviewDoc(cDoc); }}
+                                                      onClick={() => handleViewDoc(cDoc)}
                                                       title={`Lihat Dokumen ${cDoc.number}`}
                                                       style={{
                                                         background: '#ffffff',
@@ -1598,10 +1654,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                                           <button
-                                            onClick={() => {
-                                              setModalTab('info');
-                                              setPreviewDoc(doc);
-                                            }}
+                                            onClick={() => handleViewDoc(doc)}
                                             title={`Lihat Dokumen ${doc.number}`}
                                             style={{
                                               background: '#ffffff',
@@ -1791,10 +1844,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
                               <button
-                                onClick={() => {
-                                  setModalTab('info');
-                                  setPreviewDoc(doc);
-                                }}
+                                onClick={() => handleViewDoc(doc)}
                                 title={`Lihat Dokumen ${doc.number}`}
                                 style={{
                                   background: '#ffffff',
@@ -2420,24 +2470,28 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(7, 28, 44, 0.45)',
-            backdropFilter: 'blur(2px)',
+            background: 'rgba(7, 28, 44, 0.65)',
+            backdropFilter: 'blur(3px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 1000,
-            padding: '20px',
+            padding: '16px',
           }}
           onClick={() => setPreviewDoc(null)}
         >
           <div
             style={{
               background: '#ffffff',
-              borderRadius: '10px',
-              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              border: '1px solid #cbd5e1',
               width: '100%',
-              maxWidth: '680px',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
+              maxWidth: '960px',
+              height: '88vh',
+              maxHeight: '920px',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              display: 'flex',
+              flexDirection: 'column',
               overflow: 'hidden',
               animation: 'fadeIn 0.18s ease-out',
             }}
@@ -2449,58 +2503,131 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                padding: '16px 22px',
-                borderBottom: '1px solid #f1f5f9',
-                background: '#fafafa',
+                padding: '12px 20px',
+                borderBottom: '1px solid #e2e8f0',
+                background: '#071c2c',
+                color: '#ffffff',
+                gap: '16px',
+                flexShrink: 0,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <img
-                  src="/thi-logo-official.png"
-                  alt="THI Logo"
-                  style={{ height: 20, width: 'auto', objectFit: 'contain' }}
-                />
-                <div style={{ height: '16px', width: '1px', background: '#e2e8f0' }} />
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', letterSpacing: '0.04em' }}>
-                  CONTROLLED DOCUMENT VIEWER
-                </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                <div style={{ background: '#ffffff', padding: '3px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}>
+                  <img
+                    src="/thi-logo-official.png"
+                    alt="THI Logo"
+                    style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
+                  />
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: '#38bdf8' }}>
+                      {previewDoc.number}
+                    </span>
+                    <span style={{ fontSize: '10.5px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '2px 6px', borderRadius: '3px', fontWeight: 700 }}>
+                      {previewDoc.revision}
+                    </span>
+                    <span style={{ fontSize: '10px', background: '#1e293b', color: '#94a3b8', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>
+                      DOKUMEN TERKENDALI
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
+                    {previewDoc.title}
+                  </div>
+                </div>
               </div>
 
-              <button
-                onClick={() => setPreviewDoc(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#94a3b8',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  borderRadius: '4px',
-                }}
-              >
-                <X size={18} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  title="Cetak Naskah Dokumen"
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#ffffff',
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                >
+                  <Printer size={13} />
+                  <span>Cetak</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDoc(null)}
+                  title="Tutup Pratinjau"
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    color: '#ffffff',
+                    padding: '6px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.8)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
 
-            {/* Modal Tabs Header: Info vs Riwayat Revisi */}
+            {/* Modal Tabs Header: Naskah Dokumen vs Info vs Riwayat Revisi */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 borderBottom: '1px solid #e2e8f0',
-                background: '#fafcff',
-                padding: '0 22px',
+                background: '#f8fafc',
+                padding: '0 20px',
+                flexShrink: 0,
               }}
             >
               <button
                 type="button"
+                onClick={() => setModalTab('doc')}
+                style={{
+                  padding: '11px 16px',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: modalTab === 'doc' ? '2px solid #0284c7' : '2px solid transparent',
+                  color: modalTab === 'doc' ? '#0284c7' : '#64748b',
+                  fontSize: '12.5px',
+                  fontWeight: modalTab === 'doc' ? 700 : 500,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Eye size={14} />
+                <span>Naskah Dokumen</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setModalTab('info')}
                 style={{
-                  padding: '12px 16px',
+                  padding: '11px 16px',
                   background: 'transparent',
                   border: 'none',
                   borderBottom: modalTab === 'info' ? '2px solid #0284c7' : '2px solid transparent',
                   color: modalTab === 'info' ? '#0284c7' : '#64748b',
-                  fontSize: '13px',
+                  fontSize: '12.5px',
                   fontWeight: modalTab === 'info' ? 700 : 500,
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -2508,20 +2635,20 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                   gap: '6px',
                 }}
               >
-                <FileText size={15} />
-                <span>Informasi Dokumen</span>
+                <FileText size={14} />
+                <span>Detail Informasi</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setModalTab('history')}
                 style={{
-                  padding: '12px 16px',
+                  padding: '11px 16px',
                   background: 'transparent',
                   border: 'none',
                   borderBottom: modalTab === 'history' ? '2px solid #0284c7' : '2px solid transparent',
                   color: modalTab === 'history' ? '#0284c7' : '#64748b',
-                  fontSize: '13px',
+                  fontSize: '12.5px',
                   fontWeight: modalTab === 'history' ? 700 : 500,
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -2529,14 +2656,116 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                   gap: '6px',
                 }}
               >
-                <History size={15} />
-                <span>Riwayat Revisi &amp; Change Log ({getDocRevisionHistory(previewDoc).length})</span>
+                <History size={14} />
+                <span>Riwayat Revisi ({getDocRevisionHistory(previewDoc).length})</span>
               </button>
             </div>
 
-            {/* Modal Body: Info Tab */}
+            {/* Modal Body 1: Naskah Dokumen (Direct In-Modal Reader) */}
+            {modalTab === 'doc' && (
+              <div style={{ flex: 1, overflowY: 'auto', background: '#f1f5f9', padding: '24px 20px' }}>
+                <style>{`
+                  .thi-docx-body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                    color: #1e293b;
+                    line-height: 1.65;
+                    font-size: 13.5px;
+                  }
+                  .thi-docx-body table {
+                    width: 100% !important;
+                    border-collapse: collapse !important;
+                    margin: 16px 0 !important;
+                    background: #ffffff;
+                  }
+                  .thi-docx-body table td,
+                  .thi-docx-body table th {
+                    border: 1px solid #cbd5e1 !important;
+                    padding: 8px 12px !important;
+                    font-size: 12.5px !important;
+                    text-align: left;
+                    vertical-align: top;
+                  }
+                  .thi-docx-body table th {
+                    background: #f8fafc !important;
+                    font-weight: 700;
+                    color: #071c2c;
+                  }
+                  .thi-docx-body h1, .thi-docx-body h2, .thi-docx-body h3, .thi-docx-body h4 {
+                    color: #071c2c;
+                    font-weight: 700;
+                    margin-top: 20px;
+                    margin-bottom: 8px;
+                    line-height: 1.3;
+                  }
+                  .thi-docx-body h1 { font-size: 18px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; }
+                  .thi-docx-body h2 { font-size: 16px; }
+                  .thi-docx-body h3 { font-size: 14.5px; }
+                  .thi-docx-body p { margin: 8px 0; }
+                  .thi-docx-body ul, .thi-docx-body ol { margin: 8px 0; padding-left: 24px; }
+                  .thi-docx-body li { margin: 4px 0; }
+                  .thi-docx-body strong { color: #0f172a; }
+                `}</style>
+
+                {docContentLoading ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '380px', gap: '12px', color: '#64748b' }}>
+                    <Loader2 size={32} className="animate-spin" color="#0284c7" />
+                    <span style={{ fontSize: '13px', fontWeight: 600 }}>Memuat naskah dokumen kendali...</span>
+                  </div>
+                ) : docContentError ? (
+                  <div style={{ background: '#ffffff', border: '1px solid #fecaca', borderRadius: '8px', padding: '24px', textAlign: 'center', color: '#991b1b', maxWidth: '520px', margin: '40px auto' }}>
+                    <AlertCircle size={32} color="#dc2626" style={{ margin: '0 auto 10px auto' }} />
+                    <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '6px' }}>Naskah Dokumen Belum Tersedia</div>
+                    <div style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.5 }}>{docContentError}</div>
+                    <button
+                      type="button"
+                      onClick={() => setModalTab('info')}
+                      style={{ marginTop: '16px', padding: '6px 14px', borderRadius: '6px', background: '#0284c7', color: '#ffffff', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
+                    >
+                      Buka Tab Detail Informasi
+                    </button>
+                  </div>
+                ) : docIsPdf && docPdfUrl ? (
+                  <div style={{ height: '100%', minHeight: '620px', background: '#ffffff', borderRadius: '6px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+                    <iframe src={docPdfUrl} style={{ width: '100%', height: '620px', border: 'none' }} title={previewDoc.title} />
+                  </div>
+                ) : (
+                  <article
+                    style={{
+                      maxWidth: '820px',
+                      margin: '0 auto',
+                      background: '#ffffff',
+                      borderRadius: '4px',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+                      padding: '40px 48px',
+                      color: '#1e293b',
+                      lineHeight: 1.6,
+                      fontSize: '13.5px',
+                    }}
+                  >
+                    {/* Document Header Watermark */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0284c7', paddingBottom: '12px', marginBottom: '24px' }}>
+                      <div>
+                        <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#071c2c', letterSpacing: '0.05em' }}>PT TAKA HYDROCORE INDONESIA</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>Quality, Health, Safety, Security &amp; Environment Management System</div>
+                      </div>
+                      <span style={{ background: '#f0f9ff', color: '#0284c7', border: '1px solid #bae6fd', fontSize: '10px', fontWeight: 700, padding: '3px 8px', borderRadius: '3px' }}>
+                        CONTROLLED COPY
+                      </span>
+                    </div>
+
+                    {/* HTML Rendered Content from Mammoth */}
+                    <div
+                      className="thi-docx-body"
+                      dangerouslySetInnerHTML={{ __html: docContentHtml || '<p>Dokumen kosong.</p>' }}
+                    />
+                  </article>
+                )}
+              </div>
+            )}
+
+            {/* Modal Body 2: Info Tab */}
             {modalTab === 'info' && (
-              <div style={{ padding: '22px' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '22px' }}>
                 <div style={{ marginBottom: '16px' }}>
                   <span
                     style={{
@@ -2599,30 +2828,30 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                   </div>
                 </div>
 
-                {/* Document Simulator Pane */}
+                {/* Document Verification Box */}
                 <div
                   style={{
-                    border: '1px dashed #cbd5e1',
+                    border: '1px solid #e2e8f0',
                     borderRadius: '8px',
-                    padding: '24px 20px',
+                    padding: '20px',
                     textAlign: 'center',
-                    background: '#fafafa',
+                    background: '#f8fafc',
                   }}
                 >
-                  <FileText size={28} color="#071c2c" style={{ margin: '0 auto 8px auto', strokeWidth: 1.5 }} />
+                  <FileText size={26} color="#0284c7" style={{ margin: '0 auto 8px auto', strokeWidth: 1.75 }} />
                   <p style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b', margin: '0 0 4px 0' }}>
                     Dokumen Kendali Terverifikasi Sistem
                   </p>
-                  <p style={{ fontSize: '12px', color: '#64748b', margin: 0, maxWidth: '420px', marginInline: 'auto' }}>
-                    Dokumen ini tersimpan secara aman dalam arsip DMS PT Taka Hydrocore Indonesia dengan tanda air kendali mutu.
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: 0, maxWidth: '440px', marginInline: 'auto' }}>
+                    Dokumen ini tersimpan secara aman dalam arsip DCMS PT Taka Hydrocore Indonesia dengan tanda air kendali mutu.
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Modal Body: History & Change Log Tab */}
+            {/* Modal Body 3: History & Change Log Tab */}
             {modalTab === 'history' && (
-              <div style={{ padding: '22px', maxHeight: '60vh', overflowY: 'auto' }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '22px' }}>
                 <div style={{ marginBottom: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>Nomor Dokumen:</div>
                   <div style={{ fontSize: '15px', fontWeight: 800, color: '#071c2c', marginTop: '2px' }}>
@@ -2669,38 +2898,36 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                               fontWeight: 700,
                               padding: '2px 8px',
                               borderRadius: '12px',
-                              color: revItem.isCurrent ? '#15803d' : '#64748b',
                               background: revItem.isCurrent ? '#dcfce7' : '#f1f5f9',
-                              border: revItem.isCurrent ? '1px solid #bbf7d0' : '1px solid #e2e8f0',
+                              color: revItem.isCurrent ? '#15803d' : '#64748b',
                             }}
                           >
-                            {revItem.isCurrent ? 'CURRENT (Aktif)' : 'SUPERSEDED (Diarsipkan)'}
+                            {revItem.isCurrent ? 'BERLAKU SAAT INI (CURRENT)' : 'HISTORIS'}
                           </span>
                         </div>
-
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          Tanggal Rilis: <strong>{revItem.date}</strong>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <Clock size={12} />
+                          <span>{revItem.date}</span>
                         </div>
                       </div>
 
-                      {/* Catatan / Note Apa Yang Diganti */}
+                      {/* Notes Box */}
                       <div
                         style={{
                           background: revItem.isCurrent ? '#ffffff' : '#f8fafc',
-                          padding: '10px 12px',
-                          borderRadius: '6px',
                           border: '1px solid #e2e8f0',
+                          borderRadius: '6px',
+                          padding: '10px 12px',
+                          fontSize: '12px',
+                          color: '#334155',
+                          lineHeight: 1.45,
                         }}
                       >
-                        <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#071c2c', marginBottom: '3px' }}>
-                          📝 Catatan &amp; Uraian Perubahan (Change Notes):
-                        </div>
-                        <div style={{ fontSize: '12.5px', color: '#334155', lineHeight: 1.45 }}>
-                          {revItem.notes}
-                        </div>
+                        <div style={{ fontWeight: 600, color: '#071c2c', marginBottom: '2px' }}>Uraian Perubahan / Catatan Rilis:</div>
+                        <div>{revItem.notes}</div>
                       </div>
 
-                      {/* Bottom Info: Author, Approver & Download */}
+                      {/* Bottom Info: Author, Approver & View Action */}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', fontSize: '11.5px', color: '#64748b' }}>
                         <div>
                           Disiapkan oleh: <strong style={{ color: '#0f172a' }}>{revItem.author}</strong> · Disetujui: <strong style={{ color: '#0f172a' }}>{revItem.approver}</strong>
@@ -2724,7 +2951,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                           }}
                         >
                           <Eye size={11} />
-                          <span>Lihat Berkas {revItem.rev}</span>
+                          <span>Lihat Naskah {revItem.rev}</span>
                         </button>
                       </div>
                     </div>
@@ -2738,107 +2965,69 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
-                gap: '10px',
-                padding: '14px 22px',
+                justifyContent: 'space-between',
+                padding: '12px 20px',
                 borderTop: '1px solid #f1f5f9',
                 background: '#fafafa',
+                flexShrink: 0,
               }}
             >
-              {isAdmin && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => promptDeleteDoc(previewDoc)}
+                    title="Hapus dokumen kendali ini"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #fecaca',
+                      background: '#fef2f2',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      color: '#dc2626',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = '#dc2626';
+                      e.currentTarget.style.color = '#ffffff';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = '#fef2f2';
+                      e.currentTarget.style.color = '#dc2626';
+                    }}
+                  >
+                    <Trash2 size={13} />
+                    <span>Hapus Dokumen</span>
+                  </button>
+                )}
+                <span style={{ fontSize: '11.5px', color: '#64748b' }}>
+                  Status: <strong style={{ color: '#15803d' }}>{previewDoc.status}</strong> · {previewDoc.classification}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
                   type="button"
-                  onClick={() => {
-                    promptDeleteDoc(previewDoc);
-                  }}
-                  title="Hapus dokumen kendali ini"
+                  onClick={() => setPreviewDoc(null)}
                   style={{
-                    padding: '7px 14px',
+                    padding: '7px 18px',
                     borderRadius: '6px',
-                    border: '1px solid #fecaca',
-                    background: '#fef2f2',
+                    border: '1px solid #d1d5db',
+                    background: '#ffffff',
                     fontSize: '12.5px',
                     fontWeight: 600,
-                    color: '#dc2626',
+                    color: '#334155',
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    marginRight: 'auto',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = '#dc2626';
-                    e.currentTarget.style.color = '#ffffff';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = '#fef2f2';
-                    e.currentTarget.style.color = '#dc2626';
                   }}
                 >
-                  <Trash2 size={13} />
-                  <span>Hapus Dokumen</span>
+                  Tutup
                 </button>
-              )}
-
-              <button
-                onClick={() => setPreviewDoc(null)}
-                style={{
-                  padding: '7px 14px',
-                  borderRadius: '6px',
-                  border: '1px solid #d1d5db',
-                  background: '#ffffff',
-                  fontSize: '12.5px',
-                  fontWeight: 500,
-                  color: '#475569',
-                  cursor: 'pointer',
-                }}
-              >
-                Tutup
-              </button>
-              <button
-                onClick={() => handleViewDoc(previewDoc)}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  color: '#334155',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#0284c7'; e.currentTarget.style.color = '#0284c7'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#334155'; }}
-              >
-                <Eye size={13} />
-                Lihat Dokumen
-              </button>
-              <button
-                onClick={() => {
-                  handleDownloadDoc(previewDoc);
-                  setPreviewDoc(null);
-                }}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: '#071c2c',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  color: '#ffffff',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <Download size={13} />
-                Unduh ({previewDoc.fileExt.toUpperCase()})
-              </button>
+              </div>
             </div>
           </div>
         </div>
