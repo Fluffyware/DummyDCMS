@@ -49,7 +49,6 @@ interface NewDocEntry {
   docNumber: string;
   judulDokumen: string;
   revisiKe: string;
-  docUrl: string;
   selectedFile: File | null;
 }
 
@@ -78,7 +77,7 @@ const JENIS_OPTIONS_DEFAULT = [
 function makeid() { return Math.random().toString(36).slice(2, 9); }
 
 function makeEmptyNewDoc(): NewDocEntry {
-  return { id: makeid(), selectedFolderId: '', selectedSubFolderId: '', dept: '', jenis: '', docNumber: '', judulDokumen: '', revisiKe: '00', docUrl: '', selectedFile: null };
+  return { id: makeid(), selectedFolderId: '', selectedSubFolderId: '', dept: '', jenis: '', docNumber: '', judulDokumen: '', revisiKe: '00', selectedFile: null };
 }
 
 function makeEmptyRevDoc(): RevDocEntry {
@@ -162,6 +161,8 @@ export default function DistributionPage() {
   const [modalRecipient, setModalRecipient] = useState<string>('');
   const [modalNotes, setModalNotes] = useState<string>('');
   const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitStatusText, setSubmitStatusText] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
@@ -212,7 +213,7 @@ export default function DistributionPage() {
     setErrorMessage('');
   };
 
-  const sendEmails = (entries: DistributionDoc[], notes: string) => {
+  const sendEmails = async (entries: DistributionDoc[], notes: string) => {
     if (!sendEmailNotification || !recipientEmail.trim()) return;
     const emailList = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
 
@@ -227,170 +228,286 @@ export default function DistributionPage() {
     }));
 
     // Send ONE combined email per recipient
-    emailList.forEach(targetEmail => {
-      fetch('/api/distribution/send-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          batch: true,
-          to: targetEmail,
-          category,
-          documents,
-          distributorName: user?.name || 'Admin QMS THI',
-          notes: notes || emailNotes || '',
-        }),
-      }).catch(console.error);
-    });
+    for (const targetEmail of emailList) {
+      try {
+        await fetch('/api/distribution/send-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            batch: true,
+            to: targetEmail,
+            category,
+            documents,
+            distributorName: user?.name || 'Admin QMS THI',
+            notes: notes || emailNotes || '',
+          }),
+        });
+      } catch (err) {
+        console.error('Failed to send email to', targetEmail, err);
+      }
+    }
   };
 
 
-  const handleSubmitForm = (e: React.FormEvent) => {
+  const handleSubmitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     const now = new Date();
     const dateStr = now.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 
     if (distMode === 'NEW_DOC') {
-      for (const entry of newDocEntries) {
-        if (!entry.selectedFolderId) { setErrorMessage('Pilih Folder Utama untuk semua dokumen.'); return; }
-        if (!entry.dept) { setErrorMessage('Pilih Departemen untuk semua dokumen.'); return; }
-        if (!entry.jenis) { setErrorMessage('Pilih Jenis Dokumen untuk semua dokumen.'); return; }
-        if (!entry.judulDokumen.trim()) { setErrorMessage('Isi Judul Dokumen untuk semua dokumen.'); return; }
+      for (const [idx, entry] of newDocEntries.entries()) {
+        if (!entry.selectedFolderId) { setErrorMessage(`Pilih Folder Utama untuk Dokumen #${idx + 1}.`); return; }
+        if (!entry.dept) { setErrorMessage(`Pilih Departemen untuk Dokumen #${idx + 1}.`); return; }
+        if (!entry.jenis) { setErrorMessage(`Pilih Jenis Dokumen untuk Dokumen #${idx + 1}.`); return; }
+        if (!entry.judulDokumen.trim()) { setErrorMessage(`Isi Judul Dokumen untuk Dokumen #${idx + 1}.`); return; }
+        if (!entry.selectedFile) { setErrorMessage(`Pilih berkas file untuk Dokumen #${idx + 1} agar otomatis diunggah ke Cloudflare R2.`); return; }
       }
 
-      const newEntries: DistributionDoc[] = [];
-      let updatedFolders = [...masterFolders];
+      setIsSubmitting(true);
+      setSubmitStatusText('Menyiapkan dokumen & mengunggah ke Cloudflare R2...');
 
-      newDocEntries.forEach((entry, i) => {
-        const folderObj = updatedFolders.find(f => f.id === Number(entry.selectedFolderId));
-        let subObj: MasterSubFolder | undefined;
-        for (const s of folderObj?.subfolders || []) {
-          if (s.id === entry.selectedSubFolderId) { subObj = s; break; }
-          for (const cs of s.subfolders || []) { if (cs.id === entry.selectedSubFolderId) { subObj = cs; break; } }
-          if (subObj) break;
-        }
-        const folderDisplay = folderObj ? `${folderObj.name}${subObj ? ' > ' + subObj.name : ''}` : 'General';
-        const seqNum = distributions.length + newEntries.length + 1;
-        const moPad = String(now.getMonth() + 1).padStart(2, '0');
-        const yrShort = String(now.getFullYear()).slice(-2);
-        const formattedId = `DIS${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
-        const finalDocNumber = entry.docNumber.trim() || `THI-${(entry.dept || 'GEN').slice(0, 4).toUpperCase()}-${String(seqNum).padStart(3, '0')}`;
+      try {
+        const newEntries: DistributionDoc[] = [];
+        let updatedFolders = [...masterFolders];
 
-        const distEntry: DistributionDoc = {
-          no: seqNum, id: formattedId, idRegistrasi: '-', dept: entry.dept, jenis: entry.jenis,
-          judul: entry.judulDokumen.trim(), revisi: entry.revisiKe.trim() || '00', folder: folderDisplay,
-          groupDoc: 'HEAD_OFFICE', fileName: entry.selectedFile ? entry.selectedFile.name : null,
-          fileSize: entry.selectedFile ? `${(entry.selectedFile.size / 1024).toFixed(0)} KB` : '',
-          fileUrl: entry.docUrl.trim() || undefined,
-          status: 'Released', createdAt: dateStr, distType: 'NEW_DOC',
-        };
-
-        const newMasterDoc: MasterDocItem = {
-          id: `d-new-${Date.now()}-${i}`, number: finalDocNumber, title: entry.judulDokumen.trim(),
-          revision: `Rev.${entry.revisiKe.trim() || '00'}`, effectiveDate: dateStr, reviewDate: '01 Jan 2027',
-          status: 'CURRENT', classification: 'INTERNAL', type: entry.jenis,
-          size: entry.selectedFile ? `${(entry.selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '—',
-          fileExt: 'pdf',
-        };
-
-        updatedFolders = updatedFolders.map(f => {
-          if (f.id !== Number(entry.selectedFolderId)) return f;
-          if (entry.selectedSubFolderId && f.subfolders) {
-            return {
-              ...f, subfolders: f.subfolders.map(sub => {
-                if (sub.id === entry.selectedSubFolderId) return { ...sub, docs: [newMasterDoc, ...(sub.docs || [])] };
-                if ((sub.subfolders || []).some(cs => cs.id === entry.selectedSubFolderId)) {
-                  return { ...sub, subfolders: (sub.subfolders || []).map(cs => cs.id === entry.selectedSubFolderId ? { ...cs, docs: [newMasterDoc, ...(cs.docs || [])] } : cs) };
-                }
-                return sub;
-              }),
-            };
+        for (const [i, entry] of newDocEntries.entries()) {
+          const folderObj = updatedFolders.find(f => f.id === Number(entry.selectedFolderId));
+          let subObj: MasterSubFolder | undefined;
+          for (const s of folderObj?.subfolders || []) {
+            if (s.id === entry.selectedSubFolderId) { subObj = s; break; }
+            for (const cs of s.subfolders || []) { if (cs.id === entry.selectedSubFolderId) { subObj = cs; break; } }
+            if (subObj) break;
           }
-          return { ...f, docs: [newMasterDoc, ...(f.docs || [])] };
-        });
-        newEntries.push(distEntry);
-      });
+          const folderDisplay = folderObj ? `${folderObj.name}${subObj ? ' > ' + subObj.name : ''}` : 'General';
+          const seqNum = distributions.length + newEntries.length + 1;
+          const moPad = String(now.getMonth() + 1).padStart(2, '0');
+          const yrShort = String(now.getFullYear()).slice(-2);
+          const formattedId = `DIS${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
+          const finalDocNumber = entry.docNumber.trim() || `THI-${(entry.dept || 'GEN').slice(0, 4).toUpperCase()}-${String(seqNum).padStart(3, '0')}`;
 
-      setMasterFolders(updatedFolders);
-      saveMasterFolders(updatedFolders);
-      sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
-      const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
-      setDistributions(updated);
-      saveDistributions(updated);
-      handleResetForm();
-      showToast(`${newEntries.length} dokumen baru berhasil didistribusikan!`);
+          let uploadedR2Url: string | undefined = undefined;
+          let uploadedR2Key: string | undefined = undefined;
+          let fileSizeFormatted = entry.selectedFile ? `${(entry.selectedFile.size / 1024).toFixed(0)} KB` : '';
+
+          if (entry.selectedFile) {
+            setSubmitStatusText(`Mengunggah berkas (${i + 1}/${newDocEntries.length}): ${entry.selectedFile.name} ke Cloudflare R2...`);
+            const formData = new FormData();
+            formData.append('file', entry.selectedFile);
+            formData.append('docNumber', finalDocNumber);
+            formData.append('docTitle', entry.judulDokumen.trim());
+            formData.append('docType', entry.jenis);
+            formData.append('docRevision', `Rev.${entry.revisiKe.trim() || '00'}`);
+            formData.append('docClassification', 'INTERNAL');
+            formData.append('folderId', String(entry.selectedFolderId));
+            if (entry.selectedSubFolderId) {
+              formData.append('subFolderId', entry.selectedSubFolderId);
+              if (subObj?.name) formData.append('subFolderName', subObj.name);
+            }
+            formData.append('uploader', user?.name || 'Admin QMS');
+
+            const uploadRes = await fetch('/api/r2/upload', {
+              method: 'POST',
+              body: formData,
+            });
+
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              if (uploadData.document) {
+                uploadedR2Key = uploadData.document.r2_key || undefined;
+                uploadedR2Url = uploadData.document.r2_url || undefined;
+                if (uploadData.document.file_size) fileSizeFormatted = uploadData.document.file_size;
+              }
+            } else {
+              console.warn('R2 upload warning:', await uploadRes.text());
+            }
+          }
+
+          const distEntry: DistributionDoc = {
+            no: seqNum, id: formattedId, idRegistrasi: '-', dept: entry.dept, jenis: entry.jenis,
+            judul: entry.judulDokumen.trim(), revisi: entry.revisiKe.trim() || '00', folder: folderDisplay,
+            groupDoc: 'HEAD_OFFICE', fileName: entry.selectedFile ? entry.selectedFile.name : null,
+            fileSize: fileSizeFormatted,
+            fileUrl: uploadedR2Url,
+            status: 'Released', createdAt: dateStr, distType: 'NEW_DOC',
+          };
+
+          const newMasterDoc: MasterDocItem = {
+            id: `d-new-${Date.now()}-${i}`, number: finalDocNumber, title: entry.judulDokumen.trim(),
+            revision: `Rev.${entry.revisiKe.trim() || '00'}`, effectiveDate: dateStr, reviewDate: '01 Jan 2027',
+            status: 'CURRENT', classification: 'INTERNAL', type: entry.jenis,
+            size: entry.selectedFile ? `${(entry.selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '—',
+            fileExt: entry.selectedFile ? entry.selectedFile.name.split('.').pop()?.toLowerCase() || 'pdf' : 'pdf',
+            r2Key: uploadedR2Key,
+            r2Url: uploadedR2Url,
+          };
+
+          updatedFolders = updatedFolders.map(f => {
+            if (f.id !== Number(entry.selectedFolderId)) return f;
+            if (entry.selectedSubFolderId && f.subfolders) {
+              return {
+                ...f, subfolders: f.subfolders.map(sub => {
+                  if (sub.id === entry.selectedSubFolderId) return { ...sub, docs: [newMasterDoc, ...(sub.docs || [])] };
+                  if ((sub.subfolders || []).some(cs => cs.id === entry.selectedSubFolderId)) {
+                    return { ...sub, subfolders: (sub.subfolders || []).map(cs => cs.id === entry.selectedSubFolderId ? { ...cs, docs: [newMasterDoc, ...(cs.docs || [])] } : cs) };
+                  }
+                  return sub;
+                }),
+              };
+            }
+            return { ...f, docs: [newMasterDoc, ...(f.docs || [])] };
+          });
+          newEntries.push(distEntry);
+        }
+
+        setMasterFolders(updatedFolders);
+        saveMasterFolders(updatedFolders);
+
+        setSubmitStatusText('Mengirimkan notifikasi email batch...');
+        await sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
+
+        const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
+        setDistributions(updated);
+        saveDistributions(updated);
+        handleResetForm();
+        showToast(`${newEntries.length} dokumen baru berhasil diunggah ke R2 & didistribusikan!`);
+      } catch (err: any) {
+        console.error('Distribusi error:', err);
+        setErrorMessage(err.message || 'Terjadi kesalahan saat memproses distribusi.');
+      } finally {
+        setIsSubmitting(false);
+        setSubmitStatusText('');
+      }
 
     } else if (distMode === 'REVISION_UPDATE') {
-      for (const entry of revDocEntries) {
-        if (!entry.selectedExistingDocId) { setErrorMessage('Pilih Dokumen yang akan direvisi.'); return; }
-        if (!entry.newRevisionNumber.trim()) { setErrorMessage('Isi Nomor Revisi Baru.'); return; }
-        if (!entry.revisionNotes.trim()) { setErrorMessage('Isi Alasan Revisi.'); return; }
+      for (const [idx, entry] of revDocEntries.entries()) {
+        if (!entry.selectedExistingDocId) { setErrorMessage(`Pilih Dokumen yang akan direvisi (#${idx + 1}).`); return; }
+        if (!entry.newRevisionNumber.trim()) { setErrorMessage(`Isi Nomor Revisi Baru (#${idx + 1}).`); return; }
+        if (!entry.revisionNotes.trim()) { setErrorMessage(`Isi Alasan Revisi (#${idx + 1}).`); return; }
       }
 
-      const newEntries: DistributionDoc[] = [];
-      let updatedFolders = [...masterFolders];
+      setIsSubmitting(true);
+      setSubmitStatusText('Memproses dokumen revisi...');
 
-      revDocEntries.forEach(entry => {
-        const existingDoc = flattenedDocs.find(d => d.id === entry.selectedExistingDocId);
-        if (!existingDoc) return;
-        const revDisplay = entry.newRevisionNumber.trim().startsWith('Rev.') ? entry.newRevisionNumber.trim() : `Rev.${entry.newRevisionNumber.trim()}`;
-        const seqNum = distributions.length + newEntries.length + 1;
-        const moPad = String(now.getMonth() + 1).padStart(2, '0');
-        const yrShort = String(now.getFullYear()).slice(-2);
-        const formattedId = `DIS${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
+      try {
+        const newEntries: DistributionDoc[] = [];
+        let updatedFolders = [...masterFolders];
 
-        const distEntry: DistributionDoc = {
-          no: seqNum, id: formattedId, idRegistrasi: existingDoc.number, dept: existingDoc.type || 'QHSE',
-          jenis: existingDoc.type, judul: existingDoc.title, revisi: revDisplay.replace('Rev.', ''),
-          folder: `${existingDoc.folderName}${existingDoc.subFolderName ? ' > ' + existingDoc.subFolderName : ''}`,
-          groupDoc: 'HEAD_OFFICE', fileName: entry.selectedRevFile ? entry.selectedRevFile.name : `${existingDoc.number}_${revDisplay}.pdf`,
-          fileSize: entry.selectedRevFile ? `${(entry.selectedRevFile.size / 1024).toFixed(0)} KB` : '—',
-          status: 'Released', createdAt: dateStr, distType: 'REVISION_UPDATE',
-        };
+        for (const [i, entry] of revDocEntries.entries()) {
+          const existingDoc = flattenedDocs.find(d => d.id === entry.selectedExistingDocId);
+          if (!existingDoc) continue;
+          const revDisplay = entry.newRevisionNumber.trim().startsWith('Rev.') ? entry.newRevisionNumber.trim() : `Rev.${entry.newRevisionNumber.trim()}`;
+          const seqNum = distributions.length + newEntries.length + 1;
+          const moPad = String(now.getMonth() + 1).padStart(2, '0');
+          const yrShort = String(now.getFullYear()).slice(-2);
+          const formattedId = `DIS${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
 
-        updatedFolders = updatedFolders.map(f => ({
-          ...f,
-          docs: (f.docs || []).map(d => d.id === existingDoc.id ? { ...d, revision: revDisplay, effectiveDate: dateStr } : d),
-          subfolders: (f.subfolders || []).map(sub => ({
-            ...sub,
-            docs: (sub.docs || []).map(d => d.id === existingDoc.id ? { ...d, revision: revDisplay, effectiveDate: dateStr } : d),
-          })),
-        }));
-        newEntries.push(distEntry);
-      });
+          let uploadedR2Url = existingDoc.r2Url;
+          let uploadedR2Key = existingDoc.r2Key;
+          let fileSizeFormatted = entry.selectedRevFile ? `${(entry.selectedRevFile.size / 1024).toFixed(0)} KB` : '—';
 
-      setMasterFolders(updatedFolders);
-      saveMasterFolders(updatedFolders);
-      sendEmails(newEntries, `Pembaruan revisi dokumen resmi.`);
-      const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
-      setDistributions(updated);
-      saveDistributions(updated);
-      handleResetForm();
-      showToast(`${newEntries.length} dokumen revisi berhasil dirilis!`);
+          if (entry.selectedRevFile) {
+            setSubmitStatusText(`Mengunggah revisi (${i + 1}/${revDocEntries.length}): ${entry.selectedRevFile.name} ke Cloudflare R2...`);
+            const formData = new FormData();
+            formData.append('file', entry.selectedRevFile);
+            formData.append('docNumber', existingDoc.number);
+            formData.append('docTitle', existingDoc.title);
+            formData.append('docType', existingDoc.type || 'SOP');
+            formData.append('docRevision', revDisplay);
+            formData.append('docClassification', existingDoc.classification || 'INTERNAL');
+            formData.append('uploader', user?.name || 'Admin QMS');
+
+            const uploadRes = await fetch('/api/r2/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const uploadData = await uploadRes.json();
+              if (uploadData.document) {
+                uploadedR2Key = uploadData.document.r2_key || undefined;
+                uploadedR2Url = uploadData.document.r2_url || undefined;
+                if (uploadData.document.file_size) fileSizeFormatted = uploadData.document.file_size;
+              }
+            }
+          }
+
+          const distEntry: DistributionDoc = {
+            no: seqNum, id: formattedId, idRegistrasi: existingDoc.number, dept: existingDoc.type || 'QHSE',
+            jenis: existingDoc.type, judul: existingDoc.title, revisi: revDisplay.replace('Rev.', ''),
+            folder: `${existingDoc.folderName}${existingDoc.subFolderName ? ' > ' + existingDoc.subFolderName : ''}`,
+            groupDoc: 'HEAD_OFFICE', fileName: entry.selectedRevFile ? entry.selectedRevFile.name : `${existingDoc.number}_${revDisplay}.pdf`,
+            fileSize: fileSizeFormatted,
+            fileUrl: uploadedR2Url,
+            status: 'Released', createdAt: dateStr, distType: 'REVISION_UPDATE',
+          };
+
+          updatedFolders = updatedFolders.map(f => ({
+            ...f,
+            docs: (f.docs || []).map(d => d.id === existingDoc.id ? { ...d, revision: revDisplay, effectiveDate: dateStr, r2Url: uploadedR2Url, r2Key: uploadedR2Key } : d),
+            subfolders: (f.subfolders || []).map(sub => ({
+              ...sub,
+              docs: (sub.docs || []).map(d => d.id === existingDoc.id ? { ...d, revision: revDisplay, effectiveDate: dateStr, r2Url: uploadedR2Url, r2Key: uploadedR2Key } : d),
+            })),
+          }));
+          newEntries.push(distEntry);
+        }
+
+        setMasterFolders(updatedFolders);
+        saveMasterFolders(updatedFolders);
+
+        setSubmitStatusText('Mengirimkan notifikasi email revisi...');
+        await sendEmails(newEntries, `Pembaruan revisi dokumen resmi.`);
+
+        const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
+        setDistributions(updated);
+        saveDistributions(updated);
+        handleResetForm();
+        showToast(`${newEntries.length} dokumen revisi berhasil dirilis!`);
+      } catch (err: any) {
+        console.error('Distribusi revisi error:', err);
+        setErrorMessage(err.message || 'Terjadi kesalahan saat merilis revisi.');
+      } finally {
+        setIsSubmitting(false);
+        setSubmitStatusText('');
+      }
 
     } else {
       if (announcedDocIds.length === 0) { setErrorMessage('Pilih minimal satu dokumen untuk diumumkan.'); return; }
-      const newEntries: DistributionDoc[] = [];
-      announcedDocIds.forEach(docId => {
-        const doc = flattenedDocs.find(d => d.id === docId);
-        if (!doc) return;
-        const seqNum = distributions.length + newEntries.length + 1;
-        const moPad = String(now.getMonth() + 1).padStart(2, '0');
-        const yrShort = String(now.getFullYear()).slice(-2);
-        const formattedId = `ANN${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
-        newEntries.push({
-          no: seqNum, id: formattedId, idRegistrasi: doc.number, dept: doc.type || 'QHSE',
-          jenis: doc.type, judul: doc.title, revisi: doc.revision.replace('Rev.', ''),
-          folder: `${doc.folderName}${doc.subFolderName ? ' > ' + doc.subFolderName : ''}`,
-          groupDoc: 'HEAD_OFFICE', fileName: doc.title, fileUrl: doc.r2Url,
-          status: 'Released', createdAt: dateStr, distType: 'ANNOUNCEMENT',
+      setIsSubmitting(true);
+      setSubmitStatusText('Menyiapkan pengumuman dokumen...');
+
+      try {
+        const newEntries: DistributionDoc[] = [];
+        announcedDocIds.forEach(docId => {
+          const doc = flattenedDocs.find(d => d.id === docId);
+          if (!doc) return;
+          const seqNum = distributions.length + newEntries.length + 1;
+          const moPad = String(now.getMonth() + 1).padStart(2, '0');
+          const yrShort = String(now.getFullYear()).slice(-2);
+          const formattedId = `ANN${moPad}${yrShort}.${String(seqNum).padStart(3, '0')}`;
+          newEntries.push({
+            no: seqNum, id: formattedId, idRegistrasi: doc.number, dept: doc.type || 'QHSE',
+            jenis: doc.type, judul: doc.title, revisi: doc.revision.replace('Rev.', ''),
+            folder: `${doc.folderName}${doc.subFolderName ? ' > ' + doc.subFolderName : ''}`,
+            groupDoc: 'HEAD_OFFICE', fileName: doc.title, fileUrl: doc.r2Url,
+            status: 'Released', createdAt: dateStr, distType: 'ANNOUNCEMENT',
+          });
         });
-      });
-      sendEmails(newEntries, announcementNote || 'Pengumuman sosialisasi dokumen terkendali resmi.');
-      const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
-      setDistributions(updated);
-      saveDistributions(updated);
-      handleResetForm();
-      showToast(`${newEntries.length} dokumen berhasil diumumkan!`);
+
+        setSubmitStatusText('Mengirimkan email pengumuman dokumen...');
+        await sendEmails(newEntries, announcementNote || 'Pengumuman sosialisasi dokumen terkendali resmi.');
+
+        const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
+        setDistributions(updated);
+        saveDistributions(updated);
+        handleResetForm();
+        showToast(`${newEntries.length} dokumen berhasil diumumkan!`);
+      } catch (err: any) {
+        console.error('Pengumuman error:', err);
+        setErrorMessage(err.message || 'Terjadi kesalahan saat mengumumkan dokumen.');
+      } finally {
+        setIsSubmitting(false);
+        setSubmitStatusText('');
+      }
     }
   };
 
@@ -402,7 +519,17 @@ export default function DistributionPage() {
       for (const em of emails) {
         await fetch('/api/distribution/send-email', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: em, documentTitle: emailModalDoc.judul, documentNumber: emailModalDoc.id, revision: emailModalDoc.revisi, department: emailModalDoc.dept, jenisDokumen: emailModalDoc.jenis, distributorName: user?.name || 'Admin QMS THI', notes: modalNotes || 'Pemberitahuan sosialisasi dokumen.' }),
+          body: JSON.stringify({
+            to: em,
+            documentTitle: emailModalDoc.judul,
+            documentNumber: emailModalDoc.id,
+            revision: emailModalDoc.revisi,
+            department: emailModalDoc.dept,
+            jenisDokumen: emailModalDoc.jenis,
+            distributorName: user?.name || 'Admin QMS THI',
+            fileUrl: emailModalDoc.fileUrl,
+            notes: modalNotes || 'Pemberitahuan sosialisasi dokumen.',
+          }),
         });
       }
       showToast(`Email berhasil dikirim dari qms@thi.co.id!`);
@@ -577,11 +704,27 @@ export default function DistributionPage() {
               )}
             </div>
 
+            {isSubmitting && (
+              <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 600 }}>
+                <Loader2 size={16} className="animate-spin" />
+                <span>{submitStatusText || 'Sedang mengunggah berkas ke Cloudflare R2 & memproses distribusi...'}</span>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', paddingTop: '8px' }}>
-              <button type="button" onClick={handleResetForm} style={{ padding: '9px 20px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Reset</button>
-              <button type="submit" style={{ padding: '9px 24px', borderRadius: '6px', border: 'none', background: '#071c2c', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(7,28,44,0.2)' }} onMouseOver={e => (e.currentTarget.style.background = '#0d2d47')} onMouseOut={e => (e.currentTarget.style.background = '#071c2c')}>
-                <Send size={14} />
-                {distMode === 'NEW_DOC' ? 'Distribusikan Dokumen' : distMode === 'REVISION_UPDATE' ? 'Rilis Revisi' : 'Umumkan Dokumen'}
+              <button type="button" onClick={handleResetForm} disabled={isSubmitting} style={{ padding: '9px 20px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: isSubmitting ? '#94a3b8' : '#64748b', fontSize: '13px', fontWeight: 600, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>Reset</button>
+              <button type="submit" disabled={isSubmitting} style={{ padding: '9px 24px', borderRadius: '6px', border: 'none', background: isSubmitting ? '#475569' : '#071c2c', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: isSubmitting ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 6px rgba(7,28,44,0.2)' }} onMouseOver={e => { if (!isSubmitting) e.currentTarget.style.background = '#0d2d47'; }} onMouseOut={e => { if (!isSubmitting) e.currentTarget.style.background = isSubmitting ? '#475569' : '#071c2c'; }}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>{submitStatusText || 'Mengunggah ke R2...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} />
+                    <span>{distMode === 'NEW_DOC' ? 'Distribusikan Dokumen' : distMode === 'REVISION_UPDATE' ? 'Rilis Revisi' : 'Umumkan Dokumen'}</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -807,14 +950,21 @@ function NewDocEntryRow({ entry, index, totalCount, masterFolders, deptOptions, 
           <input type="text" value={entry.docNumber} onChange={e => onUpdate({ docNumber: e.target.value })} placeholder="Contoh: THI-QHSSE-SOP-009" style={inputStyle2} />
         </div>
         <div>
-          <label style={labelStyle2}>Upload Berkas <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(max 10MB)</span></label>
-          <input ref={fileRef} type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx" style={{ fontSize: '12.5px', color: '#475569' }} />
-          {entry.selectedFile && <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', display: 'block' }}>✓ {entry.selectedFile.name} ({(entry.selectedFile.size / 1024).toFixed(0)} KB)</span>}
+          <label style={labelStyle2}>
+            Upload Berkas <span style={{ color: '#dc2626' }}>*</span>{' '}
+            <span style={{ color: '#0284c7', textTransform: 'none', fontWeight: 600 }}>(Otomatis ke R2)</span>
+          </label>
+          <input ref={fileRef} type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx" style={{ fontSize: '12.5px', color: '#475569' }} required />
+          {entry.selectedFile ? (
+            <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', display: 'block', fontWeight: 600 }}>
+              ✓ {entry.selectedFile.name} ({(entry.selectedFile.size / 1024).toFixed(0)} KB) — otomatis diunggah ke R2
+            </span>
+          ) : (
+            <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+              Pilih file PDF/Office. Tautan R2 akan dibuat otomatis untuk email.
+            </span>
+          )}
         </div>
-      </div>
-      <div>
-        <label style={labelStyle2}>URL Dokumen <span style={{ color: '#94a3b8', textTransform: 'none', fontWeight: 400 }}>(Google Drive / link — untuk notifikasi email)</span></label>
-        <input type="url" value={entry.docUrl} onChange={e => onUpdate({ docUrl: e.target.value })} placeholder="https://drive.google.com/file/d/..." style={inputStyle2} />
       </div>
     </div>
   );

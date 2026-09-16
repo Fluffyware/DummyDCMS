@@ -75,20 +75,24 @@ export async function POST(req: NextRequest) {
     // 2. Insert into Supabase if configured
     const supabaseServer = getSupabaseServer();
     if (supabaseServer) {
-      let { error: dbError } = await supabaseServer
-        .from('documents')
-        .insert([newDocRecord]);
-
-      if (dbError && dbError.message?.toLowerCase().includes('foreign key')) {
-        // Retry with null foreign keys if subfolder or folder doesn't exist in master tables
-        const { error: retryError } = await supabaseServer
+      try {
+        let { error: dbError } = await supabaseServer
           .from('documents')
-          .insert([{ ...newDocRecord, subfolder_id: null, folder_id: null }]);
-        if (retryError) {
-          console.warn('Supabase insert fallback warning:', retryError.message);
+          .insert([newDocRecord]);
+
+        if (dbError && dbError.message?.toLowerCase().includes('foreign key')) {
+          // Retry with null foreign keys if subfolder or folder doesn't exist in master tables
+          const { error: retryError } = await supabaseServer
+            .from('documents')
+            .insert([{ ...newDocRecord, subfolder_id: null, folder_id: null }]);
+          if (retryError) {
+            console.warn('Supabase insert fallback warning:', retryError.message);
+          }
+        } else if (dbError) {
+          console.warn('Supabase insert warning:', dbError.message);
         }
-      } else if (dbError) {
-        console.warn('Supabase insert warning:', dbError.message);
+      } catch (dbErr: any) {
+        console.warn('Supabase insert skipped or failed:', dbErr?.message);
       }
     }
 
