@@ -33,26 +33,12 @@ import {
   saveMasterFolders,
   getAllFlattenedDocs,
   FlattenedDocItem,
+  DistributionDoc,
+  loadDistributions,
+  saveDistributions,
 } from '@/lib/masterlist-data';
 
-/* ─── Type Definitions ──────────────────────────────────────────── */
-export interface DistributionDoc {
-  no: number;
-  id: string;
-  idRegistrasi: string;
-  dept: string;
-  jenis: string;
-  judul: string;
-  revisi: string;
-  folder: string;
-  groupDoc: 'HEAD_OFFICE' | 'PROJECT';
-  fileName: string | null;
-  fileSize?: string;
-  fileUrl?: string;
-  status: 'Released' | 'Approved' | 'Draft';
-  createdAt: string;
-  distType: 'NEW_DOC' | 'REVISION_UPDATE' | 'ANNOUNCEMENT';
-}
+export type { DistributionDoc };
 
 interface NewDocEntry {
   id: string;
@@ -118,8 +104,8 @@ export default function DistributionPage() {
   const { user } = useAuth();
   const router = useRouter();
 
-  const [viewState, setViewState] = useState<'table' | 'form'>('table');
-  const [distributions, setDistributions] = useState<DistributionDoc[]>(INITIAL_DISTRIBUTION);
+  const [isFormOpen, setIsFormOpen] = useState(true);
+  const [distributions, setDistributions] = useState<DistributionDoc[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [entriesPerPage, setEntriesPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -127,7 +113,22 @@ export default function DistributionPage() {
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
-  useEffect(() => { setMasterFolders(loadMasterFolders()); }, []);
+  useEffect(() => {
+    setMasterFolders(loadMasterFolders());
+    setDistributions(loadDistributions());
+
+    const handleUpdate = () => {
+      setDistributions(loadDistributions());
+      setMasterFolders(loadMasterFolders());
+    };
+    window.addEventListener('thi_distributions_updated', handleUpdate);
+    window.addEventListener('thi_master_folders_v3', handleUpdate);
+    return () => {
+      window.removeEventListener('thi_distributions_updated', handleUpdate);
+      window.removeEventListener('thi_master_folders_v3', handleUpdate);
+    };
+  }, []);
+
   const flattenedDocs = useMemo(() => getAllFlattenedDocs(masterFolders), [masterFolders]);
 
   const DEPT_OPTIONS = useMemo(() => {
@@ -298,8 +299,8 @@ export default function DistributionPage() {
       sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
       const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
       setDistributions(updated);
+      saveDistributions(updated);
       handleResetForm();
-      setViewState('table');
       showToast(`${newEntries.length} dokumen baru berhasil didistribusikan!`);
 
     } else if (distMode === 'REVISION_UPDATE') {
@@ -346,8 +347,8 @@ export default function DistributionPage() {
       sendEmails(newEntries, `Pembaruan revisi dokumen resmi.`);
       const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
       setDistributions(updated);
+      saveDistributions(updated);
       handleResetForm();
-      setViewState('table');
       showToast(`${newEntries.length} dokumen revisi berhasil dirilis!`);
 
     } else {
@@ -371,8 +372,8 @@ export default function DistributionPage() {
       sendEmails(newEntries, announcementNote || 'Pengumuman sosialisasi dokumen terkendali resmi.');
       const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
       setDistributions(updated);
+      saveDistributions(updated);
       handleResetForm();
-      setViewState('table');
       showToast(`${newEntries.length} dokumen berhasil diumumkan!`);
     }
   };
@@ -399,6 +400,7 @@ export default function DistributionPage() {
     if (confirm(`Hapus distribusi ${id} (${title})?`)) {
       const filtered = distributions.filter(d => d.id !== id).map((item, idx) => ({ ...item, no: idx + 1 }));
       setDistributions(filtered);
+      saveDistributions(filtered);
       showToast(`Distribusi ${id} telah dihapus.`);
     }
   };
@@ -425,117 +427,48 @@ export default function DistributionPage() {
         </div>
       )}
 
-      {/* TABLE VIEW */}
-      {viewState === 'table' && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#071c2c', margin: 0, letterSpacing: '-0.01em' }}>Distribusi Dokumen</h1>
-          </div>
+      {/* HEADER BAR */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#071c2c', margin: 0, letterSpacing: '-0.01em' }}>Distribusi Dokumen</h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '3px 0 0' }}>Distribusikan dokumen baru, rilis nomor revisi terdaftar, dan sosialisasikan kebijakan ke departemen.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsFormOpen(!isFormOpen)}
+          style={{
+            background: isFormOpen ? '#f1f5f9' : '#071c2c',
+            color: isFormOpen ? '#334155' : '#fff',
+            border: isFormOpen ? '1px solid #cbd5e1' : 'none',
+            borderRadius: '8px',
+            padding: '8px 18px',
+            fontSize: '13px',
+            fontWeight: 600,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          {isFormOpen ? (
+            <>
+              <Minus size={14} strokeWidth={2.2} /> Tutup Form
+            </>
+          ) : (
+            <>
+              <Plus size={14} strokeWidth={2.2} /> Buat Distribusi Baru
+            </>
+          )}
+        </button>
+      </div>
 
-          <div style={{ ...cardStyle, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid #f1f5f9' }}>
-              <button type="button" onClick={() => { handleResetForm(); setViewState('form'); }} style={{ background: '#071c2c', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 18px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px' }} onMouseOver={e => (e.currentTarget.style.background = '#0d2d47')} onMouseOut={e => (e.currentTarget.style.background = '#071c2c')}>
-                <Plus size={14} strokeWidth={2.2} /> Distribusi Baru
-              </button>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>Search:</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 10px', width: '200px', background: '#fff' }}>
-                  <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
-                  <input type="text" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={{ border: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#0f172a', background: 'transparent' }} />
-                  {searchTerm && <button onClick={() => setSearchTerm('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}><X size={12} /></button>}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ padding: '8px 20px', background: '#fafcff', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px', color: '#64748b' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>Show</span>
-                <select value={entriesPerPage} onChange={e => { setEntriesPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#fff', cursor: 'pointer' }}>
-                  {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-                <span>entries</span>
-              </div>
-              <span>Total <strong>{totalEntries}</strong> dokumen distribusi</span>
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e8eef5', color: '#475569', fontSize: '11px' }}>
-                    <th style={{ padding: '10px 8px', width: '3%', textAlign: 'center', fontWeight: 700 }}>#</th>
-                    <th style={{ padding: '10px 8px', width: '9%', fontWeight: 700 }}>ID</th>
-                    <th style={{ padding: '10px 8px', width: '8%', fontWeight: 700 }}>ID Reg</th>
-                    <th style={{ padding: '10px 8px', width: '11%', fontWeight: 700 }}>Departemen</th>
-                    <th style={{ padding: '10px 8px', width: '11%', fontWeight: 700 }}>Jenis</th>
-                    <th style={{ padding: '10px 8px', width: '24%', fontWeight: 700 }}>Judul</th>
-                    <th style={{ padding: '10px 4px', width: '4%', textAlign: 'center', fontWeight: 700 }}>Rev</th>
-                    <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Tipe</th>
-                    <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Status</th>
-                    <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Tanggal</th>
-                    <th style={{ padding: '10px 8px', width: '9%', textAlign: 'center', fontWeight: 700 }}>Aksi</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedData.length > 0 ? paginatedData.map((doc, idx) => {
-                    const isEven = idx % 2 === 1;
-                    const typeColor = doc.distType === 'NEW_DOC' ? '#15803d' : doc.distType === 'REVISION_UPDATE' ? '#0284c7' : '#7c3aed';
-                    const typeBg = doc.distType === 'NEW_DOC' ? '#f0fdf4' : doc.distType === 'REVISION_UPDATE' ? '#f0f9ff' : '#f5f3ff';
-                    const typeLabel = doc.distType === 'NEW_DOC' ? 'Baru' : doc.distType === 'REVISION_UPDATE' ? 'Revisi' : 'Umumkan';
-                    return (
-                      <tr key={doc.id} style={{ background: isEven ? '#fafcff' : '#fff', borderBottom: '1px solid #f1f5f9', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f0f7ff')} onMouseLeave={e => (e.currentTarget.style.background = isEven ? '#fafcff' : '#fff')}>
-                        <td style={{ padding: '9px 8px', textAlign: 'center', color: '#94a3b8', fontWeight: 600, fontSize: '11px' }}>{startIndex + idx + 1}</td>
-                        <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#071c2c' }}>{doc.id}</span></td>
-                        <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', color: doc.idRegistrasi !== '-' ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{doc.idRegistrasi}</span></td>
-                        <td style={{ padding: '9px 8px', color: '#0f172a', fontWeight: 500, fontSize: '11.5px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.dept}</td>
-                        <td style={{ padding: '9px 8px', color: '#334155', fontSize: '11px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.jenis}</td>
-                        <td style={{ padding: '9px 8px', color: '#071c2c', fontWeight: 600, fontSize: '11.5px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.judul}</td>
-                        <td style={{ padding: '9px 4px', textAlign: 'center', color: '#475569', fontWeight: 700, fontSize: '11px' }}>{doc.revisi}</td>
-                        <td style={{ padding: '9px 4px', textAlign: 'center' }}>
-                          <span style={{ background: typeBg, color: typeColor, padding: '2px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 700, whiteSpace: 'nowrap' }}>{typeLabel}</span>
-                        </td>
-                        <td style={{ padding: '9px 4px', textAlign: 'center' }}>
-                          <span style={{ background: '#0284c7', color: '#fff', padding: '2px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>{doc.status}</span>
-                        </td>
-                        <td style={{ padding: '9px 8px', textAlign: 'center', color: '#64748b', fontSize: '11px' }}>{doc.createdAt}</td>
-                        <td style={{ padding: '9px 8px', textAlign: 'center' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
-                            <button type="button" title="Buka dokumen di tab baru" onClick={() => { if (doc.fileUrl) window.open(doc.fileUrl, '_blank', 'noopener,noreferrer'); else showToast('Tidak ada URL dokumen yang tersedia.', 'error'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', padding: '3px' }}><Eye size={13} /></button>
-                            <button type="button" title="Kirim notifikasi email" onClick={() => { setEmailModalDoc(doc); setModalRecipient(''); setModalNotes(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '3px' }}><Mail size={13} /></button>
-                            <button type="button" title="Hapus" onClick={() => handleDeleteItem(doc.id, doc.judul)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '3px' }}><Trash2 size={13} /></button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  }) : (
-                    <tr><td colSpan={11} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Belum ada data distribusi dokumen. Klik <strong>Distribusi Baru</strong> untuk memulai.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', fontSize: '12.5px', color: '#64748b' }}>
-              <div>Showing {totalEntries === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + entriesPerPage, totalEntries)} of {totalEntries} entries</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={validPage === 1} style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', background: validPage === 1 ? '#f8fafc' : '#fff', color: validPage === 1 ? '#cbd5e1' : '#334155', cursor: validPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '12px' }}>Previous</button>
-                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(pn => (
-                  <button key={pn} onClick={() => setCurrentPage(pn)} style={{ width: '30px', height: '30px', borderRadius: '4px', border: pn === validPage ? '1px solid #071c2c' : '1px solid #cbd5e1', background: pn === validPage ? '#071c2c' : '#fff', color: pn === validPage ? '#fff' : '#334155', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>{pn}</button>
-                ))}
-                {totalPages > 5 && <><span style={{ color: '#94a3b8' }}>...</span><button onClick={() => setCurrentPage(totalPages)} style={{ width: '30px', height: '30px', borderRadius: '4px', border: validPage === totalPages ? '1px solid #071c2c' : '1px solid #cbd5e1', background: validPage === totalPages ? '#071c2c' : '#fff', color: validPage === totalPages ? '#fff' : '#334155', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>{totalPages}</button></>}
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={validPage === totalPages || totalPages === 0} style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', background: (validPage === totalPages || totalPages === 0) ? '#f8fafc' : '#fff', color: (validPage === totalPages || totalPages === 0) ? '#cbd5e1' : '#334155', cursor: (validPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '12px' }}>Next</button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* FORM VIEW */}
-      {viewState === 'form' && (
-        <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button type="button" onClick={() => setViewState('table')} style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '7px 14px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ArrowLeft size={14} /> Kembali
-            </button>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#071c2c', margin: 0, letterSpacing: '-0.01em' }}>Distribusi Dokumen Baru</h1>
+      {/* FORM VIEW (WHEN OPEN) */}
+      {isFormOpen && (
+        <div style={{ ...cardStyle, padding: '20px 24px', borderLeft: '4px solid #071c2c', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#071c2c', margin: 0 }}>Formulir Distribusi &amp; Rilis Dokumen</h2>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>Pilih metode distribusi di bawah:</span>
           </div>
 
           {errorMessage && (
@@ -544,7 +477,7 @@ export default function DistributionPage() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
             {([
               { key: 'NEW_DOC', icon: <FilePlus size={16} />, label: 'Dokumen Baru', sub: 'Pilih Folder & Sub Folder', color: '#15803d', bg: '#f0fdf4' },
               { key: 'REVISION_UPDATE', icon: <RefreshCw size={16} />, label: 'Update Revisi', sub: 'Pilih Berkas Terdaftar', color: '#0284c7', bg: '#f0f9ff' },
@@ -636,8 +569,104 @@ export default function DistributionPage() {
               </button>
             </div>
           </form>
-        </>
+        </div>
       )}
+
+      {/* RIWAYAT DISTRIBUSI DOKUMEN TABLE (ALWAYS DISPLAYED UNDER FORM) */}
+      <div style={{ ...cardStyle, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', borderBottom: '1px solid #f1f5f9', background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' }}>
+          <div>
+            <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#071c2c', margin: 0 }}>Riwayat Distribusi Dokumen</h2>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Daftar seluruh berkas yang telah didistribusikan dan dirilis ke pengguna</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '13px', color: '#475569', fontWeight: 500 }}>Search:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '6px 10px', width: '220px', background: '#fff' }}>
+              <Search size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+              <input type="text" placeholder="Cari ID, judul, dept..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} style={{ border: 'none', outline: 'none', fontSize: '13px', width: '100%', color: '#0f172a', background: 'transparent' }} />
+              {searchTerm && <button onClick={() => setSearchTerm('')} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', padding: 0 }}><X size={12} /></button>}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ padding: '8px 20px', background: '#fafcff', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px', color: '#64748b' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>Show</span>
+            <select value={entriesPerPage} onChange={e => { setEntriesPerPage(Number(e.target.value)); setCurrentPage(1); }} style={{ padding: '3px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#fff', cursor: 'pointer' }}>
+              {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span>entries</span>
+          </div>
+          <span>Total <strong>{totalEntries}</strong> riwayat distribusi</span>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e8eef5', color: '#475569', fontSize: '11px' }}>
+                <th style={{ padding: '10px 8px', width: '3%', textAlign: 'center', fontWeight: 700 }}>#</th>
+                <th style={{ padding: '10px 8px', width: '9%', fontWeight: 700 }}>ID</th>
+                <th style={{ padding: '10px 8px', width: '8%', fontWeight: 700 }}>ID Reg</th>
+                <th style={{ padding: '10px 8px', width: '11%', fontWeight: 700 }}>Departemen</th>
+                <th style={{ padding: '10px 8px', width: '11%', fontWeight: 700 }}>Jenis</th>
+                <th style={{ padding: '10px 8px', width: '24%', fontWeight: 700 }}>Judul</th>
+                <th style={{ padding: '10px 4px', width: '4%', textAlign: 'center', fontWeight: 700 }}>Rev</th>
+                <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Tipe</th>
+                <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Status</th>
+                <th style={{ padding: '10px 8px', width: '7%', textAlign: 'center', fontWeight: 700 }}>Tanggal</th>
+                <th style={{ padding: '10px 8px', width: '9%', textAlign: 'center', fontWeight: 700 }}>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedData.length > 0 ? paginatedData.map((doc, idx) => {
+                const isEven = idx % 2 === 1;
+                const typeColor = doc.distType === 'NEW_DOC' ? '#15803d' : doc.distType === 'REVISION_UPDATE' ? '#0284c7' : '#7c3aed';
+                const typeBg = doc.distType === 'NEW_DOC' ? '#f0fdf4' : doc.distType === 'REVISION_UPDATE' ? '#f0f9ff' : '#f5f3ff';
+                const typeLabel = doc.distType === 'NEW_DOC' ? 'Baru' : doc.distType === 'REVISION_UPDATE' ? 'Revisi' : 'Umumkan';
+                return (
+                  <tr key={doc.id} style={{ background: isEven ? '#fafcff' : '#fff', borderBottom: '1px solid #f1f5f9', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f0f7ff')} onMouseLeave={e => (e.currentTarget.style.background = isEven ? '#fafcff' : '#fff')}>
+                    <td style={{ padding: '9px 8px', textAlign: 'center', color: '#94a3b8', fontWeight: 600, fontSize: '11px' }}>{startIndex + idx + 1}</td>
+                    <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#071c2c' }}>{doc.id}</span></td>
+                    <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', color: doc.idRegistrasi !== '-' ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{doc.idRegistrasi}</span></td>
+                    <td style={{ padding: '9px 8px', color: '#0f172a', fontWeight: 500, fontSize: '11.5px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.dept}</td>
+                    <td style={{ padding: '9px 8px', color: '#334155', fontSize: '11px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.jenis}</td>
+                    <td style={{ padding: '9px 8px', color: '#071c2c', fontWeight: 600, fontSize: '11.5px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.judul}</td>
+                    <td style={{ padding: '9px 4px', textAlign: 'center', color: '#475569', fontWeight: 700, fontSize: '11px' }}>{doc.revisi}</td>
+                    <td style={{ padding: '9px 4px', textAlign: 'center' }}>
+                      <span style={{ background: typeBg, color: typeColor, padding: '2px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 700, whiteSpace: 'nowrap' }}>{typeLabel}</span>
+                    </td>
+                    <td style={{ padding: '9px 4px', textAlign: 'center' }}>
+                      <span style={{ background: '#0284c7', color: '#fff', padding: '2px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>{doc.status}</span>
+                    </td>
+                    <td style={{ padding: '9px 8px', textAlign: 'center', color: '#64748b', fontSize: '11px' }}>{doc.createdAt}</td>
+                    <td style={{ padding: '9px 8px', textAlign: 'center' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
+                        <button type="button" title="Buka dokumen di tab baru" onClick={() => { if (doc.fileUrl) window.open(doc.fileUrl, '_blank', 'noopener,noreferrer'); else showToast('Tidak ada URL dokumen yang tersedia.', 'error'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', padding: '3px' }}><Eye size={13} /></button>
+                        <button type="button" title="Kirim notifikasi email" onClick={() => { setEmailModalDoc(doc); setModalRecipient(''); setModalNotes(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#0284c7', padding: '3px' }}><Mail size={13} /></button>
+                        <button type="button" title="Hapus" onClick={() => handleDeleteItem(doc.id, doc.judul)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '3px' }}><Trash2 size={13} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              }) : (
+                <tr><td colSpan={11} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Belum ada riwayat distribusi dokumen. Gunakan formulir di atas untuk mendistribusikan dokumen baru.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', fontSize: '12.5px', color: '#64748b' }}>
+          <div>Showing {totalEntries === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + entriesPerPage, totalEntries)} of {totalEntries} entries</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={validPage === 1} style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', background: validPage === 1 ? '#f8fafc' : '#fff', color: validPage === 1 ? '#cbd5e1' : '#334155', cursor: validPage === 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '12px' }}>Previous</button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(pn => (
+              <button key={pn} onClick={() => setCurrentPage(pn)} style={{ width: '30px', height: '30px', borderRadius: '4px', border: pn === validPage ? '1px solid #071c2c' : '1px solid #cbd5e1', background: pn === validPage ? '#071c2c' : '#fff', color: pn === validPage ? '#fff' : '#334155', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>{pn}</button>
+            ))}
+            {totalPages > 5 && <><span style={{ color: '#94a3b8' }}>...</span><button onClick={() => setCurrentPage(totalPages)} style={{ width: '30px', height: '30px', borderRadius: '4px', border: validPage === totalPages ? '1px solid #071c2c' : '1px solid #cbd5e1', background: validPage === totalPages ? '#071c2c' : '#fff', color: validPage === totalPages ? '#fff' : '#334155', cursor: 'pointer', fontWeight: 700, fontSize: '12px' }}>{totalPages}</button></>}
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={validPage === totalPages || totalPages === 0} style={{ padding: '5px 10px', borderRadius: '4px', border: '1px solid #cbd5e1', background: (validPage === totalPages || totalPages === 0) ? '#f8fafc' : '#fff', color: (validPage === totalPages || totalPages === 0) ? '#cbd5e1' : '#334155', cursor: (validPage === totalPages || totalPages === 0) ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: '12px' }}>Next</button>
+          </div>
+        </div>
+      </div>
 
       {/* Quick Email Modal */}
       {emailModalDoc && (

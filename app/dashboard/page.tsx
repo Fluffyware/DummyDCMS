@@ -6,19 +6,26 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { FilePlus, Share2, FolderOpen, Search, ArrowRight, CheckCircle2, Shield, Lightbulb } from 'lucide-react';
 
+import {
+  MasterFolder,
+  loadMasterFolders,
+  getAllFlattenedDocs,
+  loadDistributions,
+  DistributionDoc,
+} from '@/lib/masterlist-data';
+
 interface MasterlistEntry {
-  id: number;
+  id: string | number;
   dept: string;
   jenis: string;
   number: string;
   judul: string;
   released: string;
   revisi: string;
-  status: 'CURRENT' | 'SUPERSEDED' | 'DRAFT';
+  status: 'CURRENT' | 'SUPERSEDED' | 'DRAFT' | 'Released';
+  r2Url?: string;
+  isRecent?: boolean;
 }
-
-const MASTERLIST_ENTRIES: MasterlistEntry[] = [];
-
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -27,6 +34,8 @@ export default function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [entriesPerPage, setEntriesPerPage] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
+  const [distributions, setDistributions] = useState<DistributionDoc[]>([]);
 
   React.useEffect(() => {
     router.prefetch('/dashboard/registration');
@@ -34,15 +43,84 @@ export default function DashboardPage() {
     router.prefetch('/dashboard/masterlist');
     router.prefetch('/dashboard/suggestions');
     router.prefetch('/dashboard/concepts');
+
+    setMasterFolders(loadMasterFolders());
+    setDistributions(loadDistributions());
+
+    const handleSync = () => {
+      setMasterFolders(loadMasterFolders());
+      setDistributions(loadDistributions());
+    };
+
+    window.addEventListener('thi_master_folders_v3', handleSync);
+    window.addEventListener('thi_distributions_updated', handleSync);
+    return () => {
+      window.removeEventListener('thi_master_folders_v3', handleSync);
+      window.removeEventListener('thi_distributions_updated', handleSync);
+    };
   }, [router]);
 
   const activeUserName = user?.name || 'Reza Firmansyah';
 
+  // Build unified dynamic document list combining masterlist & recent distributions
+  const allMasterEntries = useMemo<MasterlistEntry[]>(() => {
+    const list: MasterlistEntry[] = [];
+    const flattened = getAllFlattenedDocs(masterFolders);
+
+    // 1. Add flattened masterlist docs
+    flattened.forEach((doc, idx) => {
+      list.push({
+        id: `ml-${doc.id || idx}`,
+        dept: doc.folderName || 'QHSE',
+        jenis: doc.type || 'SOP',
+        number: doc.number || `THI-DOC-${String(idx + 1).padStart(3, '0')}`,
+        judul: doc.title,
+        released: doc.effectiveDate || '—',
+        revisi: doc.revision || 'Rev.00',
+        status: doc.status === 'DRAFT' ? 'DRAFT' : 'CURRENT',
+        r2Url: doc.r2Url,
+        isRecent: false,
+      });
+    });
+
+    // 2. Add or update from distributions (recent releases)
+    distributions.forEach((dist, idx) => {
+      const matchIdx = list.findIndex(
+        l => (dist.idRegistrasi !== '-' && l.number === dist.idRegistrasi) || l.judul.toLowerCase() === dist.judul.toLowerCase()
+      );
+
+      if (matchIdx >= 0) {
+        list[matchIdx] = {
+          ...list[matchIdx],
+          released: dist.createdAt || list[matchIdx].released,
+          revisi: dist.revisi.startsWith('Rev.') ? dist.revisi : `Rev.${dist.revisi}`,
+          r2Url: dist.fileUrl || list[matchIdx].r2Url,
+          isRecent: true,
+        };
+      } else {
+        list.unshift({
+          id: `dist-${dist.id || idx}`,
+          dept: dist.dept || dist.folder || 'QHSE',
+          jenis: dist.jenis || 'Dokumen',
+          number: dist.idRegistrasi !== '-' ? dist.idRegistrasi : dist.id,
+          judul: dist.judul,
+          released: dist.createdAt || '—',
+          revisi: dist.revisi.startsWith('Rev.') ? dist.revisi : `Rev.${dist.revisi}`,
+          status: 'Released',
+          r2Url: dist.fileUrl,
+          isRecent: true,
+        });
+      }
+    });
+
+    return list;
+  }, [masterFolders, distributions]);
+
   // Filtered entries based on search term across all columns
   const filteredEntries = useMemo(() => {
-    if (!searchTerm.trim()) return MASTERLIST_ENTRIES;
+    if (!searchTerm.trim()) return allMasterEntries;
     const term = searchTerm.toLowerCase();
-    return MASTERLIST_ENTRIES.filter(
+    return allMasterEntries.filter(
       item =>
         item.dept.toLowerCase().includes(term) ||
         item.jenis.toLowerCase().includes(term) ||
@@ -51,7 +129,7 @@ export default function DashboardPage() {
         item.released.toLowerCase().includes(term) ||
         item.revisi.toLowerCase().includes(term)
     );
-  }, [searchTerm]);
+  }, [allMasterEntries, searchTerm]);
 
   // Pagination calculation
   const totalEntries = filteredEntries.length;
@@ -692,10 +770,17 @@ export default function DashboardPage() {
 
                       {/* Judul */}
                       <td style={{ padding: '10px 8px', wordBreak: 'break-word' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#0284c7', fontFamily: 'monospace' }}>
-                            {item.number}
-                          </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 800, color: '#0284c7', fontFamily: 'monospace' }}>
+                              {item.number}
+                            </span>
+                            {item.isRecent && (
+                              <span style={{ fontSize: '9.5px', fontWeight: 800, color: '#15803d', background: '#dcfce7', border: '1px solid #bbf7d0', padding: '1px 5px', borderRadius: '4px' }}>
+                                UPDATE
+                              </span>
+                            )}
+                          </div>
                           <span style={{ fontSize: '12px', fontWeight: 700, color: '#071c2c', lineHeight: 1.35 }}>
                             {item.judul}
                           </span>

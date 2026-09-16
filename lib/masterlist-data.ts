@@ -264,3 +264,51 @@ export function getAllFlattenedDocs(folders: MasterFolder[]): FlattenedDocItem[]
   });
   return allDocs;
 }
+
+/* ─── DISTRIBUTION PERSISTENCE ─────────────────────────────────── */
+export interface DistributionDoc {
+  no: number;
+  id: string;
+  idRegistrasi: string;
+  dept: string;
+  jenis: string;
+  judul: string;
+  revisi: string;
+  folder: string;
+  groupDoc: 'HEAD_OFFICE' | 'PROJECT';
+  fileName: string | null;
+  fileSize?: string;
+  fileUrl?: string;
+  status: 'Released' | 'Approved' | 'Draft';
+  createdAt: string;
+  distType: 'NEW_DOC' | 'REVISION_UPDATE' | 'ANNOUNCEMENT';
+}
+
+export const DISTRIBUTIONS_STORAGE_KEY = 'thi_distributions_v2';
+
+export function loadDistributions(): DistributionDoc[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(DISTRIBUTIONS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+    }
+  } catch (err) {
+    console.error('Failed to load distributions from localStorage:', err);
+  }
+  return [];
+}
+
+export function saveDistributions(data: DistributionDoc[]) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(DISTRIBUTIONS_STORAGE_KEY, JSON.stringify(data));
+    window.dispatchEvent(new Event('thi_distributions_updated'));
+  } catch (err) {
+    console.error('Failed to save distributions to localStorage:', err);
+  }
+}
+
