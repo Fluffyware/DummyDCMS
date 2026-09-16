@@ -70,7 +70,7 @@ export default function ApprovalPage() {
         name,
         size,
         uploadedAt: `Hari ini, ${timeStr}`,
-        signedBy: user?.name || 'Rizal (Admin QMS)',
+        signedBy: user?.name || 'Rizal (QMS)',
       },
     }));
   };
@@ -78,7 +78,7 @@ export default function ApprovalPage() {
   const handleSimulateUpload = (doc: ApprovalItem) => {
     saveUploadedFile(
       doc.id,
-      `${doc.docNumber}_${doc.revision}_SIGNED_AdminQHSE.pdf`,
+      `${doc.docNumber}_${doc.revision}_SIGNED_QMS.pdf`,
       '2.45 MB'
     );
   };
@@ -96,7 +96,7 @@ export default function ApprovalPage() {
     if (!selected || !isAdmin) return;
     const currentUploaded = uploadedFiles[selected];
     if (!currentUploaded) {
-      alert('Unggah dokumen bertanda tangan Admin QHSE terlebih dahulu.');
+      alert('Unggah dokumen bertanda tangan QMS terlebih dahulu.');
       return;
     }
 
@@ -106,7 +106,7 @@ export default function ApprovalPage() {
     setSelected(null);
     setComment('');
     setActionNotice(
-      `✓ Dokumen ${doc?.docNumber} (${doc?.title}) telah disetujui secara manual oleh Admin QHSE dengan lampiran berkas bertanda tangan '${currentUploaded.name}'. Status dokumen resmi berubah menjadi CURRENT.`
+      `✓ Dokumen ${doc?.docNumber} (${doc?.title}) telah disetujui secara manual oleh QMS dengan lampiran berkas bertanda tangan '${currentUploaded.name}'. Status dokumen resmi berubah menjadi CURRENT.`
     );
     setTimeout(() => setActionNotice(null), 8000);
   };
@@ -126,7 +126,7 @@ export default function ApprovalPage() {
   };
 
   const handleDownloadDraft = (doc: ApprovalItem) => {
-    const textContent = `PT TAKA HYDROCORE INDONESIA\nDOCUMENT DRAFT FOR SIGNATURE\n\nNomor Dokumen : ${doc.docNumber}\nJudul          : ${doc.title}\nRevisi         : ${doc.revision}\nDepartemen     : ${doc.department}\nDiajukan Oleh  : ${doc.submittedBy} (${doc.submittedAt})\n\n[DRAF DOKUMEN SISTEM MANAJEMEN QHSSE - MEMERLUKAN TANDA TANGAN ADMIN QHSE]\n\nHarap bubuhkan tanda tangan fisik/digital lalu unggah kembali berkas ini ke sistem DCMS untuk approval manual.`;
+    const textContent = `PT TAKA HYDROCORE INDONESIA\nDOCUMENT DRAFT FOR SIGNATURE\n\nNomor Dokumen : ${doc.docNumber}\nJudul          : ${doc.title}\nRevisi         : ${doc.revision}\nDepartemen     : ${doc.department}\nDiajukan Oleh  : ${doc.submittedBy} (${doc.submittedAt})\n\n[DRAF DOKUMEN SISTEM MANAJEMEN QHSSE - MEMERLUKAN TANDA TANGAN QMS]\n\nHarap bubuhkan tanda tangan fisik/digital lalu unggah kembali berkas ini ke sistem DCMS untuk approval manual.`;
     const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -151,10 +151,10 @@ export default function ApprovalPage() {
 
       <div className="page-header">
         <div>
-          <div className="page-eyebrow">Manual Approval Workflow · Admin QHSE Authority</div>
+          <div className="page-eyebrow">Manual Approval Workflow · QMS Authority</div>
           <h1 className="page-title">Approval Queue</h1>
           <p className="page-subtitle">
-            Verifikasi manual dan pengesahan berkas dokumen terkendali. Admin QHSE meninjau draf dokumen, membubuhkan tanda tangan fisik/digital, dan mengunggah berkas bertanda tangan sebelum dokumen disetujui.
+            Verifikasi manual dan pengesahan berkas dokumen terkendali. QMS meninjau draf dokumen, membubuhkan tanda tangan fisik/digital, dan mengunggah berkas bertanda tangan sebelum dokumen disetujui.
           </p>
         </div>
       </div>
@@ -431,7 +431,7 @@ export default function ApprovalPage() {
                       fontSize: 11,
                       fontWeight: 700,
                     }}>2</span>
-                    <span>Kolom Unggah Dokumen Bertanda Tangan (Admin Signed Document)</span>
+                    <span>Kolom Unggah Dokumen Bertanda Tangan (QMS Signed Document)</span>
                   </div>
                   {uploadedFiles[selectedDoc.id] && (
                     <span style={{
@@ -447,7 +447,7 @@ export default function ApprovalPage() {
                   )}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--ink-muted)', marginBottom: 'var(--sp-3)', paddingLeft: 4 }}>
-                  Dokumen ini membutuhkan tanda tangan (TTD) Admin QHSE secara manual. Unggah berkas yang telah ditandatangani (.pdf, .docx, atau scan gambar) di bawah ini sebagai bukti verifikasi pengesahan.
+                  Dokumen ini membutuhkan tanda tangan (TTD) QMS secara manual. Unggah berkas yang telah ditandatangani (.pdf, .docx, atau scan gambar) di bawah ini sebagai bukti verifikasi pengesahan.
                 </div>
 
                 {!isAdmin ? (
@@ -460,10 +460,10 @@ export default function ApprovalPage() {
                   }}>
                     <Lock size={24} style={{ color: '#94a3b8', margin: '0 auto 8px' }} />
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>
-                      Pengunggahan Terbatas — Hanya Admin QHSE
+                      Pengunggahan Terbatas — Hanya QMS
                     </div>
                     <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-                      Anda saat ini login sebagai Staff. Silakan beralih ke akun Admin QHSE untuk mengunggah dokumen bertanda tangan dan melakukan approval manual.
+                      Anda saat ini login sebagai Staff. Silakan beralih ke akun QMS untuk mengunggah dokumen bertanda tangan dan melakukan approval manual.
                     </div>
                   </div>
                 ) : uploadedFiles[selectedDoc.id] ? (
@@ -604,7 +604,7 @@ export default function ApprovalPage() {
                         }}
                       >
                         <FileCheck size={13} color="#16a34a" />
-                        <span>Lampirkan Contoh Berkas TTD ({selectedDoc.docNumber}_Signed_Admin.pdf)</span>
+                        <span>Lampirkan Contoh Berkas TTD ({selectedDoc.docNumber}_Signed_QMS.pdf)</span>
                       </button>
                     </div>
                   </div>
@@ -663,7 +663,7 @@ export default function ApprovalPage() {
               <div>
                 {!uploadedFiles[selectedDoc.id] && (
                   <div className="alert alert-warning" style={{ padding: '8px 14px', fontSize: 12.5, margin: 0 }}>
-                    ⚠️ Berkas bertanda tangan belum diunggah. Unggah dokumen ber-TTD Admin untuk mengesahkan.
+                    ⚠️ Berkas bertanda tangan belum diunggah. Unggah dokumen ber-TTD QMS untuk mengesahkan.
                   </div>
                 )}
                 {uploadedFiles[selectedDoc.id] && isAdmin && (
@@ -673,7 +673,7 @@ export default function ApprovalPage() {
                 )}
                 {uploadedFiles[selectedDoc.id] && !isAdmin && (
                   <div className="alert alert-warning" style={{ padding: '8px 14px', fontSize: 12.5, margin: 0 }}>
-                    🔒 Hanya Admin QHSE yang memiliki otoritas untuk menandatangani dan menyetujui.
+                    🔒 Hanya QMS yang memiliki otoritas untuk menandatangani dan menyetujui.
                   </div>
                 )}
               </div>
@@ -684,9 +684,9 @@ export default function ApprovalPage() {
                   className="btn btn-danger"
                   onClick={() => setShowReject(true)}
                   disabled={!isAdmin}
-                  title={!isAdmin ? 'Hanya Admin QHSE yang dapat menolak dokumen' : 'Kembalikan dokumen ke Staff'}
+                  title={!isAdmin ? 'Hanya QMS yang dapat menolak dokumen' : 'Kembalikan dokumen ke Staff'}
                 >
-                  Tolak / Revisi {!isAdmin && '(Admin Only)'}
+                  Tolak / Revisi {!isAdmin && '(QMS Only)'}
                 </button>
                 <button
                   id={`approve-${selectedDoc.id}`}
@@ -702,7 +702,7 @@ export default function ApprovalPage() {
                   }}
                   title={
                     !isAdmin
-                      ? 'Hanya Admin QHSE yang dapat menyetujui dokumen'
+                      ? 'Hanya QMS yang dapat menyetujui dokumen'
                       : !uploadedFiles[selectedDoc.id]
                       ? 'Silakan unggah dokumen bertanda tangan terlebih dahulu'
                       : 'Sahkan dokumen secara manual dan rilis sebagai CURRENT'
@@ -710,7 +710,7 @@ export default function ApprovalPage() {
                 >
                   <ShieldCheck size={16} />
                   <span>Sahkan &amp; Setujui Dokumen (Manual Approval)</span>
-                  {!isAdmin && <span style={{ fontSize: 11, opacity: 0.8 }}>(Admin Only)</span>}
+                  {!isAdmin && <span style={{ fontSize: 11, opacity: 0.8 }}>(QMS Only)</span>}
                 </button>
               </div>
             </div>
@@ -811,7 +811,7 @@ export default function ApprovalPage() {
                   borderRadius: '12px',
                 }}>
                   DRAF RESMI BELUM SAH<br />
-                  MEMERLUKAN TANDA TANGAN MANUAL ADMIN QHSE
+                  MEMERLUKAN TANDA TANGAN MANUAL QMS
                 </div>
 
                 {/* Company Header */}
@@ -868,7 +868,7 @@ export default function ApprovalPage() {
 
                   <h4 style={{ fontSize: 13.5, fontWeight: 700, color: '#071c2c', marginBottom: 6 }}>2. TANGGUNG JAWAB &amp; OTORITAS</h4>
                   <p style={{ marginTop: 0, marginBottom: 12 }}>
-                    Seluruh personil pelaksana, koordinator teknis, dan pengawas keselamatan wajib mematuhi ketentuan yang tertuang dalam dokumen terkendali ini setelah disahkan oleh Document Controller dan Admin QHSE.
+                    Seluruh personil pelaksana, koordinator teknis, dan pengawas keselamatan wajib mematuhi ketentuan yang tertuang dalam dokumen terkendali ini setelah disahkan oleh Document Controller dan QMS.
                   </p>
 
                   <h4 style={{ fontSize: 13.5, fontWeight: 700, color: '#071c2c', marginBottom: 6 }}>3. KETENTUAN KHUSUS &amp; IDENTIFIKASI BAHAYA</h4>
@@ -901,7 +901,7 @@ export default function ApprovalPage() {
                     </div>
 
                     <div style={{ border: '1.5px dashed #f59e0b', borderRadius: '6px', padding: '12px', background: '#fffbeb' }}>
-                      <div style={{ fontSize: 11, color: '#92400e' }}>Disetujui &amp; Disahkan oleh (Admin QMS):</div>
+                      <div style={{ fontSize: 11, color: '#92400e' }}>Disetujui &amp; Disahkan oleh (QMS):</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#92400e', marginTop: 4 }}>
                         {user?.role === 'admin' ? user?.name : 'Rizal'}
                       </div>

@@ -177,7 +177,7 @@ export default function DistributionPage() {
           <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', border: '1px solid #fecaca' }}>
             <ShieldAlert size={32} strokeWidth={2} />
           </div>
-          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#071c2c', margin: '0 0 10px' }}>Otoritas Khusus Admin QHSE</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#071c2c', margin: '0 0 10px' }}>Otoritas Khusus QMS</h2>
           <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6, margin: '0 0 28px' }}>
             Akun <strong>Staff</strong> tidak memiliki hak akses ke modul <strong>Distribusi Dokumen</strong>.
           </p>
@@ -247,7 +247,7 @@ export default function DistributionPage() {
             to: targetEmail,
             category,
             documents,
-            distributorName: user?.name || 'Admin QMS THI',
+            distributorName: user?.name || 'QMS THI',
             notes: notes || emailNotes || '',
           }),
         });
@@ -324,7 +324,7 @@ export default function DistributionPage() {
               formData.append('subFolderId', entry.selectedSubFolderId);
               if (subObj?.name) formData.append('subFolderName', subObj.name);
             }
-            formData.append('uploader', user?.name || 'Admin QMS');
+            formData.append('uploader', user?.name || 'QMS');
 
             const uploadRes = await fetch('/api/r2/upload', {
               method: 'POST',
@@ -440,7 +440,7 @@ export default function DistributionPage() {
             formData.append('docType', existingDoc.type || 'SOP');
             formData.append('docRevision', revDisplay);
             formData.append('docClassification', existingDoc.classification || 'INTERNAL');
-            formData.append('uploader', user?.name || 'Admin QMS');
+            formData.append('uploader', user?.name || 'QMS');
 
             const uploadRes = await fetch('/api/r2/upload', {
               method: 'POST',
@@ -552,7 +552,7 @@ export default function DistributionPage() {
             revision: emailModalDoc.revisi,
             department: emailModalDoc.dept,
             jenisDokumen: emailModalDoc.jenis,
-            distributorName: user?.name || 'Admin QMS THI',
+            distributorName: user?.name || 'QMS THI',
             fileUrl: emailModalDoc.fileUrl,
             notes: modalNotes || 'Pemberitahuan sosialisasi dokumen.',
           }),

@@ -49,7 +49,7 @@ const DEPT_OPTIONS = [
 
 /* ─── Status badge styles ───────────────────────────────────── */
 const STATUS_STYLES: Record<string, { bg: string; text: string; border: string; desc: string }> = {
-  'Baru':     { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe', desc: 'Menunggu Tinjauan Admin' },
+  'Baru':     { bg: '#eff6ff', text: '#1d4ed8', border: '#bfdbfe', desc: 'Menunggu Tinjauan QMS' },
   'Ditinjau': { bg: '#fefce8', text: '#a16207', border: '#fef08a', desc: 'Sedang Dievaluasi' },
   'Diterima': { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0', desc: 'Disetujui untuk Diterapkan' },
   'Ditolak':  { bg: '#fef2f2', text: '#dc2626', border: '#fecaca', desc: 'Belum Dapat Diterapkan' },

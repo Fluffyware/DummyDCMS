@@ -71,8 +71,8 @@ const INITIAL_DEPARTMENTS: DepartmentItem[] = [
 ];
 
 const USERS_APPROVAL = [
-  { id: 1, name: 'Hendra Pratama', dept: 'QHSE', role: 'Admin QHSE', active: true },
-  { id: 2, name: 'Citra Dewi', dept: 'QHSE', role: 'Admin QHSE', active: true },
+  { id: 1, name: 'Hendra Pratama', dept: 'QHSE', role: 'QMS', active: true },
+  { id: 2, name: 'Citra Dewi', dept: 'QHSE', role: 'QMS', active: true },
   { id: 3, name: 'Ahmad Fauzi', dept: 'Geotechnical & Survey Operations', role: 'Staff', active: true },
   { id: 4, name: 'Dimas Pratama', dept: 'Engineering', role: 'Staff', active: true },
 ];
@@ -82,7 +82,7 @@ const APPROVAL_STANDARDS = [
     id: 1,
     name: 'Alur Approval Manual 2-Tingkat',
     applies: 'Seluruh Jenis Dokumen',
-    steps: ['Pengajuan Dokumen oleh Staff', 'Verifikasi & Review Admin QHSE', 'Upload Berkas TTD & Approval Resmi', 'Publikasi & Distribusi'],
+    steps: ['Pengajuan Dokumen oleh Staff', 'Verifikasi & Review QMS', 'Upload Berkas TTD & Approval Resmi', 'Publikasi & Distribusi'],
     active: true,
   },
 ];
@@ -1110,8 +1110,8 @@ export default function SettingsPage() {
                     {/* Avatar */}
                     <div style={{
                       width: 32, height: 32, borderRadius: '8px',
-                      background: u.role === 'Admin QHSE' ? '#071c2c' : '#f1f5f9',
-                      color: u.role === 'Admin QHSE' ? '#ffffff' : '#475569',
+                      background: u.role === 'QMS' ? '#071c2c' : '#f1f5f9',
+                      color: u.role === 'QMS' ? '#ffffff' : '#475569',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '11px', fontWeight: 700, flexShrink: 0,
                       letterSpacing: '0.04em',
@@ -1124,9 +1124,9 @@ export default function SettingsPage() {
                     </div>
                     <span style={{
                       fontSize: '11px', fontWeight: 600,
-                      color: u.role === 'Admin QHSE' ? '#0369a1' : '#64748b',
-                      background: u.role === 'Admin QHSE' ? '#f0f9ff' : '#f8fafc',
-                      border: `1px solid ${u.role === 'Admin QHSE' ? '#bae6fd' : '#e2e8f0'}`,
+                      color: u.role === 'QMS' ? '#0369a1' : '#64748b',
+                      background: u.role === 'QMS' ? '#f0f9ff' : '#f8fafc',
+                      border: `1px solid ${u.role === 'QMS' ? '#bae6fd' : '#e2e8f0'}`,
                       padding: '2px 8px', borderRadius: '6px',
                     }}>
                       {u.role}

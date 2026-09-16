@@ -151,7 +151,7 @@ export default function MasterlistPage() {
         formData.append('subFolderId', docTargetSubFolder.id);
         formData.append('subFolderName', docTargetSubFolder.name);
       }
-      formData.append('uploader', user?.name || 'Admin QMS');
+      formData.append('uploader', user?.name || 'QMS');
 
       const uploadRes = await fetch('/api/r2/upload', {
         method: 'POST',
@@ -2888,7 +2888,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
               }}
             >
               <AlertTriangle size={15} style={{ flexShrink: 0 }} />
-              <span>Tindakan ini hanya dapat dilakukan oleh Admin QMS.</span>
+              <span>Tindakan ini hanya dapat dilakukan oleh QMS.</span>
             </div>
 
             {/* Footer Buttons */}

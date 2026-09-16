@@ -62,7 +62,7 @@ const SECTIONS: { id: 'core' | 'docs' | 'governance'; title: string }[] = [
 
 const ROLE_LABELS: Record<string, string> = {
   staff: 'Staff',
-  admin: 'Admin QHSE',
+  admin: 'QMS',
 };
 
 const PAGE_TITLES: Record<string, string> = {
@@ -608,7 +608,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   background: activeUser.role === 'admin' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(16, 185, 129, 0.2)',
                   color: activeUser.role === 'admin' ? '#38bdf8' : '#34d399',
                 }}>
-                  {activeUser.role === 'admin' ? 'Admin' : 'Staff'}
+                  {activeUser.role === 'admin' ? 'QMS' : 'Staff'}
                 </span>
                 <ChevronDown size={13} color="#94a3b8" style={{ transform: accountMenuOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
               </button>
@@ -667,7 +667,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           background: activeUser.role === 'admin' ? '#e0f2fe' : '#dcfce7',
                           color: activeUser.role === 'admin' ? '#0284c7' : '#15803d',
                         }}>
-                          {activeUser.roleName || (activeUser.role === 'admin' ? 'Admin QMS' : 'Staff')}
+                          {activeUser.roleName || (activeUser.role === 'admin' ? 'QMS' : 'Staff')}
                         </span>
                         <span style={{
                           fontSize: '10.5px',

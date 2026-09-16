@@ -77,7 +77,7 @@ export interface UserProfile {
 }
 
 export const ALL_USERS: UserProfile[] = [
-  // ── 2 Akun Admin QMS (Username: rizal / khabil, Password: 12345) ──
+  // ── 2 Akun QMS (Username: rizal / khabil, Password: 12345) ──
   {
     id: 'admin-rizal',
     username: 'rizal',
@@ -85,7 +85,7 @@ export const ALL_USERS: UserProfile[] = [
     name: 'Rizal',
     email: 'rizal@thi.co.id',
     role: 'admin',
-    roleName: 'Admin QMS',
+    roleName: 'QMS',
     department: 'QHSE & QMS',
     position: 'Lead Quality & Management System',
     avatar: 'RZ',
@@ -97,9 +97,9 @@ export const ALL_USERS: UserProfile[] = [
     name: 'Khabil',
     email: 'khabil@thi.co.id',
     role: 'admin',
-    roleName: 'Admin QMS',
+    roleName: 'QMS',
     department: 'QHSE & QMS',
-    position: 'Document Controller & QMS Admin',
+    position: 'Document Controller & QMS',
     avatar: 'KB',
   },
 

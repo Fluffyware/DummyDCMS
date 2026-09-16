@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         to: String(to).trim(),
         category: category || 'Corporate Documents',
         documents,
-        distributorName: distributorName || 'Admin QMS THI',
+        distributorName: distributorName || 'QMS THI',
         notes: notes || '',
       };
 
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       jenisDokumen: jenisDokumen || 'SOP',
       fileUrl: fileUrl || null,
       fileName: fileName || null,
-      distributorName: distributorName || 'Admin QMS THI',
+      distributorName: distributorName || 'QMS THI',
       notes: notes || '',
     };
 

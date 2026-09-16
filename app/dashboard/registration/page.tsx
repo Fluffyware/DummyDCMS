@@ -201,7 +201,7 @@ export default function RegistrationPage() {
     const newIdNum = registrations.length + 1;
     const formattedId = `REG0926.${String(newIdNum).padStart(3, '0')}`;
 
-    const currentAuthor = user?.name || (user?.role === 'admin' ? 'Rizal (Admin QMS)' : 'Staff');
+    const currentAuthor = user?.name || (user?.role === 'admin' ? 'Rizal (QMS)' : 'Staff');
 
     const newDocItem: RegisteredDoc = {
       no: 1,
@@ -387,7 +387,7 @@ export default function RegistrationPage() {
             Registrasi Dokumen
           </h1>
           <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
-            Alur Manual: Pengajuan berkas baru oleh Staff → Verifikasi &amp; Approval manual oleh Admin QHSE.
+            Alur Manual: Pengajuan berkas baru oleh Staff → Verifikasi &amp; Approval manual oleh QMS.
           </div>
         </div>
 

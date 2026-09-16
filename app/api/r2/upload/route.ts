@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const folderId = (formData.get('folderId') as string) || '';
     const subFolderId = (formData.get('subFolderId') as string) || '';
     const subFolderName = (formData.get('subFolderName') as string) || '';
-    const uploader = (formData.get('uploader') as string) || 'Admin QMS';
+    const uploader = (formData.get('uploader') as string) || 'QMS';
 
     if (!docNumber || !docTitle) {
       return NextResponse.json(
