@@ -15,7 +15,6 @@ import {
   Share2,
   ShieldCheck,
   Settings,
-  Bell,
   ChevronRight,
   ChevronDown,
   Lightbulb,
@@ -85,7 +84,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, logout, isLoading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [notifOpen, setNotifOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -731,28 +729,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </>
               )}
             </div>
-            <button
-              id="notif-btn"
-              onClick={() => setNotifOpen(o => !o)}
-              title="Notifications"
-              style={{
-                width: 36, height: 36, borderRadius: 8,
-                border: '1px solid rgba(255, 255, 255, 0.16)',
-                background: 'rgba(255, 255, 255, 0.08)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: '#ffffff', position: 'relative',
-                transition: 'all 0.15s', outline: 'none',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.16)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)')}
-            >
-              <Bell size={15} strokeWidth={2} />
-              <span style={{
-                position: 'absolute', top: 9, right: 9,
-                width: 6, height: 6, borderRadius: '50%',
-                background: '#ef4444', border: '1.5px solid #071c2c',
-              }} />
-            </button>
           </div>
         </header>
 
@@ -761,86 +737,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </div>
-
-      {/* ═══════════════════════════════════════════════════════
-          NOTIFICATION PANEL
-          ═══════════════════════════════════════════════════════ */}
-      <AnimatePresence>
-        {notifOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0, y: -6, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -6, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              style={{
-                position: 'fixed', top: 64, right: 20, zIndex: 9000,
-                background: '#ffffff', border: '1px solid #e8eef5',
-                borderRadius: 12, boxShadow: '0 12px 40px rgba(7,28,44,0.12)',
-                width: 340, overflow: 'hidden', fontFamily: 'var(--font-body)',
-              }}
-            >
-              <div style={{
-                padding: '14px 16px', borderBottom: '1px solid #f0f4f8',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              }}>
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: '#071c2c' }}>
-                  Notifications
-                </span>
-                <span style={{ fontSize: 11, color: '#8fa0b0', fontWeight: 500 }}>3 unread</span>
-              </div>
-              {[
-                { icon: '✍', text: 'Document SOP-OPS-004 awaiting your approval', time: '2h ago', unread: true },
-                { icon: '📤', text: 'WI-GEO-005 distributed — 4 recipients pending', time: '5h ago', unread: true },
-                { icon: '✅', text: 'POL-QHSE-001 approved by QHSSE Manager', time: 'Yesterday', unread: false },
-              ].map((n, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: 'flex', gap: 12, padding: '12px 16px',
-                    borderBottom: '1px solid #f0f4f8',
-                    background: n.unread ? '#fafcff' : 'transparent',
-                    cursor: 'pointer', transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
-                  onMouseLeave={e => (e.currentTarget.style.background = n.unread ? '#fafcff' : 'transparent')}
-                >
-                  <div style={{
-                    width: 30, height: 30, borderRadius: 8, background: '#f0f4f8',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 13, flexShrink: 0,
-                  }}>
-                    {n.icon}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12.5, color: '#15212a', lineHeight: 1.4, marginBottom: 3 }}>{n.text}</div>
-                    <div style={{ fontSize: 11, color: '#8fa0b0' }}>{n.time}</div>
-                  </div>
-                  {n.unread && (
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#071c2c', flexShrink: 0, marginTop: 6 }} />
-                  )}
-                </div>
-              ))}
-              <div style={{ padding: '10px 16px', textAlign: 'center' }}>
-                <button
-                  onClick={() => setNotifOpen(false)}
-                  style={{ fontSize: 12, color: '#6b7a8d', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)', fontWeight: 500 }}
-                >
-                  View all notifications
-                </button>
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{ position: 'fixed', inset: 0, zIndex: 8999 }}
-              onClick={() => setNotifOpen(false)}
-            />
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
