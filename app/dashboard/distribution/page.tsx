@@ -22,6 +22,7 @@ import {
   Minus,
   Eye,
   Bell,
+  FilePlus,
   ExternalLink,
 } from 'lucide-react';
 import {
@@ -545,7 +546,7 @@ export default function DistributionPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
             {([
-              { key: 'NEW_DOC', icon: <FolderPlus size={16} />, label: 'Dokumen Baru', sub: 'Pilih Folder & Sub Folder', color: '#15803d', bg: '#f0fdf4' },
+              { key: 'NEW_DOC', icon: <FilePlus size={16} />, label: 'Dokumen Baru', sub: 'Pilih Folder & Sub Folder', color: '#15803d', bg: '#f0fdf4' },
               { key: 'REVISION_UPDATE', icon: <RefreshCw size={16} />, label: 'Update Revisi', sub: 'Pilih Berkas Terdaftar', color: '#0284c7', bg: '#f0f9ff' },
               { key: 'ANNOUNCEMENT', icon: <Megaphone size={16} />, label: 'Pengumuman', sub: 'Sosialisasi Ulang Dokumen', color: '#7c3aed', bg: '#f5f3ff' },
             ] as const).map(tab => {
