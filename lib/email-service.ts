@@ -14,131 +14,79 @@ export interface EmailDistributionPayload {
   notes?: string;
 }
 
-/**
- * Generate official PT Taka Hydrocore Indonesia HTML Email Template
- */
-export function generateDistributionEmailHtml(data: EmailDistributionPayload): string {
-  const currentDate = new Date().toLocaleDateString('id-ID', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
+export interface BatchEmailDoc {
+  title: string;
+  number?: string;
+  fileUrl?: string | null;
+}
 
-  return `
-<!DOCTYPE html>
-<html lang="id">
+export interface BatchEmailPayload {
+  to: string;
+  category: string; // e.g. "Corporate Policies"
+  documents: BatchEmailDoc[];
+  distributorName?: string;
+  notes?: string;
+}
+
+/**
+ * Generate a batch HTML email listing multiple documents in one email.
+ * Format: "Dear All, Here i attach new document for [Category]: 1. Title: URL..."
+ */
+export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): string {
+  const docListHtml = data.documents
+    .map(
+      (doc, idx) => `
+      <p style="margin: 0 0 18px; font-size: 14px; color: #1e293b; line-height: 1.8;">
+        <strong>${idx + 1}. ${doc.title}:</strong><br>
+        ${doc.fileUrl
+          ? `<a href="${doc.fileUrl}" style="color: #0284c7; text-decoration: none; font-size: 13.5px; word-break: break-all;">${doc.fileUrl}</a>`
+          : `<span style="color: #64748b; font-size: 13px;">—</span>`
+        }
+      </p>`
+    )
+    .join('');
+
+  return `<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Distribusi Dokumen Terkendali - PT Taka Hydrocore Indonesia</title>
+  <title>Document Distribution - PT Taka Hydrocore Indonesia</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: Arial, Helvetica, sans-serif; color: #1e293b;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 15px;">
     <tr>
       <td align="center">
-        <!-- Main Card -->
-        <table role="presentation" width="100%" style="max-width: 620px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(7, 28, 44, 0.08); border: 1px solid #e2e8f0;">
-          
-          <!-- Header Banner -->
+        <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(7,28,44,0.08); border: 1px solid #e2e8f0;">
+
           <tr>
-            <td style="background: linear-gradient(135deg, #071c2c 0%, #0c3352 100%); padding: 30px 32px; text-align: left; border-bottom: 4px solid #0284c7;">
-              <table role="presentation" width="100%">
-                <tr>
-                  <td>
-                    <div style="display: inline-block; padding: 4px 10px; background: rgba(2, 132, 199, 0.2); border: 1px solid rgba(2, 132, 199, 0.4); border-radius: 6px; color: #38bdf8; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px;">
-                      QHSSE Document Management System
-                    </div>
-                    <h1 style="margin: 0; color: #ffffff; font-size: 20px; font-weight: 800; line-height: 1.3;">
-                      PT TAKA HYDROCORE INDONESIA
-                    </h1>
-                    <p style="margin: 4px 0 0; color: #94a3b8; font-size: 13px;">
-                      Pemberitahuan Distribusi Dokumen Terkendali (Controlled Copy)
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="padding: 36px 40px 28px;">
+              <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.8; color: #1e293b;">Dear All</p>
+              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.8; color: #1e293b;">
+                Here i attach new document for <strong>${data.category}</strong>:
+              </p>
+              ${docListHtml}
+              <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.9; color: #1e293b;">
+                If you have any questions, please contact me or the relevant<br>Sub-Department. Thank you.
+              </p>
             </td>
           </tr>
 
-          <!-- Body Content -->
           <tr>
-            <td style="padding: 32px 32px 24px;">
-              <p style="margin: 0 0 16px; font-size: 14px; line-height: 1.6; color: #334155;">
-                Yth. Bapak/Ibu <strong>${data.to}</strong>,
+            <td style="padding: 0 40px 24px;">
+              <p style="margin: 0 0 4px; font-size: 13.5px; line-height: 1.9; color: #1e293b;">
+                Contact Persons: <strong>Rizal Ramdani</strong> - <a href="mailto:rizal@thi.co.id" style="color: #0284c7; text-decoration: none;">rizal@thi.co.id</a> / <strong>Hetty Monalisa</strong> – <a href="mailto:admin.hse@thi.co.id" style="color: #0284c7; text-decoration: none;">admin.hse@thi.co.id</a> / <strong>Kahbil Nazhif Haqiki</strong> - <a href="mailto:qms@thi.co.id" style="color: #0284c7; text-decoration: none;">qms@thi.co.id</a>
               </p>
-              <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.6; color: #334155;">
-                Melalui email ini, kami informasikan bahwa dokumen sistem manajemen baru/revisi telah berhasil diterbitkan dan didistribusikan ke departemen Anda melalui sistem <strong>THI QHSSE DMS</strong>.
-              </p>
-
-              <!-- Document Details Table -->
-              <table role="presentation" width="100%" style="background-color: #f8fafc; border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 24px; border-collapse: separate; border-spacing: 0;">
-                <tr>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-weight: 600; width: 35%;">Nomor Dokumen</td>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #0284c7; font-weight: 800; font-family: monospace;">${data.documentNumber || '-'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-weight: 600;">Judul Dokumen</td>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #0f172a; font-weight: 700;">${data.documentTitle}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-weight: 600;">Departemen</td>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155;">${data.department}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-weight: 600;">Status & Revisi</td>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #15803d; font-weight: 700;">
-                    Rev. ${data.revision || '00'} (EFFECTIVE / RELEASED)
-                  </td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 12px; color: #64748b; font-weight: 600;">Tanggal Distribusi</td>
-                  <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-size: 13px; color: #334155;">${currentDate}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px 16px; font-size: 12px; color: #64748b; font-weight: 600;">Didistribusikan Oleh</td>
-                  <td style="padding: 12px 16px; font-size: 13px; color: #334155; font-weight: 600;">${data.distributorName || 'Admin QMS & Document Controller'}</td>
-                </tr>
-              </table>
-
-              ${data.notes ? `
-              <div style="background-color: #fffbeb; border: 1px solid #fef08a; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 14px 16px; margin-bottom: 24px;">
-                <div style="font-size: 12px; font-weight: 700; color: #92400e; margin-bottom: 4px; text-transform: uppercase;">Catatan Sosialisasi:</div>
-                <div style="font-size: 13px; color: #78350f; line-height: 1.5;">${data.notes}</div>
-              </div>
-              ` : ''}
-
-              <!-- Action Call to Action -->
-              <div style="text-align: center; margin: 32px 0 24px;">
-                ${data.fileUrl ? `
-                <a href="${data.fileUrl}" target="_blank" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);">
-                  Buka & Unduh Dokumen Resmi
-                </a>
-                ` : `
-                <a href="https://dummy-dcms.vercel.app/dashboard/masterlist" target="_blank" style="display: inline-block; background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 13px 32px; border-radius: 8px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);">
-                  Buka Dokumen di Portal DMS
-                </a>
-                `}
-              </div>
-
-              <!-- Compliance Note -->
-              <div style="border-top: 1px solid #f1f5f9; padding-top: 18px; margin-top: 24px;">
-                <p style="margin: 0; font-size: 12px; line-height: 1.6; color: #64748b;">
-                  * Dokumen ini berstatus <strong>Controlled Copy</strong>. Harap pastikan seluruh personil di departemen Anda mengacu pada dokumen revisi terbaru ini dalam operasional kerja harian.
-                </p>
-              </div>
+              ${data.notes ? `<p style="margin: 12px 0 0; font-size: 13px; color: #64748b; font-style: italic;">${data.notes}</p>` : ''}
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
-            <td style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; text-align: center;">
-              <p style="margin: 0 0 4px; font-size: 12px; font-weight: 700; color: #475569;">
-                PT TAKA HYDROCORE INDONESIA
-              </p>
-              <p style="margin: 0; font-size: 11px; color: #94a3b8; line-height: 1.5;">
-                QHSE & Quality Management System Division<br>
-                Email otomatis dari THI Electronic Document Control System. Jangan membalas email ini secara langsung.
-              </p>
+            <td style="background-color: #f8fafc; padding: 20px 40px; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0 0 4px; font-size: 13.5px; color: #475569; line-height: 1.7;">Best Regards,</p>
+              <br>
+              <p style="margin: 0 0 2px; font-size: 14px; font-weight: 700; color: #071c2c;">Quality Management System</p>
+              <p style="margin: 0; font-size: 11px; color: #94a3b8;">PT Taka Hydrocore Indonesia &mdash; QHSE &amp; QMS Division</p>
             </td>
           </tr>
 
@@ -147,12 +95,43 @@ export function generateDistributionEmailHtml(data: EmailDistributionPayload): s
     </tr>
   </table>
 </body>
-</html>
-  `;
+</html>`;
 }
 
 /**
- * Send email via Resend or Nodemailer (Gmail / SMTP)
+ * Generate single-document HTML email (delegates to batch template for consistency).
+ */
+export function generateDistributionEmailHtml(data: EmailDistributionPayload): string {
+  return generateBatchDistributionEmailHtml({
+    to: data.to,
+    category: data.jenisDokumen || 'Corporate Documents',
+    documents: [
+      {
+        title: `${data.documentNumber ? data.documentNumber + ' ' : ''}${data.documentTitle}`,
+        fileUrl: data.fileUrl,
+      },
+    ],
+    distributorName: data.distributorName,
+    notes: data.notes,
+  });
+}
+
+/**
+ * Send a batch email with multiple documents listed in one email.
+ */
+export async function sendBatchDistributionEmail(payload: BatchEmailPayload): Promise<{
+  success: boolean;
+  provider: 'resend' | 'nodemailer' | 'simulated';
+  messageId?: string;
+  error?: string;
+}> {
+  const htmlContent = generateBatchDistributionEmailHtml(payload);
+  const subject = `[DISTRIBUSI RESMI] New Document for ${payload.category} (${payload.documents.length} file${payload.documents.length > 1 ? 's' : ''})`;
+  return _sendEmail(payload.to, subject, htmlContent);
+}
+
+/**
+ * Send email via Resend or Nodemailer (Gmail / SMTP) — single document.
  */
 export async function sendDistributionEmail(payload: EmailDistributionPayload): Promise<{
   success: boolean;
@@ -162,7 +141,18 @@ export async function sendDistributionEmail(payload: EmailDistributionPayload): 
 }> {
   const htmlContent = generateDistributionEmailHtml(payload);
   const subject = `[DISTRIBUSI RESMI] ${payload.documentNumber ? payload.documentNumber + ' - ' : ''}${payload.documentTitle} (Rev.${payload.revision || '00'})`;
+  return _sendEmail(payload.to, subject, htmlContent);
+}
 
+/**
+ * Internal: send email through the configured provider.
+ */
+async function _sendEmail(to: string, subject: string, htmlContent: string): Promise<{
+  success: boolean;
+  provider: 'resend' | 'nodemailer' | 'simulated';
+  messageId?: string;
+  error?: string;
+}> {
   // ── Opsi 1: Corporate SMTP Server (mail.thi.co.id, smtp.office365.com, dsb) ──
   const smtpHost = process.env.SMTP_HOST;
   const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : 465;
@@ -188,7 +178,7 @@ export async function sendDistributionEmail(payload: EmailDistributionPayload): 
 
       const info = await transporter.sendMail({
         from: smtpFrom,
-        to: payload.to,
+        to,
         subject,
         html: htmlContent,
       });
@@ -217,7 +207,7 @@ export async function sendDistributionEmail(payload: EmailDistributionPayload): 
 
       const response = await resend.emails.send({
         from: `PT Taka Hydrocore Indonesia <${fromEmail}>`,
-        to: [payload.to],
+        to: [to],
         subject,
         html: htmlContent,
       });
@@ -257,7 +247,7 @@ export async function sendDistributionEmail(payload: EmailDistributionPayload): 
 
       const info = await transporter.sendMail({
         from: `"PT Taka Hydrocore Indonesia (DMS)" <${gmailUser}>`,
-        to: payload.to,
+        to,
         subject,
         html: htmlContent,
       });
@@ -280,7 +270,7 @@ export async function sendDistributionEmail(payload: EmailDistributionPayload): 
   // ── Opsi 4: Belum terkonfigurasi (Simulated preview mode) ──
   console.warn(`
 [EMAIL DISTRIBUTION SIMULATED]
-To: ${payload.to}
+To: ${to}
 Subject: ${subject}
 Note: Kredensial email perusahaan (SMTP_HOST / SMTP_USER / SMTP_PASS atau RESEND_API_KEY) belum diisi di .env.local.
   `);
@@ -291,3 +281,4 @@ Note: Kredensial email perusahaan (SMTP_HOST / SMTP_USER / SMTP_PASS atau RESEND
     error: 'Kredensial email perusahaan belum dikonfigurasi di .env.local. Silakan masukkan SMTP_HOST, SMTP_USER, dan SMTP_PASS.',
   };
 }
+

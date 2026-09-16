@@ -213,21 +213,35 @@ export default function DistributionPage() {
 
   const sendEmails = (entries: DistributionDoc[], notes: string) => {
     if (!sendEmailNotification || !recipientEmail.trim()) return;
-    const emails = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
-    entries.forEach(entry => {
-      emails.forEach(targetEmail => {
-        fetch('/api/distribution/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            to: targetEmail, documentTitle: entry.judul, documentNumber: entry.id,
-            revision: entry.revisi, department: entry.dept, jenisDokumen: entry.jenis,
-            distributorName: user?.name || 'Admin QMS THI', notes: notes || emailNotes || 'Notifikasi distribusi dokumen.',
-          }),
-        }).catch(console.error);
-      });
+    const emailList = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
+
+    // Determine category from jenis of first entry (or use generic label)
+    const category = entries[0]?.jenis || 'Corporate Documents';
+
+    // Build document list for batch email
+    const documents = entries.map(entry => ({
+      title: entry.judul,
+      number: entry.idRegistrasi !== '-' ? entry.idRegistrasi : undefined,
+      fileUrl: entry.fileUrl || null,
+    }));
+
+    // Send ONE combined email per recipient
+    emailList.forEach(targetEmail => {
+      fetch('/api/distribution/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          batch: true,
+          to: targetEmail,
+          category,
+          documents,
+          distributorName: user?.name || 'Admin QMS THI',
+          notes: notes || emailNotes || '',
+        }),
+      }).catch(console.error);
     });
   };
+
 
   const handleSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
