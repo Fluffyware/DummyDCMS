@@ -2321,7 +2321,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                   {docFileName ? (
                     <div style={{ textAlign: 'center' }}>
                       <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#071c2c' }}>{docFileName}</span>
-                      <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600 }}>{docFileSize} &bull; Berkas siap disimpan ke Cloudflare R2</div>
+                      <div style={{ fontSize: '11px', color: '#0284c7', fontWeight: 600 }}>{docFileSize} &bull; Berkas siap diunggah</div>
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center' }}>
@@ -2367,7 +2367,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                   }}
                 >
                   <FilePlus size={14} />
-                  {isUploading ? 'Menyimpan ke R2 & Database…' : 'Simpan Dokumen'}
+                  {isUploading ? 'Menyimpan dokumen…' : 'Simpan Dokumen'}
                 </button>
               </div>
             </form>

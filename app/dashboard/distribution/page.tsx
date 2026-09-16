@@ -281,11 +281,11 @@ export default function DistributionPage() {
         if (!entry.dept) { setErrorMessage(`Pilih Departemen untuk Dokumen #${idx + 1}.`); return; }
         if (!entry.jenis) { setErrorMessage(`Pilih Jenis Dokumen untuk Dokumen #${idx + 1}.`); return; }
         if (!entry.judulDokumen.trim()) { setErrorMessage(`Isi Judul Dokumen untuk Dokumen #${idx + 1}.`); return; }
-        if (!entry.selectedFile) { setErrorMessage(`Pilih berkas file untuk Dokumen #${idx + 1} agar otomatis diunggah ke Cloudflare R2.`); return; }
+        if (!entry.selectedFile) { setErrorMessage(`Pilih berkas file untuk Dokumen #${idx + 1}.`); return; }
       }
 
       setIsSubmitting(true);
-      setSubmitStatusText('Menyiapkan dokumen & mengunggah ke Cloudflare R2...');
+      setSubmitStatusText('Menyiapkan & mengunggah berkas dokumen...');
 
       try {
         const newEntries: DistributionDoc[] = [];
@@ -311,7 +311,7 @@ export default function DistributionPage() {
           let fileSizeFormatted = entry.selectedFile ? `${(entry.selectedFile.size / 1024).toFixed(0)} KB` : '';
 
           if (entry.selectedFile) {
-            setSubmitStatusText(`Mengunggah berkas (${i + 1}/${newDocEntries.length}): ${entry.selectedFile.name} ke Cloudflare R2...`);
+            setSubmitStatusText(`Mengunggah berkas (${i + 1}/${newDocEntries.length}): ${entry.selectedFile.name}...`);
             const formData = new FormData();
             formData.append('file', entry.selectedFile);
             formData.append('docNumber', finalDocNumber);
@@ -383,18 +383,18 @@ export default function DistributionPage() {
         setMasterFolders(updatedFolders);
         saveMasterFolders(updatedFolders);
 
-        setSubmitStatusText('Mengirimkan notifikasi email batch...');
+        setSubmitStatusText('Mengirimkan notifikasi email...');
         const emailResult = await sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
 
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
         saveDistributions(updated);
         handleResetForm();
-        showToast(`${newEntries.length} dokumen baru berhasil diunggah ke R2 & didistribusikan!`);
+        showToast(`${newEntries.length} dokumen baru berhasil didistribusikan!`);
         if (emailResult && emailResult.sent > 0) {
           showToast(`Email terkirim ke ${emailResult.sent} penerima!`);
         } else if (emailResult && emailResult.failed > 0) {
-          showToast(`Distribusi berhasil, tapi email gagal dikirim ke: ${emailResult.failedAddresses.join(', ')}. Cek koneksi SMTP.`, 'error');
+          showToast(`Distribusi berhasil, tapi email gagal dikirim ke: ${emailResult.failedAddresses.join(', ')}. Silakan periksa konfigurasi email.`, 'error');
         }
       } catch (err: any) {
         console.error('Distribusi error:', err);
@@ -432,7 +432,7 @@ export default function DistributionPage() {
           let fileSizeFormatted = entry.selectedRevFile ? `${(entry.selectedRevFile.size / 1024).toFixed(0)} KB` : '—';
 
           if (entry.selectedRevFile) {
-            setSubmitStatusText(`Mengunggah revisi (${i + 1}/${revDocEntries.length}): ${entry.selectedRevFile.name} ke Cloudflare R2...`);
+            setSubmitStatusText(`Mengunggah revisi berkas (${i + 1}/${revDocEntries.length}): ${entry.selectedRevFile.name}...`);
             const formData = new FormData();
             formData.append('file', entry.selectedRevFile);
             formData.append('docNumber', existingDoc.number);
@@ -733,7 +733,7 @@ export default function DistributionPage() {
             {isSubmitting && (
               <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0369a1', display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', fontWeight: 600 }}>
                 <Loader2 size={16} className="animate-spin" />
-                <span>{submitStatusText || 'Sedang mengunggah berkas ke Cloudflare R2 & memproses distribusi...'}</span>
+                <span>{submitStatusText || 'Sedang mengunggah berkas & memproses distribusi...'}</span>
               </div>
             )}
 
@@ -743,7 +743,7 @@ export default function DistributionPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>{submitStatusText || 'Mengunggah ke R2...'}</span>
+                    <span>{submitStatusText || 'Mengunggah berkas...'}</span>
                   </>
                 ) : (
                   <>
@@ -977,17 +977,16 @@ function NewDocEntryRow({ entry, index, totalCount, masterFolders, deptOptions, 
         </div>
         <div>
           <label style={labelStyle2}>
-            Upload Berkas <span style={{ color: '#dc2626' }}>*</span>{' '}
-            <span style={{ color: '#0284c7', textTransform: 'none', fontWeight: 600 }}>(Otomatis ke R2)</span>
+            Upload Berkas <span style={{ color: '#dc2626' }}>*</span>
           </label>
           <input ref={fileRef} type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.xls,.xlsx" style={{ fontSize: '12.5px', color: '#475569' }} required />
           {entry.selectedFile ? (
             <span style={{ fontSize: '11px', color: '#15803d', marginTop: '4px', display: 'block', fontWeight: 600 }}>
-              ✓ {entry.selectedFile.name} ({(entry.selectedFile.size / 1024).toFixed(0)} KB) — otomatis diunggah ke R2
+              ✓ {entry.selectedFile.name} ({(entry.selectedFile.size / 1024).toFixed(0)} KB) — siap didistribusikan
             </span>
           ) : (
             <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-              Pilih file PDF/Office. Tautan R2 akan dibuat otomatis untuk email.
+              Pilih file PDF/Office. Berkas akan otomatis dilampirkan dalam notifikasi email.
             </span>
           )}
         </div>

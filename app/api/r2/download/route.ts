@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     if (!isR2Configured()) {
       return NextResponse.json(
-        { error: 'Cloudflare R2 belum dikonfigurasi pada sistem.' },
+        { error: 'Penyimpanan berkas belum dikonfigurasi pada sistem.' },
         { status: 503 }
       );
     }

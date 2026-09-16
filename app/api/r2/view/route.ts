@@ -40,14 +40,14 @@ export async function GET(req: NextRequest) {
 
     if (!isR2Configured()) {
       return NextResponse.json(
-        { error: 'Cloudflare R2 belum dikonfigurasi pada sistem.' },
+        { error: 'Penyimpanan berkas belum dikonfigurasi pada sistem.' },
         { status: 503 }
       );
     }
 
     const client = getR2Client();
     if (!client) {
-      return NextResponse.json({ error: 'Gagal terhubung ke R2.' }, { status: 503 });
+      return NextResponse.json({ error: 'Gagal terhubung ke penyimpanan berkas.' }, { status: 503 });
     }
 
     const command = new GetObjectCommand({
