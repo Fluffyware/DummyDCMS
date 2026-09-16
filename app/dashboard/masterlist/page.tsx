@@ -257,10 +257,14 @@ export default function MasterlistPage() {
       showToast(`Mengunduh berkas resmi ${doc.number}...`);
       return;
     }
-    if (doc.r2Url && !doc.r2Url.includes('localhost')) {
-      window.open(doc.r2Url, '_blank');
-      showToast(`Mengunduh berkas ${doc.number}...`);
-      return;
+    // For r2Url: use as-is if it's already a proxy path, else skip direct r2.dev (blocked by ISP)
+    if (doc.r2Url && (doc.r2Url.startsWith('/api/r2') || doc.r2Url.startsWith('http'))) {
+      const safeUrl = doc.r2Url.startsWith('https://pub-') ? null : doc.r2Url;
+      if (safeUrl) {
+        window.open(safeUrl, '_blank');
+        showToast(`Mengunduh berkas ${doc.number}...`);
+        return;
+      }
     }
 
     // Fallback: Generate real official controlled copy blob file
@@ -294,14 +298,14 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     showToast(`Mengunduh salinan berkas kendali ${doc.number}...`);
   };
 
-  // ─── Inline View Handler (opens file in new tab, no download) ───
   const handleViewDoc = (doc: MasterDocItem) => {
     if (doc.r2Key) {
       window.open(`/api/r2/view?key=${encodeURIComponent(doc.r2Key)}`, '_blank', 'noopener,noreferrer');
       showToast(`Membuka berkas ${doc.number} di tab baru...`);
       return;
     }
-    if (doc.r2Url && !doc.r2Url.includes('localhost')) {
+    // For r2Url: use as-is if it's a proxy path, skip direct r2.dev (blocked by ISP)
+    if (doc.r2Url && doc.r2Url.startsWith('/api/r2')) {
       window.open(doc.r2Url, '_blank', 'noopener,noreferrer');
       showToast(`Membuka berkas ${doc.number} di tab baru...`);
       return;

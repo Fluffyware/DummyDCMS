@@ -222,10 +222,14 @@ export default function DistributionPage() {
     const category = entries[0]?.jenis || 'Corporate Documents';
 
     // Build document list for batch email
+    // Convert relative /api/r2/view URLs to absolute so they work in email clients
+    const appOrigin = typeof window !== 'undefined' ? window.location.origin : '';
     const documents = entries.map(entry => ({
       title: entry.judul,
       number: entry.idRegistrasi !== '-' ? entry.idRegistrasi : undefined,
-      fileUrl: entry.fileUrl || null,
+      fileUrl: entry.fileUrl
+        ? (entry.fileUrl.startsWith('/') ? `${appOrigin}${entry.fileUrl}` : entry.fileUrl)
+        : null,
     }));
 
     let sent = 0;

@@ -55,8 +55,10 @@ export async function uploadBufferToR2({
 
   await client.send(command);
 
-  // Return public URL or fallback signed URL
-  const fileUrl = publicUrl ? `${publicUrl.replace(/\/$/, '')}/${key}` : `/api/r2/download?key=${encodeURIComponent(key)}`;
+  // Always use internal proxy URL (/api/r2/view) to avoid direct r2.dev domain access.
+  // The r2.dev public URL is blocked by Indonesian ISPs (SSL/HSTS error), so we
+  // route all file access through the Next.js API which fetches from R2 server-side.
+  const fileUrl = `/api/r2/view?key=${encodeURIComponent(key)}`;
 
   return {
     key,
