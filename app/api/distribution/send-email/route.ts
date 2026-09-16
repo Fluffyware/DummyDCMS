@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
 
     // ── Batch mode: send one email listing multiple documents ──
     if (body.batch === true && Array.isArray(body.documents)) {
-      const { to, category, documents, distributorName, notes, distributionType, customSubject } = body;
+      const { to, category, documents, distributorName, notes, distributionType, customSubject, appOrigin, logoUrl } = body;
 
       if (!to) {
         return NextResponse.json(
@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
         category: category || 'Corporate Documents',
         distributionType: distributionType || 'NEW_DOC',
         customSubject: customSubject || undefined,
+        appOrigin: appOrigin || undefined,
+        logoUrl: logoUrl || undefined,
         documents,
         distributorName: distributorName || 'QMS THI',
         notes: notes || '',
@@ -70,6 +72,8 @@ export async function POST(req: NextRequest) {
       jenisDokumen,
       distributionType,
       customSubject,
+      appOrigin,
+      logoUrl,
       fileUrl,
       fileName,
       distributorName,
@@ -99,6 +103,8 @@ export async function POST(req: NextRequest) {
       jenisDokumen: jenisDokumen || 'SOP',
       distributionType: distributionType || 'NEW_DOC',
       customSubject: customSubject || undefined,
+      appOrigin: appOrigin || undefined,
+      logoUrl: logoUrl || undefined,
       fileUrl: fileUrl || null,
       fileName: fileName || null,
       distributorName: distributorName || 'QMS THI',

@@ -12,6 +12,8 @@ export interface EmailDistributionPayload {
   jenisDokumen?: string;
   distributionType?: DistributionType;
   customSubject?: string;
+  appOrigin?: string;
+  logoUrl?: string;
   fileUrl?: string | null;
   fileName?: string | null;
   distributorName?: string;
@@ -29,6 +31,8 @@ export interface BatchEmailPayload {
   category: string; // e.g. "Corporate Policies"
   distributionType?: DistributionType;
   customSubject?: string;
+  appOrigin?: string;
+  logoUrl?: string;
   documents: BatchEmailDoc[];
   distributorName?: string;
   notes?: string;
@@ -39,13 +43,25 @@ export interface BatchEmailPayload {
  * Format: "Dear All, Here i attach [new/revised/socialization] document for [Category]: 1. Title: URL..."
  */
 export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): string {
+  let logoUrl = data.logoUrl;
+  if (!logoUrl) {
+    const origin = data.appOrigin || (typeof window !== 'undefined' ? window.location.origin : '');
+    if (origin) {
+      logoUrl = `${origin}/thi-logo-official.png`;
+    } else if (process.env.VERCEL_URL) {
+      logoUrl = `https://${process.env.VERCEL_URL}/thi-logo-official.png`;
+    } else {
+      logoUrl = '/thi-logo-official.png';
+    }
+  }
+
   const docListHtml = data.documents
     .map(
       (doc, idx) => `
       <p style="margin: 0 0 18px; font-size: 14px; color: #1e293b; line-height: 1.8;">
         <strong>${idx + 1}. ${doc.title}:</strong><br>
         ${doc.fileUrl
-          ? `<a href="${doc.fileUrl}" target="_blank" style="display: inline-block; margin-top: 6px; padding: 7px 16px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;">Download Dokumen</a>`
+          ? `<a href="${doc.fileUrl}" target="_blank" style="display: inline-block; margin-top: 6px; padding: 8px 18px; background-color: #0284c7; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600; box-shadow: 0 2px 4px rgba(2,132,199,0.2);">Download Dokumen</a>`
           : `<span style="color: #64748b; font-size: 13px;">—</span>`
         }
       </p>`
@@ -70,8 +86,26 @@ export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): str
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 15px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 12px rgba(7,28,44,0.08); border: 1px solid #e2e8f0;">
+        <table role="presentation" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 16px rgba(7,28,44,0.08); border: 1px solid #e2e8f0;">
 
+          <!-- Header Section with Official THI Logo -->
+          <tr>
+            <td style="padding: 24px 40px; background-color: #ffffff; border-bottom: 3px solid #0284c7;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td valign="middle" style="vertical-align: middle;">
+                    <img src="${logoUrl}" alt="PT Taka Hydrocore Indonesia" style="height: 38px; width: auto; max-width: 220px; display: block; border: 0;" />
+                  </td>
+                  <td align="right" valign="middle" style="vertical-align: middle; text-align: right;">
+                    <span style="font-size: 11px; font-weight: 800; color: #071c2c; text-transform: uppercase; letter-spacing: 0.06em; display: block;">Document Control</span>
+                    <span style="font-size: 10.5px; color: #0284c7; font-weight: 600; display: block; margin-top: 2px;">QHSE &amp; QMS Division</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content -->
           <tr>
             <td style="padding: 36px 40px 28px;">
               <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.8; color: #1e293b;">Dear All</p>
@@ -85,18 +119,20 @@ export function generateBatchDistributionEmailHtml(data: BatchEmailPayload): str
             </td>
           </tr>
 
+          <!-- Contact Persons Section -->
           <tr>
             <td style="padding: 0 40px 24px;">
               <p style="margin: 0 0 4px; font-size: 13.5px; line-height: 1.9; color: #1e293b;">
                 Contact Persons: <strong>Rizal Ramdani</strong> - <a href="mailto:rizal@thi.co.id" style="color: #0284c7; text-decoration: none;">rizal@thi.co.id</a> / <strong>Hetty Monalisa</strong> – <a href="mailto:admin.hse@thi.co.id" style="color: #0284c7; text-decoration: none;">admin.hse@thi.co.id</a> / <strong>Kahbil Nazhif Haqiki</strong> - <a href="mailto:qms@thi.co.id" style="color: #0284c7; text-decoration: none;">qms@thi.co.id</a>
               </p>
-              ${data.notes ? `<p style="margin: 12px 0 0; font-size: 13px; color: #64748b; font-style: italic;">${data.notes}</p>` : ''}
+              ${data.notes ? `<p style="margin: 12px 0 0; font-size: 13px; color: #64748b; font-style: italic; background-color: #f8fafc; padding: 10px 14px; border-left: 3px solid #cbd5e1; border-radius: 4px;">${data.notes}</p>` : ''}
             </td>
           </tr>
 
+          <!-- Footer Section -->
           <tr>
-            <td style="background-color: #f8fafc; padding: 20px 40px; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0 0 6px; font-size: 13.5px; color: #475569; line-height: 1.7;">Best Regards,</p>
+            <td style="background-color: #f8fafc; padding: 22px 40px; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0 0 4px; font-size: 13.5px; color: #475569; line-height: 1.6;">Best Regards,</p>
               <p style="margin: 0 0 2px; font-size: 14px; font-weight: 700; color: #071c2c;">Quality Management System</p>
               <p style="margin: 0; font-size: 11px; color: #94a3b8;">PT Taka Hydrocore Indonesia &mdash; QHSE &amp; QMS Division</p>
             </td>
@@ -123,6 +159,8 @@ export function generateDistributionEmailHtml(data: EmailDistributionPayload): s
     category: data.jenisDokumen || 'Corporate Documents',
     distributionType: data.distributionType,
     customSubject: data.customSubject,
+    appOrigin: data.appOrigin,
+    logoUrl: data.logoUrl,
     documents: [
       {
         title: docTitle,
