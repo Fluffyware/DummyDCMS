@@ -655,9 +655,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#071c2c', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {activeUser.name}
                           </div>
-                          <div style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {activeUser.email}
-                          </div>
                         </div>
                       </div>
 
@@ -687,13 +684,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                     {/* Session Security Details */}
                     <div style={{ padding: '10px 16px', borderBottom: '1px solid #f1f5f9' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
-                        <span>Status Sesi</span>
-                        <span style={{ color: '#16a34a', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a' }} />
-                          Terverifikasi
-                        </span>
-                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748b' }}>
                         <span>Username / ID</span>
                         <span style={{ fontFamily: 'var(--font-mono, monospace)', fontWeight: 600, color: '#1e293b' }}>
@@ -704,36 +694,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                     {/* Menu Actions */}
                     <div style={{ padding: '6px' }}>
-                      <button
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          router.push('/dashboard/settings');
-                        }}
-                        style={{
-                          width: '100%',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          padding: '8px 10px',
-                          borderRadius: '6px',
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#334155',
-                          fontSize: '12px',
-                          fontWeight: 500,
-                          cursor: 'pointer',
-                          textAlign: 'left',
-                          transition: 'background 0.12s ease',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
-                      >
-                        <Settings size={14} color="#64748b" />
-                        <span>Pengaturan Akun</span>
-                      </button>
-
-                      <div style={{ margin: '4px 0', borderTop: '1px solid #f1f5f9' }} />
-
                       <button
                         onClick={() => {
                           setAccountMenuOpen(false);

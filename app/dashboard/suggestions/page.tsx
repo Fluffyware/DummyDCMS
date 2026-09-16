@@ -105,10 +105,9 @@ export default function SuggestionsPage() {
     return () => window.removeEventListener('thi_suggestions_updated', handleUpdate);
   }, []);
 
-  // ── Auto-fill user name and dept when user is logged in ──
+  // ── Auto-fill user dept when user is logged in ──
   useEffect(() => {
     if (user) {
-      if (!formNama) setFormNama(user.name || '');
       if (!formDept && user.department) setFormDept(user.department);
     }
   }, [user]);
@@ -157,7 +156,8 @@ export default function SuggestionsPage() {
       // Update local state immediately
       setSuggestions(prev => [created, ...prev.filter(p => p.id !== created.id)]);
 
-      // Reset form (keep name & dept prefilled for convenience)
+      // Reset form
+      setFormNama('');
       setFormJudul('');
       setFormMasalah('');
       setFormIde('');
