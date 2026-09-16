@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Folder,
@@ -13,7 +13,6 @@ import {
   FilePlus,
   Upload,
   AlertCircle,
-  Eye,
   Download,
   Printer,
   Loader2,
@@ -98,94 +97,8 @@ export default function MasterlistPage() {
   const [expandedFolderIds, setExpandedFolderIds] = useState<number[]>([]);
   const [expandedSubFolderIds, setExpandedSubFolderIds] = useState<string[]>([]);
 
-  // Selected document for raw preview modal
-  const [previewDoc, setPreviewDoc] = useState<MasterDocItem | null>(null);
+  // Modal Riwayat Revisi
   const [historyDoc, setHistoryDoc] = useState<MasterDocItem | null>(null);
-  const [docViewerType, setDocViewerType] = useState<'pdf' | 'docx' | 'image' | 'other'>('other');
-  const [docRawUrl, setDocRawUrl] = useState<string | null>(null);
-  const [docLoading, setDocLoading] = useState(false);
-  const [docError, setDocError] = useState<string | null>(null);
-  const docxContainerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!previewDoc) {
-      setDocRawUrl(null);
-      setDocError(null);
-      setDocLoading(false);
-      return;
-    }
-
-    const key = previewDoc.r2Key || (previewDoc.r2Url && previewDoc.r2Url.includes('key=')
-      ? new URL(previewDoc.r2Url, 'http://localhost').searchParams.get('key')
-      : null);
-
-    if (!key) {
-      setDocLoading(false);
-      setDocError('Berkas fisik naskah asli belum diunggah ke server penyimpanan Cloudflare R2.');
-      return;
-    }
-
-    const fileUrl = `/api/r2/view?key=${encodeURIComponent(key)}`;
-    setDocRawUrl(fileUrl);
-    setDocError(null);
-
-    const ext = (previewDoc.fileExt || key.split('.').pop() || '').toLowerCase();
-
-    if (ext === 'pdf') {
-      setDocViewerType('pdf');
-      setDocLoading(false);
-      return;
-    }
-
-    if (ext === 'docx' || ext === 'doc') {
-      setDocViewerType('docx');
-      setDocLoading(true);
-      let isMounted = true;
-
-      (async () => {
-        try {
-          const res = await fetch(fileUrl);
-          if (!res.ok) {
-            throw new Error(`Gagal mengambil berkas Word (${res.status})`);
-          }
-          const arrayBuffer = await res.arrayBuffer();
-          if (!isMounted) return;
-
-          const { renderAsync } = await import('docx-preview');
-          if (docxContainerRef.current && isMounted) {
-            docxContainerRef.current.innerHTML = '';
-            await renderAsync(arrayBuffer, docxContainerRef.current, undefined, {
-              inWrapper: true,
-              ignoreWidth: false,
-              ignoreHeight: false,
-              breakPages: true,
-              renderHeaders: true,
-              renderFooters: true,
-            });
-          }
-        } catch (err: any) {
-          if (isMounted) {
-            setDocError(err.message || 'Gagal merender berkas dokumen Word.');
-          }
-        } finally {
-          if (isMounted) setDocLoading(false);
-        }
-      })();
-
-      return () => {
-        isMounted = false;
-      };
-    }
-
-    if (['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(ext)) {
-      setDocViewerType('image');
-      setDocLoading(false);
-      return;
-    }
-
-    setDocViewerType('other');
-    setDocLoading(false);
-  }, [previewDoc]);
 
   // Modal Tambah Folder
   const [isAddFolderOpen, setIsAddFolderOpen] = useState(false);
@@ -412,10 +325,6 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     showToast(`Mengunduh salinan berkas kendali ${doc.number}...`);
   };
 
-  const handleViewDoc = (doc: MasterDocItem) => {
-    setPreviewDoc(doc);
-  };
-
   // ─── Modal Konfirmasi Hapus (Admin QMS) ───
   const [deleteConfirm, setDeleteConfirm] = useState<{
     type: 'folder' | 'subfolder' | 'document';
@@ -531,10 +440,6 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
 
         setFolders(updated);
         saveMasterFolders(updated);
-
-        if (previewDoc && (previewDoc.id === targetId || previewDoc.number === docNumber)) {
-          setPreviewDoc(null);
-        }
 
         try {
           await fetch('/api/r2/delete', {
@@ -1486,33 +1391,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                                     </span>
                                                   </div>
                                                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <button
-                                                      onClick={() => handleViewDoc(cDoc)}
-                                                      title={`Lihat Dokumen ${cDoc.number}`}
-                                                      style={{
-                                                        background: '#ffffff',
-                                                        border: '1px solid #e2e8f0',
-                                                        borderRadius: '4px',
-                                                        width: '24px',
-                                                        height: '24px',
-                                                        display: 'inline-flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: '#334155',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.15s ease',
-                                                      }}
-                                                      onMouseEnter={e => {
-                                                        e.currentTarget.style.borderColor = '#0284c7';
-                                                        e.currentTarget.style.color = '#0284c7';
-                                                      }}
-                                                      onMouseLeave={e => {
-                                                        e.currentTarget.style.borderColor = '#e2e8f0';
-                                                        e.currentTarget.style.color = '#334155';
-                                                      }}
-                                                    >
-                                                      <Eye size={12} />
-                                                    </button>
+
 
                                                     <button
                                                       onClick={() => setHistoryDoc(cDoc)}
@@ -1673,33 +1552,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                                         </div>
 
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                                          <button
-                                            onClick={() => handleViewDoc(doc)}
-                                            title={`Lihat Dokumen ${doc.number}`}
-                                            style={{
-                                              background: '#ffffff',
-                                              border: '1px solid #e2e8f0',
-                                              borderRadius: '5px',
-                                              width: '26px',
-                                              height: '26px',
-                                              color: '#334155',
-                                              cursor: 'pointer',
-                                              display: 'inline-flex',
-                                              alignItems: 'center',
-                                              justifyContent: 'center',
-                                              transition: 'all 0.15s ease',
-                                            }}
-                                            onMouseEnter={e => {
-                                              e.currentTarget.style.borderColor = '#0284c7';
-                                              e.currentTarget.style.color = '#0284c7';
-                                            }}
-                                            onMouseLeave={e => {
-                                              e.currentTarget.style.borderColor = '#e2e8f0';
-                                              e.currentTarget.style.color = '#334155';
-                                            }}
-                                          >
-                                            <Eye size={13} />
-                                          </button>
+
                                           <button
                                             onClick={() => setHistoryDoc(doc)}
                                             title="Riwayat Revisi"
@@ -1860,33 +1713,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-                              <button
-                                onClick={() => handleViewDoc(doc)}
-                                title={`Lihat Dokumen ${doc.number}`}
-                                style={{
-                                  background: '#ffffff',
-                                  border: '1px solid #e2e8f0',
-                                  borderRadius: '5px',
-                                  width: '26px',
-                                  height: '26px',
-                                  color: '#334155',
-                                  cursor: 'pointer',
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  transition: 'all 0.15s ease',
-                                }}
-                                onMouseEnter={e => {
-                                  e.currentTarget.style.borderColor = '#0284c7';
-                                  e.currentTarget.style.color = '#0284c7';
-                                }}
-                                onMouseLeave={e => {
-                                  e.currentTarget.style.borderColor = '#e2e8f0';
-                                  e.currentTarget.style.color = '#334155';
-                                }}
-                              >
-                                <Eye size={13} />
-                              </button>
+
 
                               <button
                                 onClick={() => setHistoryDoc(doc)}
@@ -2478,260 +2305,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
         </div>
       )}
 
-      {/* ─── Clean Raw Document Preview Modal (No Manual Templates) ─── */}
-      {previewDoc && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(7, 28, 44, 0.72)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '16px',
-          }}
-          onClick={() => setPreviewDoc(null)}
-        >
-          <div
-            style={{
-              background: '#ffffff',
-              borderRadius: '12px',
-              border: '1px solid #cbd5e1',
-              width: '94vw',
-              maxWidth: '1200px',
-              height: '92vh',
-              maxHeight: '960px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)',
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              animation: 'fadeIn 0.18s ease-out',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '12px 20px',
-                borderBottom: '1px solid #e2e8f0',
-                background: '#071c2c',
-                color: '#ffffff',
-                gap: '16px',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                <div style={{ background: '#ffffff', padding: '3px 8px', borderRadius: '4px', display: 'flex', alignItems: 'center' }}>
-                  <img
-                    src="/thi-logo-official.png"
-                    alt="THI Logo"
-                    style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
-                  />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 700, color: '#38bdf8' }}>
-                      {previewDoc.number}
-                    </span>
-                    <span style={{ fontSize: '10.5px', background: 'rgba(56, 189, 248, 0.2)', color: '#38bdf8', padding: '2px 6px', borderRadius: '3px', fontWeight: 700 }}>
-                      {previewDoc.revision}
-                    </span>
-                    <span style={{ fontSize: '10px', background: '#1e293b', color: '#94a3b8', padding: '2px 6px', borderRadius: '3px', fontWeight: 600 }}>
-                      DOKUMEN TERKENDALI
-                    </span>
-                    <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.1)', color: '#cbd5e1', padding: '2px 6px', borderRadius: '3px' }}>
-                      {previewDoc.fileExt?.toUpperCase() || 'BERKAS'}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '13.5px', fontWeight: 600, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                    {previewDoc.title}
-                  </div>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  title="Cetak Naskah Dokumen"
-                  style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    color: '#ffffff',
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.2)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                >
-                  <Printer size={13} />
-                  <span>Cetak</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPreviewDoc(null)}
-                  title="Tutup Pratinjau"
-                  style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: 'none',
-                    color: '#ffffff',
-                    padding: '6px',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.8)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Modal Body: 100% Full View of the Raw Uploaded File */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#f8fafc', display: 'flex', flexDirection: 'column' }}>
-              <style>{`
-                .docx-viewer-container {
-                  width: 100%;
-                  height: 100%;
-                  overflow: auto;
-                  background: #f1f5f9;
-                }
-                .docx-viewer-container .docx-wrapper {
-                  background: #f1f5f9 !important;
-                  padding: 32px 16px !important;
-                }
-                .docx-viewer-container .docx {
-                  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12) !important;
-                  margin: 0 auto 24px auto !important;
-                  background: #ffffff !important;
-                }
-              `}</style>
-
-              {docLoading && (
-                <div style={{ position: 'absolute', inset: 0, background: 'rgba(248, 250, 252, 0.9)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', color: '#64748b' }}>
-                  <Loader2 size={36} className="animate-spin" color="#0284c7" />
-                  <span style={{ fontSize: '13.5px', fontWeight: 600 }}>Memuat naskah dokumen asli...</span>
-                </div>
-              )}
-
-              {docError ? (
-                <div style={{ margin: 'auto', padding: '32px', textAlign: 'center', maxWidth: '480px' }}>
-                  <AlertCircle size={36} color="#dc2626" style={{ margin: '0 auto 12px auto' }} />
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>Berkas Tidak Dapat Ditampilkan</h4>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>{docError}</p>
-                </div>
-              ) : docViewerType === 'pdf' && docRawUrl ? (
-                <iframe
-                  src={docRawUrl}
-                  style={{ width: '100%', height: '100%', border: 'none', background: '#525659' }}
-                  title={previewDoc.title}
-                />
-              ) : docViewerType === 'docx' ? (
-                <div
-                  ref={docxContainerRef}
-                  className="docx-viewer-container"
-                />
-              ) : docViewerType === 'image' && docRawUrl ? (
-                <div style={{ width: '100%', height: '100%', overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#0f172a' }}>
-                  <img src={docRawUrl} alt={previewDoc.title} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }} />
-                </div>
-              ) : docRawUrl ? (
-                <iframe
-                  src={docRawUrl}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  title={previewDoc.title}
-                />
-              ) : null}
-            </div>
-
-            {/* Modal Footer */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 20px',
-                borderTop: '1px solid #e2e8f0',
-                background: '#ffffff',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {isAdmin && (
-                  <button
-                    type="button"
-                    onClick={() => promptDeleteDoc(previewDoc)}
-                    title="Hapus dokumen kendali ini"
-                    style={{
-                      padding: '5px 12px',
-                      borderRadius: '6px',
-                      border: '1px solid #fecaca',
-                      background: '#fef2f2',
-                      fontSize: '11.5px',
-                      fontWeight: 600,
-                      color: '#dc2626',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.background = '#dc2626';
-                      e.currentTarget.style.color = '#ffffff';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.background = '#fef2f2';
-                      e.currentTarget.style.color = '#dc2626';
-                    }}
-                  >
-                    <Trash2 size={12} />
-                    <span>Hapus Dokumen</span>
-                  </button>
-                )}
-                <span style={{ fontSize: '11.5px', color: '#64748b' }}>
-                  Status: <strong style={{ color: '#15803d' }}>{previewDoc.status}</strong> · {previewDoc.classification} · {previewDoc.size}
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setPreviewDoc(null)}
-                  style={{
-                    padding: '6px 18px',
-                    borderRadius: '6px',
-                    border: '1px solid #d1d5db',
-                    background: '#ffffff',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    color: '#334155',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ─── Dedicated Riwayat Revisi Modal ─── */}
       {historyDoc && (
@@ -2858,7 +2432,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                       type="button"
                       onClick={() => {
                         setHistoryDoc(null);
-                        setPreviewDoc(historyDoc);
+                        handleDownloadDoc(historyDoc);
                       }}
                       style={{
                         background: '#ffffff',
@@ -2874,8 +2448,8 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                         gap: '4px',
                       }}
                     >
-                      <Eye size={11} />
-                      <span>Lihat Dokumen</span>
+                      <Download size={11} />
+                      <span>Unduh Berkas</span>
                     </button>
                   </div>
                 </div>
