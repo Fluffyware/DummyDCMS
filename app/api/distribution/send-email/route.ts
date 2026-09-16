@@ -107,6 +107,13 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabaseServer();
       if (supabase) {
         try {
+          const now = new Date();
+          const day = String(now.getDate()).padStart(2, '0');
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+          const dateFormatted = `${day} ${months[now.getMonth()]} ${now.getFullYear()}`;
+          const moPad = String(now.getMonth() + 1).padStart(2, '0');
+          const yrShort = String(now.getFullYear()).slice(-2);
+
           const rowsToInsert = signedDocs.map((doc: any, i: number) => ({
             action: 'DISTRIBUTION',
             entity: 'distribution',
@@ -115,18 +122,18 @@ export async function POST(req: NextRequest) {
             role: user.role,
             type: distributionType || 'NEW_DOC',
             detail: JSON.stringify({
-              id: `dist-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
-              idRegistrasi: doc.number || '-',
-              dept: category || 'Corporate Documents',
-              jenis: category || 'SOP',
-              judul: doc.title,
-              revisi: '00',
-              folder: category || 'Umum',
+              id: doc.id && !doc.id.startsWith('dist-') ? doc.id : `DIS${moPad}${yrShort}.${String(i + 1).padStart(3, '0')}`,
+              idRegistrasi: doc.number || doc.idRegistrasi || '-',
+              dept: doc.dept || department || 'Corporate Documents',
+              jenis: doc.jenis || jenisDokumen || category || 'SOP',
+              judul: doc.title || doc.judul || 'Dokumen Terdistribusi',
+              revisi: doc.revisi || doc.revision || '00',
+              folder: doc.folder || category || 'Umum',
               groupDoc: 'HEAD_OFFICE',
-              fileName: null,
+              fileName: doc.fileName || null,
               fileUrl: doc.fileUrl || null,
               status: 'Released',
-              createdAt: new Date().toISOString(),
+              createdAt: dateFormatted,
               distType: distributionType || 'NEW_DOC',
               recipientEmail: payload.to,
             }),
@@ -212,6 +219,13 @@ export async function POST(req: NextRequest) {
       const supabase = getSupabaseServer();
       if (supabase) {
         try {
+          const now = new Date();
+          const day = String(now.getDate()).padStart(2, '0');
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+          const dateFormatted = `${day} ${months[now.getMonth()]} ${now.getFullYear()}`;
+          const moPad = String(now.getMonth() + 1).padStart(2, '0');
+          const yrShort = String(now.getFullYear()).slice(-2);
+
           await supabase.from('audit_logs').insert([{
             action: 'DISTRIBUTION',
             entity: 'distribution',
@@ -220,7 +234,7 @@ export async function POST(req: NextRequest) {
             role: user.role,
             type: distributionType || 'NEW_DOC',
             detail: JSON.stringify({
-              id: `dist-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              id: `DIS${moPad}${yrShort}.001`,
               idRegistrasi: documentNumber || '-',
               dept: department || 'Operations',
               jenis: jenisDokumen || 'SOP',
@@ -231,7 +245,7 @@ export async function POST(req: NextRequest) {
               fileName: fileName || null,
               fileUrl: payload.fileUrl || null,
               status: 'Released',
-              createdAt: new Date().toISOString(),
+              createdAt: dateFormatted,
               distType: distributionType || 'NEW_DOC',
               recipientEmail: payload.to,
             }),

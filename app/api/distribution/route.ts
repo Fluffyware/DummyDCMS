@@ -32,10 +32,38 @@ export async function GET(_req: NextRequest) {
       try {
         if (row.detail) {
           const parsed = JSON.parse(row.detail);
+
+          // Clean up ID: if it has raw timestamp format like dist-1789532437363-0-1i8u
+          let cleanId = parsed.id;
+          const rawDate = row.created_at || parsed.createdAt;
+          const dateObj = rawDate ? new Date(rawDate) : new Date();
+          const moPad = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const yrShort = String(dateObj.getFullYear()).slice(-2);
+          const seq = String(idx + 1).padStart(3, '0');
+
+          if (!cleanId || cleanId.startsWith('dist-')) {
+            cleanId = `DIS${moPad}${yrShort}.${seq}`;
+          }
+
+          // Clean up date format from raw ISO string
+          let formattedDate = parsed.createdAt || row.created_at;
+          if (formattedDate && (formattedDate.includes('T') || formattedDate.includes('Z'))) {
+            try {
+              const d = new Date(formattedDate);
+              if (!isNaN(d.getTime())) {
+                const day = String(d.getDate()).padStart(2, '0');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                formattedDate = `${day} ${months[d.getMonth()]} ${d.getFullYear()}`;
+              }
+            } catch {
+              // fallback
+            }
+          }
+
           distributions.push({
             no: idx + 1,
-            id: parsed.id || `dist-${row.id}`,
-            idRegistrasi: parsed.idRegistrasi || '-',
+            id: cleanId,
+            idRegistrasi: parsed.idRegistrasi && parsed.idRegistrasi !== '-' ? parsed.idRegistrasi : (parsed.docNumber || '-'),
             dept: parsed.dept || 'Operations',
             jenis: parsed.jenis || 'SOP',
             judul: parsed.judul || 'Dokumen Terdistribusi',
@@ -46,7 +74,7 @@ export async function GET(_req: NextRequest) {
             fileSize: parsed.fileSize || undefined,
             fileUrl: parsed.fileUrl || undefined,
             status: parsed.status || 'Released',
-            createdAt: parsed.createdAt || row.created_at,
+            createdAt: formattedDate,
             distType: parsed.distType || 'NEW_DOC',
           });
         }

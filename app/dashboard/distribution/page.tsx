@@ -79,6 +79,33 @@ const JENIS_OPTIONS_DEFAULT = [
 
 function makeid() { return Math.random().toString(36).slice(2, 9); }
 
+function formatDisplayDate(dateStr?: string | null): string {
+  if (!dateStr) return '-';
+  if (!dateStr.includes('T') && !dateStr.includes('Z')) return dateStr;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    return `${day} ${month} ${year}`;
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatDisplayId(id?: string | null, fallbackSeq?: number): string {
+  if (!id) return `DIS.${String((fallbackSeq || 0) + 1).padStart(3, '0')}`;
+  if (id.startsWith('dist-')) {
+    const now = new Date();
+    const moPad = String(now.getMonth() + 1).padStart(2, '0');
+    const yrShort = String(now.getFullYear()).slice(-2);
+    return `DIS${moPad}${yrShort}.${String((fallbackSeq || 0) + 1).padStart(3, '0')}`;
+  }
+  return id;
+}
+
 function makeEmptyNewDoc(): NewDocEntry {
   return { id: makeid(), selectedFolderId: '', selectedSubFolderId: '', dept: '', jenis: '', docNumber: '', judulDokumen: '', revisiKe: '00', selectedFile: null };
 }
@@ -248,8 +275,13 @@ export default function DistributionPage() {
       }
 
       return {
+        id: entry.id,
         title: titleFormatted,
-        number: entry.idRegistrasi !== '-' ? entry.idRegistrasi : undefined,
+        number: entry.idRegistrasi && entry.idRegistrasi !== '-' ? entry.idRegistrasi : undefined,
+        idRegistrasi: entry.idRegistrasi && entry.idRegistrasi !== '-' ? entry.idRegistrasi : undefined,
+        dept: entry.dept,
+        jenis: entry.jenis,
+        revisi: entry.revisi,
         fileUrl: entry.fileUrl
           ? (entry.fileUrl.startsWith('/') ? `${appOrigin}${entry.fileUrl}` : entry.fileUrl)
           : null,
@@ -370,7 +402,7 @@ export default function DistributionPage() {
           }
 
           const distEntry: DistributionDoc = {
-            no: seqNum, id: formattedId, idRegistrasi: '-', dept: entry.dept, jenis: entry.jenis,
+            no: seqNum, id: formattedId, idRegistrasi: finalDocNumber, dept: entry.dept, jenis: entry.jenis,
             judul: entry.judulDokumen.trim(), revisi: entry.revisiKe.trim() || '00', folder: folderDisplay,
             groupDoc: 'HEAD_OFFICE', fileName: entry.selectedFile ? entry.selectedFile.name : null,
             fileSize: fileSizeFormatted,
@@ -855,7 +887,7 @@ export default function DistributionPage() {
                 return (
                   <tr key={doc.id} style={{ background: isEven ? '#fafcff' : '#fff', borderBottom: '1px solid #f1f5f9', transition: 'background 0.12s' }} onMouseEnter={e => (e.currentTarget.style.background = '#f0f7ff')} onMouseLeave={e => (e.currentTarget.style.background = isEven ? '#fafcff' : '#fff')}>
                     <td style={{ padding: '9px 8px', textAlign: 'center', color: '#94a3b8', fontWeight: 600, fontSize: '11px' }}>{startIndex + idx + 1}</td>
-                    <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#071c2c' }}>{doc.id}</span></td>
+                    <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#071c2c' }}>{formatDisplayId(doc.id, startIndex + idx)}</span></td>
                     <td style={{ padding: '9px 8px' }}><span style={{ fontFamily: 'monospace', fontSize: '11px', color: doc.idRegistrasi !== '-' ? '#0284c7' : '#94a3b8', fontWeight: 600 }}>{doc.idRegistrasi}</span></td>
                     <td style={{ padding: '9px 8px', color: '#0f172a', fontWeight: 500, fontSize: '11.5px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.dept}</td>
                     <td style={{ padding: '9px 8px', color: '#334155', fontSize: '11px', lineHeight: 1.3, wordBreak: 'break-word' }}>{doc.jenis}</td>
@@ -867,7 +899,7 @@ export default function DistributionPage() {
                     <td style={{ padding: '9px 4px', textAlign: 'center' }}>
                       <span style={{ background: '#0284c7', color: '#fff', padding: '2px 7px', borderRadius: '10px', fontSize: '10px', fontWeight: 700 }}>{doc.status}</span>
                     </td>
-                    <td style={{ padding: '9px 8px', textAlign: 'center', color: '#64748b', fontSize: '11px' }}>{doc.createdAt}</td>
+                    <td style={{ padding: '9px 8px', textAlign: 'center', color: '#64748b', fontSize: '11px', whiteSpace: 'nowrap' }}>{formatDisplayDate(doc.createdAt)}</td>
                     <td style={{ padding: '9px 8px', textAlign: 'center' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '2px' }}>
                         <button type="button" title="Buka dokumen di tab baru" onClick={() => { if (doc.fileUrl) window.open(doc.fileUrl, '_blank', 'noopener,noreferrer'); else showToast('Tidak ada URL dokumen yang tersedia.', 'error'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#7c3aed', padding: '3px' }}><Eye size={13} /></button>
