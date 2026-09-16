@@ -12,6 +12,8 @@ import {
   getAllFlattenedDocs,
   loadDistributions,
   DistributionDoc,
+  fetchMasterFoldersFromServer,
+  fetchDistributionsFromServer,
 } from '@/lib/masterlist-data';
 
 interface MasterlistEntry {
@@ -46,6 +48,10 @@ export default function DashboardPage() {
 
     setMasterFolders(loadMasterFolders());
     setDistributions(loadDistributions());
+
+    // Fetch fresh centralized data from Supabase server
+    fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
+    fetchDistributionsFromServer().then(d => setDistributions(d));
 
     const handleSync = () => {
       setMasterFolders(loadMasterFolders());

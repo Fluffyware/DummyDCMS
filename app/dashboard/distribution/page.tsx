@@ -36,6 +36,9 @@ import {
   DistributionDoc,
   loadDistributions,
   saveDistributions,
+  fetchMasterFoldersFromServer,
+  fetchDistributionsFromServer,
+  saveDistributionToServer,
 } from '@/lib/masterlist-data';
 
 export type { DistributionDoc };
@@ -114,8 +117,13 @@ export default function DistributionPage() {
 
   const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
   useEffect(() => {
+    // 1. Instant load from local cache
     setMasterFolders(loadMasterFolders());
     setDistributions(loadDistributions());
+
+    // 2. Fetch centralized fresh data from Supabase
+    fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
+    fetchDistributionsFromServer().then(d => setDistributions(d));
 
     const handleUpdate = () => {
       setDistributions(loadDistributions());
@@ -407,6 +415,8 @@ export default function DistributionPage() {
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
         saveDistributions(updated);
+        saveDistributionToServer(newEntries);
+        fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
         handleResetForm();
         showToast(`${newEntries.length} dokumen baru berhasil didistribusikan!`);
         if (emailResult && emailResult.sent > 0) {
@@ -504,6 +514,8 @@ export default function DistributionPage() {
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
         saveDistributions(updated);
+        saveDistributionToServer(newEntries);
+        fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
         handleResetForm();
         showToast(`${newEntries.length} dokumen revisi berhasil dirilis!`);
         if (emailResult && emailResult.sent > 0) {
@@ -548,6 +560,8 @@ export default function DistributionPage() {
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
         saveDistributions(updated);
+        saveDistributionToServer(newEntries);
+        fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
         handleResetForm();
         showToast(`${newEntries.length} dokumen berhasil diumumkan!`);
         if (emailResult && emailResult.sent > 0) {

@@ -27,6 +27,7 @@ import {
   MasterSubFolder,
   loadMasterFolders,
   saveMasterFolders,
+  fetchMasterFoldersFromServer,
 } from '@/lib/masterlist-data';
 
 type SetupTab = 'folder-dokumen' | 'jenis-dokumen' | 'departemen' | 'user-approval' | 'standar-approval';
@@ -203,6 +204,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMasterFolders(loadMasterFolders());
+    fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
 
     try {
       const savedDocTypes = localStorage.getItem('qms_doc_types');
@@ -426,6 +428,11 @@ export default function SettingsPage() {
     const updated = [...masterFolders, newF];
     setMasterFolders(updated);
     saveMasterFolders(updated);
+    fetch('/api/masterlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create_folder', folder: newF }),
+    }).catch(err => console.warn('Gagal menyimpan folder ke server:', err));
     setExpandedFolderIds(prev => [...prev, nextId]);
     setNewFolderName('');
     setNewFolderDesc('');
@@ -503,6 +510,11 @@ export default function SettingsPage() {
 
     setMasterFolders(updated);
     saveMasterFolders(updated);
+    fetch('/api/masterlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'create_subfolder', subfolder: newSub, folderId: targetFolder.id }),
+    }).catch(err => console.warn('Gagal menyimpan subfolder ke server:', err));
     setExpandedFolderIds(prev => prev.includes(targetFolder.id) ? prev : [...prev, targetFolder.id]);
     setExpandedSubIds(prev => [...prev, subId]);
     setNewSubName('');

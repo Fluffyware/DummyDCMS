@@ -43,6 +43,7 @@ import {
   RevisionLog,
   loadMasterFolders,
   saveMasterFolders,
+  fetchMasterFoldersFromServer,
 } from '@/lib/masterlist-data';
 
 /* ─── Main Masterlist Component ───────────────────────────────── */
@@ -51,13 +52,38 @@ export default function MasterlistPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
-  // Master folders state (stored & persisted in localStorage)
+  // Master folders state (centralized from Supabase database)
   const [folders, setFolders] = useState<MasterFolder[]>([]);
   const [isClientLoaded, setIsClientLoaded] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const refreshFoldersFromServer = async () => {
+    setIsSyncing(true);
+    try {
+      const serverFolders = await fetchMasterFoldersFromServer();
+      setFolders(serverFolders);
+    } catch (err) {
+      console.warn('Gagal memuat masterlist dari server:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   useEffect(() => {
+    // 1. Instant render from local cache to prevent layout shift
     setFolders(loadMasterFolders());
     setIsClientLoaded(true);
+
+    // 2. Fetch authoritative centralized data from Supabase
+    refreshFoldersFromServer();
+
+    const handleSync = () => {
+      setFolders(loadMasterFolders());
+    };
+    window.addEventListener('thi_master_folders_v3', handleSync);
+    return () => {
+      window.removeEventListener('thi_master_folders_v3', handleSync);
+    };
   }, []);
 
   // Search state
@@ -231,6 +257,7 @@ export default function MasterlistPage() {
 
     setFolders(updatedFolders);
     saveMasterFolders(updatedFolders);
+    refreshFoldersFromServer();
 
     // Expand folder and subfolder to show newly added file
     setExpandedFolderIds(prev => prev.includes(docTargetFolder.id) ? prev : [...prev, docTargetFolder.id]);
@@ -453,6 +480,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     } finally {
       setIsDeleting(false);
       setDeleteConfirm(null);
+      refreshFoldersFromServer();
     }
   };
 
@@ -593,7 +621,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
   };
 
   // Handle create new folder
-  const handleCreateFolder = (e: React.FormEvent) => {
+  const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newFolderName.trim()) return;
 
@@ -611,6 +639,17 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     setFolders(updated);
     saveMasterFolders(updated);
     setExpandedFolderIds(prev => [...prev, nextId]);
+
+    try {
+      await fetch('/api/masterlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_folder', folder: newFolder }),
+      });
+      refreshFoldersFromServer();
+    } catch (apiErr) {
+      console.warn('Gagal menyimpan folder ke server:', apiErr);
+    }
 
     setNewFolderName('');
     setNewFolderDesc('');

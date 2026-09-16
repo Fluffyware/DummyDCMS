@@ -228,9 +228,33 @@ export function saveMasterFolders(folders: MasterFolder[]) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(folders));
+    window.dispatchEvent(new Event('thi_master_folders_v3'));
   } catch (err) {
     console.error('Failed to save master folders to localStorage:', err);
   }
+}
+
+/**
+ * Fetches the centralized master folders and active documents from Supabase.
+ * Updates localStorage as local cache for instant zero-flicker loading.
+ */
+export async function fetchMasterFoldersFromServer(): Promise<MasterFolder[]> {
+  try {
+    const res = await fetch('/api/masterlist', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.folders) && data.folders.length > 0) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data.folders));
+          window.dispatchEvent(new Event('thi_master_folders_v3'));
+        }
+        return data.folders;
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal memuat masterlist dari server, beralih ke cache:', err);
+  }
+  return loadMasterFolders();
 }
 
 export interface FlattenedDocItem extends MasterDocItem {
@@ -311,4 +335,45 @@ export function saveDistributions(data: DistributionDoc[]) {
     console.error('Failed to save distributions to localStorage:', err);
   }
 }
+
+/**
+ * Fetches the centralized distribution history from Supabase.
+ */
+export async function fetchDistributionsFromServer(): Promise<DistributionDoc[]> {
+  try {
+    const res = await fetch('/api/distribution', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && Array.isArray(data.distributions)) {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(DISTRIBUTIONS_STORAGE_KEY, JSON.stringify(data.distributions));
+          window.dispatchEvent(new Event('thi_distributions_updated'));
+        }
+        return data.distributions;
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal memuat distribusi dari server, beralih ke cache:', err);
+  }
+  return loadDistributions();
+}
+
+/**
+ * Saves a new distribution record to the server.
+ */
+export async function saveDistributionToServer(item: DistributionDoc | DistributionDoc[]): Promise<boolean> {
+  try {
+    const payload = Array.isArray(item) ? { distributions: item } : { distribution: item };
+    const res = await fetch('/api/distribution', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn('Gagal mengirim catatan distribusi ke server:', err);
+    return false;
+  }
+}
+
 

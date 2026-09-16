@@ -7,6 +7,7 @@ import {
 } from '@/lib/email-service';
 import { getSessionUser } from '@/lib/server-auth';
 import { generateSignedFileToken } from '@/lib/security';
+import { getSupabaseServer } from '@/lib/supabase';
 
 /**
  * Attaches a secure HMAC signed token to document URLs sent via email,
@@ -102,6 +103,40 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Persist distribution history to Supabase audit_logs so all laptops see the distribution
+      const supabase = getSupabaseServer();
+      if (supabase) {
+        try {
+          const rowsToInsert = signedDocs.map((doc: any, i: number) => ({
+            action: 'DISTRIBUTION',
+            entity: 'distribution',
+            user_name: user.name || 'QMS THI',
+            user_email: user.email || null,
+            role: user.role,
+            type: distributionType || 'NEW_DOC',
+            detail: JSON.stringify({
+              id: `dist-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 6)}`,
+              idRegistrasi: doc.number || '-',
+              dept: category || 'Corporate Documents',
+              jenis: category || 'SOP',
+              judul: doc.title,
+              revisi: '00',
+              folder: category || 'Umum',
+              groupDoc: 'HEAD_OFFICE',
+              fileName: null,
+              fileUrl: doc.fileUrl || null,
+              status: 'Released',
+              createdAt: new Date().toISOString(),
+              distType: distributionType || 'NEW_DOC',
+              recipientEmail: payload.to,
+            }),
+          }));
+          await supabase.from('audit_logs').insert(rowsToInsert);
+        } catch (dbErr) {
+          console.warn('Gagal mencatat distribusi batch ke audit_logs:', dbErr);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         provider: result.provider,
@@ -173,12 +208,45 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      provider: result.provider,
-      messageId: result.messageId,
-      message: `Email notifikasi distribusi berhasil dikirim ke ${payload.to}`,
-    });
+      // Persist distribution history to Supabase audit_logs
+      const supabase = getSupabaseServer();
+      if (supabase) {
+        try {
+          await supabase.from('audit_logs').insert([{
+            action: 'DISTRIBUTION',
+            entity: 'distribution',
+            user_name: user.name || 'QMS THI',
+            user_email: user.email || null,
+            role: user.role,
+            type: distributionType || 'NEW_DOC',
+            detail: JSON.stringify({
+              id: `dist-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+              idRegistrasi: documentNumber || '-',
+              dept: department || 'Operations',
+              jenis: jenisDokumen || 'SOP',
+              judul: documentTitle,
+              revisi: revision || '00',
+              folder: department || 'Umum',
+              groupDoc: 'HEAD_OFFICE',
+              fileName: fileName || null,
+              fileUrl: payload.fileUrl || null,
+              status: 'Released',
+              createdAt: new Date().toISOString(),
+              distType: distributionType || 'NEW_DOC',
+              recipientEmail: payload.to,
+            }),
+          }]);
+        } catch (dbErr) {
+          console.warn('Gagal mencatat distribusi ke audit_logs:', dbErr);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        provider: result.provider,
+        messageId: result.messageId,
+        message: `Email notifikasi distribusi berhasil dikirim ke ${payload.to}`,
+      });
   } catch (error: any) {
     console.error('API send-email error:', error);
     return NextResponse.json(
