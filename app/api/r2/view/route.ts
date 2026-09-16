@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { isR2Configured, getR2Client } from '@/lib/r2';
+import { validateDocumentKey, verifySignedFileToken } from '@/lib/security';
+import { getSessionUser } from '@/lib/server-auth';
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'thi-qhsse-documents';
 
@@ -33,9 +35,27 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const key = searchParams.get('key');
+    const token = searchParams.get('token');
 
     if (!key) {
       return NextResponse.json({ error: 'Parameter key berkas diperlukan.' }, { status: 400 });
+    }
+
+    // 1. Validate key to prevent path traversal & unauthorized bucket key access
+    const keyValidation = validateDocumentKey(key);
+    if (!keyValidation.valid) {
+      return NextResponse.json({ error: keyValidation.error }, { status: 400 });
+    }
+
+    // 2. Authorization check: Either active session user or valid HMAC signed token
+    const user = getSessionUser(req);
+    const isTokenValid = verifySignedFileToken(key, token);
+
+    if (!user && !isTokenValid) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Diperlukan sesi login atau token otorisasi dokumen yang sah.' },
+        { status: 401 }
+      );
     }
 
     if (!isR2Configured()) {

@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isR2Configured, deleteObjectFromR2, deleteObjectsByPrefix } from '@/lib/r2';
 import { getSupabaseServer } from '@/lib/supabase';
+import { getSessionUser } from '@/lib/server-auth';
+import { validateDocumentKey } from '@/lib/security';
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Enforce authentication & admin authorization
+    const user = getSessionUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Harap masuk (login) ke sistem terlebih dahulu.' },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== 'admin') {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Hanya Admin QMS yang memiliki izin menghapus berkas atau folder.' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const { docId, docNumber, r2Key, folderId, subFolderId, type } = body;
+
+    // Validate r2Key if supplied to prevent traversal
+    if (r2Key) {
+      const keyValidation = validateDocumentKey(r2Key);
+      if (!keyValidation.valid) {
+        return NextResponse.json({ error: keyValidation.error }, { status: 400 });
+      }
+    }
 
     const supabaseServer = getSupabaseServer();
 

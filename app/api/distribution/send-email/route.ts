@@ -5,14 +5,56 @@ import {
   EmailDistributionPayload,
   BatchEmailPayload,
 } from '@/lib/email-service';
+import { getSessionUser } from '@/lib/server-auth';
+import { generateSignedFileToken } from '@/lib/security';
+
+/**
+ * Attaches a secure HMAC signed token to document URLs sent via email,
+ * allowing recipients to download or view without having an active web portal session.
+ */
+function signDocumentUrl(rawUrl: string | null | undefined): string | null {
+  if (!rawUrl) return null;
+  try {
+    const parsed = new URL(rawUrl, 'http://localhost');
+    const key = parsed.searchParams.get('key');
+    if (key && (parsed.pathname.includes('/api/r2/view') || parsed.pathname.includes('/api/r2/download'))) {
+      const token = generateSignedFileToken(key);
+      parsed.searchParams.set('token', token);
+      if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
+        return parsed.toString();
+      } else {
+        return `${parsed.pathname}?${parsed.searchParams.toString()}`;
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal menandatangani tautan dokumen untuk email:', err);
+  }
+  return rawUrl;
+}
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Enforce authentication & admin authorization
+    const user = getSessionUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Harap masuk (login) ke sistem terlebih dahulu.' },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Hanya Admin QMS yang memiliki izin mendistribusikan dokumen via email.' },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
 
     // ── Batch mode: send one email listing multiple documents ──
     if (body.batch === true && Array.isArray(body.documents)) {
-      const { to, category, documents, distributorName, notes, distributionType, customSubject, appOrigin, logoUrl } = body;
+      const { to, category, documents, notes, distributionType, customSubject, appOrigin, logoUrl } = body;
 
       if (!to) {
         return NextResponse.json(
@@ -28,6 +70,12 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Securely sign all document file URLs for email recipients
+      const signedDocs = documents.map((doc: any) => ({
+        ...doc,
+        fileUrl: signDocumentUrl(doc.fileUrl),
+      }));
+
       const payload: BatchEmailPayload = {
         to: String(to).trim(),
         category: category || 'Corporate Documents',
@@ -35,8 +83,8 @@ export async function POST(req: NextRequest) {
         customSubject: customSubject || undefined,
         appOrigin: appOrigin || undefined,
         logoUrl: logoUrl || undefined,
-        documents,
-        distributorName: distributorName || 'QMS THI',
+        documents: signedDocs,
+        distributorName: user.name || 'QMS THI',
         notes: notes || '',
       };
 
@@ -105,9 +153,9 @@ export async function POST(req: NextRequest) {
       customSubject: customSubject || undefined,
       appOrigin: appOrigin || undefined,
       logoUrl: logoUrl || undefined,
-      fileUrl: fileUrl || null,
+      fileUrl: signDocumentUrl(fileUrl),
       fileName: fileName || null,
-      distributorName: distributorName || 'QMS THI',
+      distributorName: user.name || 'QMS THI',
       notes: notes || '',
     };
 

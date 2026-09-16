@@ -1,13 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isR2Configured, getPresignedDownloadUrl } from '@/lib/r2';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { isR2Configured, getR2Client } from '@/lib/r2';
+import { validateDocumentKey, verifySignedFileToken } from '@/lib/security';
+import { getSessionUser } from '@/lib/server-auth';
+
+const BUCKET_NAME = process.env.R2_BUCKET_NAME || 'thi-qhsse-documents';
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const key = searchParams.get('key');
+    const token = searchParams.get('token');
 
     if (!key) {
       return NextResponse.json({ error: 'Parameter key berkas diperlukan.' }, { status: 400 });
+    }
+
+    // 1. Validate key to prevent path traversal & unauthorized bucket key access
+    const keyValidation = validateDocumentKey(key);
+    if (!keyValidation.valid) {
+      return NextResponse.json({ error: keyValidation.error }, { status: 400 });
+    }
+
+    // 2. Authorization check: Either active session user or valid HMAC signed token
+    const user = getSessionUser(req);
+    const isTokenValid = verifySignedFileToken(key, token);
+
+    if (!user && !isTokenValid) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Diperlukan sesi login atau token otorisasi dokumen yang sah.' },
+        { status: 401 }
+      );
     }
 
     if (!isR2Configured()) {
@@ -17,12 +40,57 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const downloadUrl = await getPresignedDownloadUrl(key, 3600);
-    return NextResponse.redirect(downloadUrl);
+    const client = getR2Client();
+    if (!client) {
+      return NextResponse.json({ error: 'Gagal terhubung ke penyimpanan berkas.' }, { status: 503 });
+    }
+
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: key,
+    });
+
+    const response = await client.send(command);
+
+    if (!response.Body) {
+      return NextResponse.json({ error: 'Berkas tidak ditemukan.' }, { status: 404 });
+    }
+
+    // Convert the readable stream to a Uint8Array
+    const chunks: Uint8Array[] = [];
+    const reader = (response.Body as any).transformToWebStream().getReader();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+    const body = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      body.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    const fileName = key.split('/').pop() ?? key;
+
+    return new NextResponse(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        // attachment forces browser download dialog
+        'Content-Disposition': `attachment; filename="${fileName}"`,
+        'Content-Length': String(body.byteLength),
+        'Cache-Control': 'private, no-cache',
+      },
+    });
   } catch (error: any) {
     console.error('Download error:', error);
+    if (error?.name === 'NoSuchKey' || error?.Code === 'NoSuchKey') {
+      return NextResponse.json({ error: 'Berkas tidak ditemukan di penyimpanan.' }, { status: 404 });
+    }
     return NextResponse.json(
-      { error: error?.message || 'Gagal memproses tautan unduhan.' },
+      { error: error?.message || 'Gagal memproses unduhan berkas.' },
       { status: 500 }
     );
   }

@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isR2Configured, uploadBufferToR2 } from '@/lib/r2';
 import { getSupabaseServer } from '@/lib/supabase';
+import { getSessionUser } from '@/lib/server-auth';
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Enforce authentication
+    const user = getSessionUser(req);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Akses ditolak: Harap masuk (login) ke sistem untuk mengunggah dokumen.' },
+        { status: 401 }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
     const docNumber = (formData.get('docNumber') as string) || '';
@@ -14,7 +24,8 @@ export async function POST(req: NextRequest) {
     const folderId = (formData.get('folderId') as string) || '';
     const subFolderId = (formData.get('subFolderId') as string) || '';
     const subFolderName = (formData.get('subFolderName') as string) || '';
-    const uploader = (formData.get('uploader') as string) || 'QMS';
+    // Use verified user name instead of trusting client-supplied uploader parameter
+    const uploader = user.name || 'QMS';
 
     if (!docNumber || !docTitle) {
       return NextResponse.json(

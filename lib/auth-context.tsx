@@ -28,30 +28,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Restore session from localStorage if present and valid
-    try {
-      const stored = localStorage.getItem('qhsse_demo_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        const matched = ALL_USERS.find(
-          u => u.id === parsed.id || 
-               u.username.toLowerCase() === parsed.username?.toLowerCase() || 
-               u.email.toLowerCase() === parsed.email?.toLowerCase()
-        );
-        if (matched) {
-          setUser(matched);
-        } else {
-          setUser(null);
-          localStorage.removeItem('qhsse_demo_user');
+    // Check real server session on mount
+    const verifyServerSession = async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            setUser(data.user);
+            localStorage.setItem('qhsse_demo_user', JSON.stringify(data.user));
+            setIsLoading(false);
+            return;
+          }
         }
-      } else {
+
+        // If server session is not authenticated, clear any stale client state
         setUser(null);
+        localStorage.removeItem('qhsse_demo_user');
+      } catch (err) {
+        console.warn('Session verification error:', err);
+        setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      setUser(null);
-      localStorage.removeItem('qhsse_demo_user');
-    }
-    setIsLoading(false);
+    };
+
+    verifyServerSession();
   }, []);
 
   const loginAsUser = async (_userId: string): Promise<boolean> => {
@@ -63,57 +65,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     usernameInput: string,
     passwordInput: string
   ): Promise<{ success: boolean; error?: string }> => {
-    await new Promise(r => setTimeout(r, 350));
-    const cleanUser = usernameInput.trim().toLowerCase();
-    const cleanPass = passwordInput.trim();
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          username: usernameInput.trim(),
+          password: passwordInput.trim(),
+        }),
+      });
 
-    // Find matching user by username, email, or department code
-    let target = ALL_USERS.find(
-      u => u.username.toLowerCase() === cleanUser || u.email.toLowerCase() === cleanUser
-    );
+      const data = await res.json();
 
-    // Support code aliases and full department names
-    if (!target) {
-      if (cleanUser === 'rizal') target = ALL_USERS.find(u => u.id === 'admin-rizal');
-      else if (cleanUser === 'khabil') target = ALL_USERS.find(u => u.id === 'admin-khabil');
-      else if (cleanUser === 'gt' || cleanUser === 'geotechnical' || cleanUser === 'geo') target = ALL_USERS.find(u => u.id === 'staff-geo');
-      else if (cleanUser === 'op' || cleanUser === 'operations' || cleanUser === 'ops') target = ALL_USERS.find(u => u.id === 'staff-ops');
-      else if (cleanUser === 'en' || cleanUser === 'engineering' || cleanUser === 'eng') target = ALL_USERS.find(u => u.id === 'staff-eng');
-      else if (cleanUser === 'hr' || cleanUser === 'ga' || cleanUser === 'hr.ga' || cleanUser === 'hr & general affairs') target = ALL_USERS.find(u => u.id === 'staff-hr');
-      else if (cleanUser === 'fa' || cleanUser === 'finance' || cleanUser === 'fin' || cleanUser === 'finance & accounting') target = ALL_USERS.find(u => u.id === 'staff-fin');
-      else if (cleanUser === 'it' || cleanUser === 'information technology') target = ALL_USERS.find(u => u.id === 'staff-it');
-      else if (cleanUser === 'ev' || cleanUser === 'environment' || cleanUser === 'env') target = ALL_USERS.find(u => u.id === 'staff-env');
-      else if (cleanUser === 'cl' || cleanUser === 'commercial' || cleanUser === 'com' || cleanUser === 'commercial & logistics') target = ALL_USERS.find(u => u.id === 'staff-com');
-    }
+      if (res.ok && data.success && data.user) {
+        setUser(data.user);
+        localStorage.setItem('qhsse_demo_user', JSON.stringify(data.user));
+        return { success: true };
+      }
 
-    // Production security: Generic error message for either invalid username or invalid password
-    if (!target || cleanPass !== '12345') {
       return {
         success: false,
-        error: 'Username atau password salah. Silakan periksa kembali.',
+        error: data.error || 'Username atau password salah. Silakan periksa kembali.',
+      };
+    } catch (err: any) {
+      console.error('Login request error:', err);
+      return {
+        success: false,
+        error: 'Terjadi gangguan koneksi saat menghubungi server autentikasi.',
       };
     }
-
-    setUser(target);
-    localStorage.setItem('qhsse_demo_user', JSON.stringify(target));
-    return { success: true };
   };
 
   const login = async (role: UserRole, _email?: string, _password?: string, userId?: string): Promise<boolean> => {
-    await new Promise(r => setTimeout(r, 400));
     let target = userId ? ALL_USERS.find(u => u.id === userId) : null;
     if (!target) {
       target = DEMO_USERS[role] || ALL_USERS[0];
     }
     if (target) {
-      setUser(target);
-      localStorage.setItem('qhsse_demo_user', JSON.stringify(target));
-      return true;
+      const res = await loginWithCredentials(target.username, '12345');
+      return res.success;
     }
     return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+    } catch (err) {
+      console.warn('Logout API error:', err);
+    }
     setUser(null);
     localStorage.removeItem('qhsse_demo_user');
   };

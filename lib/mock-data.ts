@@ -77,11 +77,10 @@ export interface UserProfile {
 }
 
 export const ALL_USERS: UserProfile[] = [
-  // ── 2 Akun QMS (Username: rizal / khabil, Password: 12345) ──
+  // ── 2 Akun QMS (Username: rizal / khabil) ──
   {
     id: 'admin-rizal',
     username: 'rizal',
-    password: '12345',
     name: 'Rizal',
     email: 'rizal@thi.co.id',
     role: 'admin',
@@ -93,7 +92,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'admin-khabil',
     username: 'khabil',
-    password: '12345',
     name: 'Khabil',
     email: 'khabil@thi.co.id',
     role: 'admin',
@@ -103,11 +101,10 @@ export const ALL_USERS: UserProfile[] = [
     avatar: 'KB',
   },
 
-  // ── 1 Akun Tiap Departemen (Staff, Password: 12345) ─────────────
+  // ── 1 Akun Tiap Departemen (Staff) ─────────────
   {
     id: 'staff-geo',
     username: 'GT',
-    password: '12345',
     name: 'Staff Geotechnical',
     email: 'geotechnical@thi.co.id',
     role: 'staff',
@@ -119,7 +116,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'staff-ops',
     username: 'OP',
-    password: '12345',
     name: 'Staff Operations',
     email: 'operations@thi.co.id',
     role: 'staff',
@@ -131,7 +127,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'staff-eng',
     username: 'EN',
-    password: '12345',
     name: 'Staff Engineering',
     email: 'engineering@thi.co.id',
     role: 'staff',
@@ -143,7 +138,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'staff-hr',
     username: 'HR',
-    password: '12345',
     name: 'Staff HR & General Affairs',
     email: 'hr.ga@thi.co.id',
     role: 'staff',
@@ -155,7 +149,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'staff-fin',
     username: 'FA',
-    password: '12345',
     name: 'Staff Finance & Accounting',
     email: 'finance@thi.co.id',
     role: 'staff',
@@ -167,7 +160,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'staff-it',
     username: 'IT',
-    password: '12345',
     name: 'Staff Information Technology',
     email: 'it@thi.co.id',
     role: 'staff',
@@ -179,7 +171,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'staff-env',
     username: 'EV',
-    password: '12345',
     name: 'Staff Environment',
     email: 'environment@thi.co.id',
     role: 'staff',
@@ -191,7 +182,6 @@ export const ALL_USERS: UserProfile[] = [
   {
     id: 'staff-com',
     username: 'CL',
-    password: '12345',
     name: 'Staff Commercial & Logistics',
     email: 'commercial@thi.co.id',
     role: 'staff',
