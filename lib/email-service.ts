@@ -125,7 +125,7 @@ export async function sendBatchDistributionEmail(payload: BatchEmailPayload): Pr
   error?: string;
 }> {
   const htmlContent = generateBatchDistributionEmailHtml(payload);
-  const subject = `[DISTRIBUSI RESMI] New Document for ${payload.category} (${payload.documents.length} file${payload.documents.length > 1 ? 's' : ''})`;
+  const subject = `Taka Hydrocore - Released New Document`;
   return _sendEmail(payload.to, subject, htmlContent);
 }
 
@@ -139,7 +139,7 @@ export async function sendDistributionEmail(payload: EmailDistributionPayload): 
   error?: string;
 }> {
   const htmlContent = generateDistributionEmailHtml(payload);
-  const subject = `[DISTRIBUSI RESMI] ${payload.documentNumber ? payload.documentNumber + ' - ' : ''}${payload.documentTitle} (Rev.${payload.revision || '00'})`;
+  const subject = `Taka Hydrocore - Released New Document`;
   return _sendEmail(payload.to, subject, htmlContent);
 }
 
