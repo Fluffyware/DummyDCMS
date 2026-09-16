@@ -213,9 +213,10 @@ export default function DistributionPage() {
     setErrorMessage('');
   };
 
-  const sendEmails = async (entries: DistributionDoc[], notes: string) => {
-    if (!sendEmailNotification || !recipientEmail.trim()) return;
+  const sendEmails = async (entries: DistributionDoc[], notes: string): Promise<{ sent: number; failed: number; failedAddresses: string[] }> => {
+    if (!sendEmailNotification || !recipientEmail.trim()) return { sent: 0, failed: 0, failedAddresses: [] };
     const emailList = recipientEmail.split(',').map(e => e.trim()).filter(Boolean);
+    if (emailList.length === 0) return { sent: 0, failed: 0, failedAddresses: [] };
 
     // Determine category from jenis of first entry (or use generic label)
     const category = entries[0]?.jenis || 'Corporate Documents';
@@ -227,10 +228,14 @@ export default function DistributionPage() {
       fileUrl: entry.fileUrl || null,
     }));
 
+    let sent = 0;
+    let failed = 0;
+    const failedAddresses: string[] = [];
+
     // Send ONE combined email per recipient
     for (const targetEmail of emailList) {
       try {
-        await fetch('/api/distribution/send-email', {
+        const res = await fetch('/api/distribution/send-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -242,10 +247,22 @@ export default function DistributionPage() {
             notes: notes || emailNotes || '',
           }),
         });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          sent++;
+        } else {
+          failed++;
+          failedAddresses.push(targetEmail);
+          console.error('Email API failed for', targetEmail, data.error || data.message);
+        }
       } catch (err) {
+        failed++;
+        failedAddresses.push(targetEmail);
         console.error('Failed to send email to', targetEmail, err);
       }
     }
+
+    return { sent, failed, failedAddresses };
   };
 
 
@@ -363,13 +380,18 @@ export default function DistributionPage() {
         saveMasterFolders(updatedFolders);
 
         setSubmitStatusText('Mengirimkan notifikasi email batch...');
-        await sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
+        const emailResult = await sendEmails(newEntries, 'Dokumen sistem manajemen terkendali baru telah didistribusikan.');
 
         const updated = [...newEntries, ...distributions].map((item, idx) => ({ ...item, no: idx + 1 }));
         setDistributions(updated);
         saveDistributions(updated);
         handleResetForm();
         showToast(`${newEntries.length} dokumen baru berhasil diunggah ke R2 & didistribusikan!`);
+        if (emailResult && emailResult.sent > 0) {
+          showToast(`Email terkirim ke ${emailResult.sent} penerima!`);
+        } else if (emailResult && emailResult.failed > 0) {
+          showToast(`Distribusi berhasil, tapi email gagal dikirim ke: ${emailResult.failedAddresses.join(', ')}. Cek koneksi SMTP.`, 'error');
+        }
       } catch (err: any) {
         console.error('Distribusi error:', err);
         setErrorMessage(err.message || 'Terjadi kesalahan saat memproses distribusi.');
