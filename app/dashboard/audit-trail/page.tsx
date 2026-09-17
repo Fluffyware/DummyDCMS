@@ -1,7 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { AUDIT_LOGS } from '@/lib/mock-data';
+import { useState, useEffect } from 'react';
+
+interface AuditLog {
+  id: string;
+  action: string;
+  user: string;
+  role: string;
+  entity: string;
+  detail: string;
+  timestamp: string;
+  type: string;
+}
 
 const TYPE_META: Record<string, { icon: string; bg: string; color: string; border: string }> = {
   create:      { icon: '📄', bg: 'var(--blue-bg)',    color: '#2563eb',        border: 'var(--blue-border)'  },
@@ -32,13 +42,34 @@ const ACTION_LABELS: Record<string, string> = {
 const TYPE_OPTIONS = ['All', 'create', 'approve', 'reject', 'publish', 'distribute', 'acknowledge', 'revise', 'archive'];
 
 export default function AuditTrailPage() {
+  const [logs, setLogs]             = useState<AuditLog[]>([]);
+  const [isLoading, setIsLoading]   = useState(true);
   const [search, setSearch]         = useState('');
   const [filterType, setFilterType] = useState('All');
   const [filterUser, setFilterUser] = useState('All');
 
-  const users = ['All', ...Array.from(new Set(AUDIT_LOGS.map(l => l.user)))];
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const res = await fetch('/api/audit-trail?limit=200', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.logs)) {
+            setLogs(data.logs);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch audit logs:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchLogs();
+  }, []);
 
-  const filtered = AUDIT_LOGS.filter(l => {
+  const users = ['All', ...Array.from(new Set(logs.map(l => l.user)))];
+
+  const filtered = logs.filter(l => {
     if (search) {
       const q = search.toLowerCase();
       if (!l.action.toLowerCase().includes(q) && !l.user.toLowerCase().includes(q) &&
@@ -53,7 +84,7 @@ export default function AuditTrailPage() {
     <div className="animate-in">
       <div className="page-header">
         <div>
-          <div className="page-eyebrow">Compliance & Traceability</div>
+          <div className="page-eyebrow">Compliance &amp; Traceability</div>
           <h1 className="page-title">Audit Trail</h1>
           <p className="page-subtitle">Complete, immutable activity log for all document events and user actions.</p>
         </div>
@@ -67,10 +98,10 @@ export default function AuditTrailPage() {
       {/* Stats */}
       <div className="stat-grid stat-grid-4" style={{ marginBottom: 'var(--sp-7)' }}>
         {[
-          { label: 'Total Events',  value: AUDIT_LOGS.length,                                  color: 'var(--navy)' },
-          { label: 'Approvals',     value: AUDIT_LOGS.filter(l => l.type === 'approve').length, color: 'var(--green)' },
-          { label: 'Rejections',    value: AUDIT_LOGS.filter(l => l.type === 'reject').length,  color: 'var(--red)' },
-          { label: 'Publications',  value: AUDIT_LOGS.filter(l => l.type === 'publish').length, color: '#2563eb' },
+          { label: 'Total Events',  value: logs.length,                                  color: 'var(--navy)' },
+          { label: 'Approvals',     value: logs.filter(l => l.type === 'approve').length, color: 'var(--green)' },
+          { label: 'Rejections',    value: logs.filter(l => l.type === 'reject').length,  color: 'var(--red)' },
+          { label: 'Publications',  value: logs.filter(l => l.type === 'publish').length, color: '#2563eb' },
         ].map(s => (
           <div key={s.label} className="stat-card">
             <div className="stat-label">{s.label}</div>
@@ -104,71 +135,78 @@ export default function AuditTrailPage() {
       {/* Timeline */}
       <div className="card">
         <div className="card-body" style={{ padding: 'var(--sp-6)' }}>
-          <div className="timeline">
-            {filtered.map((log, i) => {
-              const meta = TYPE_META[log.type] || TYPE_META.create;
-              return (
-                <div key={log.id} className="timeline-item">
-                  <div className="timeline-track">
-                    <div className="timeline-dot" style={{
-                      background: meta.bg,
-                      borderColor: meta.border,
-                      border: `1.5px solid ${meta.border}`,
-                      color: meta.color,
-                    }}>
-                      {meta.icon}
+          {isLoading ? (
+            <div className="empty-state">
+              <div className="empty-icon">⏳</div>
+              <div className="empty-title">Memuat audit log…</div>
+            </div>
+          ) : (
+            <div className="timeline">
+              {filtered.map((log, i) => {
+                const meta = TYPE_META[log.type] || TYPE_META.create;
+                return (
+                  <div key={log.id} className="timeline-item">
+                    <div className="timeline-track">
+                      <div className="timeline-dot" style={{
+                        background: meta.bg,
+                        borderColor: meta.border,
+                        border: `1.5px solid ${meta.border}`,
+                        color: meta.color,
+                      }}>
+                        {meta.icon}
+                      </div>
+                      {i < filtered.length - 1 && <div className="timeline-line" />}
                     </div>
-                    {i < filtered.length - 1 && <div className="timeline-line" />}
-                  </div>
 
-                  <div className="timeline-body">
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--sp-4)' }}>
-                      <div style={{ flex: 1 }}>
-                        {/* Action pill */}
-                        <span style={{
-                          display: 'inline-block',
-                          fontSize: 10.5, fontWeight: 700, padding: '2px 9px',
-                          borderRadius: 'var(--r-pill)',
-                          background: meta.bg,
-                          color: meta.color,
-                          border: `1px solid ${meta.border}`,
-                          fontFamily: 'var(--font-mono)',
-                          letterSpacing: '0.04em',
-                          marginBottom: 'var(--sp-2)',
-                        }}>
-                          {log.action}
-                        </span>
-                        <div className="timeline-event">
-                          {ACTION_LABELS[log.action] || log.action}
-                        </div>
-                        <div className="timeline-meta">
-                          <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--navy)', fontSize: 12 }}>
-                            {log.entity}
+                    <div className="timeline-body">
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--sp-4)' }}>
+                        <div style={{ flex: 1 }}>
+                          {/* Action pill */}
+                          <span style={{
+                            display: 'inline-block',
+                            fontSize: 10.5, fontWeight: 700, padding: '2px 9px',
+                            borderRadius: 'var(--r-pill)',
+                            background: meta.bg,
+                            color: meta.color,
+                            border: `1px solid ${meta.border}`,
+                            fontFamily: 'var(--font-mono)',
+                            letterSpacing: '0.04em',
+                            marginBottom: 'var(--sp-2)',
+                          }}>
+                            {log.action}
                           </span>
-                          {' '}— {log.detail}
+                          <div className="timeline-event">
+                            {ACTION_LABELS[log.action] || log.action}
+                          </div>
+                          <div className="timeline-meta">
+                            <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--navy)', fontSize: 12 }}>
+                              {log.entity}
+                            </span>
+                            {' '}— {log.detail}
+                          </div>
                         </div>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>{log.user}</div>
-                        <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>{log.role}</div>
-                        <div style={{ fontSize: 11.5, fontFamily: 'var(--font-mono)', color: 'var(--ink-faint)', marginTop: 2 }}>
-                          {log.timestamp}
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--navy)' }}>{log.user}</div>
+                          <div style={{ fontSize: 12, color: 'var(--ink-muted)' }}>{log.role}</div>
+                          <div style={{ fontSize: 11.5, fontFamily: 'var(--font-mono)', color: 'var(--ink-faint)', marginTop: 2 }}>
+                            {log.timestamp}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
 
-            {filtered.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-icon">🔍</div>
-                <div className="empty-title">No events found</div>
-                <div className="empty-sub">Adjust your filters or search terms</div>
-              </div>
-            )}
-          </div>
+              {!isLoading && filtered.length === 0 && (
+                <div className="empty-state">
+                  <div className="empty-icon">🔍</div>
+                  <div className="empty-title">No events found</div>
+                  <div className="empty-sub">Adjust your filters or search terms</div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

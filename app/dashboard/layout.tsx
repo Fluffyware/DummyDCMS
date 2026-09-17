@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
-import { DEMO_USERS, ALL_USERS } from '@/lib/mock-data';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,

@@ -206,47 +206,44 @@ export default function SettingsPage() {
     setMasterFolders(loadMasterFolders());
     fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
 
-    try {
-      const savedDocTypes = localStorage.getItem('qms_doc_types');
-      if (savedDocTypes) {
-        const parsed = JSON.parse(savedDocTypes);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setDocTypes(parsed);
+    // Load doc_types and departments from Supabase via API
+    fetch('/api/settings?key=doc_types')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.value) && data.value.length > 0) {
+          setDocTypes(data.value);
         }
-      }
-    } catch (err) {
-      console.error('Failed to load doc types from storage', err);
-    }
+      })
+      .catch(err => console.error('Failed to load doc types from server', err));
 
-    try {
-      const savedDepts = localStorage.getItem('qms_departments');
-      if (savedDepts) {
-        const parsed = JSON.parse(savedDepts);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setDepartments(parsed);
+    fetch('/api/settings?key=departments')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.value) && data.value.length > 0) {
+          setDepartments(data.value);
         }
-      }
-    } catch (err) {
-      console.error('Failed to load departments from storage', err);
-    }
+      })
+      .catch(err => console.error('Failed to load departments from server', err));
   }, []);
 
   const persistDocTypes = (newTypes: DocTypeItem[]) => {
     setDocTypes(newTypes);
-    try {
-      localStorage.setItem('qms_doc_types', JSON.stringify(newTypes));
-    } catch (err) {
-      console.error('Failed to save doc types', err);
-    }
+    fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ key: 'doc_types', value: newTypes }),
+    }).catch(err => console.error('Failed to save doc types', err));
   };
 
   const persistDepartments = (newDepts: DepartmentItem[]) => {
     setDepartments(newDepts);
-    try {
-      localStorage.setItem('qms_departments', JSON.stringify(newDepts));
-    } catch (err) {
-      console.error('Failed to save departments', err);
-    }
+    fetch('/api/settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ key: 'departments', value: newDepts }),
+    }).catch(err => console.error('Failed to save departments', err));
   };
 
   // ── Jenis Dokumen Handlers ──

@@ -1,8 +1,21 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { APPROVAL_QUEUE, ApprovalItem } from '@/lib/mock-data';
+import { getAllFlattenedDocs, fetchMasterFoldersFromServer } from '@/lib/masterlist-data';
+
+interface ApprovalItem {
+  id: string;
+  docNumber: string;
+  title: string;
+  submittedBy: string;
+  department: string;
+  revision: string;
+  submittedAt: string;
+  daysWaiting: number;
+  type: string;
+  r2Url?: string;
+}
 import {
   FileText,
   UploadCloud,
@@ -26,14 +39,15 @@ interface UploadedDoc {
 }
 
 export default function ApprovalPage() {
-  const { user, login } = useAuth();
+  const { user } = useAuth();
   const [selected, setSelected]         = useState<string | null>(null);
   const [comment, setComment]           = useState('');
   const [approved, setApproved]         = useState<string[]>([]);
   const [rejected, setRejected]         = useState<string[]>([]);
   const [showReject, setShowReject]     = useState(false);
   const [rejectReason, setRejectReason] = useState('');
-  const [queue, setQueue]               = useState<ApprovalItem[]>(APPROVAL_QUEUE);
+  const [queue, setQueue]               = useState<ApprovalItem[]>([]);
+  const [isLoadingQueue, setIsLoadingQueue] = useState(true);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [previewDoc, setPreviewDoc]     = useState<ApprovalItem | null>(null);
   const [uploadedFiles, setUploadedFiles] = useState<Record<string, UploadedDoc>>({});
@@ -43,7 +57,30 @@ export default function ApprovalPage() {
   const isAdmin = user?.role === 'admin';
   const selectedDoc = queue.find(d => d.id === selected);
 
-  // File Upload Handlers
+  // Fetch DRAFT documents as approval queue from Supabase via masterlist API
+  useEffect(() => {
+    fetchMasterFoldersFromServer().then(folders => {
+      const allDocs = getAllFlattenedDocs(folders);
+      const drafts = allDocs
+        .filter(d => d.status === 'DRAFT')
+        .map((d, idx) => ({
+          id: d.id,
+          docNumber: d.number || `DOC-${String(idx + 1).padStart(3, '0')}`,
+          title: d.title,
+          submittedBy: 'Staff',
+          department: d.subFolderName || d.folderName || '-',
+          revision: d.revision || 'Rev.00',
+          submittedAt: d.effectiveDate || '-',
+          daysWaiting: 1,
+          type: d.type || 'SOP',
+          r2Url: d.r2Url,
+        }));
+      setQueue(drafts);
+      setIsLoadingQueue(false);
+    }).catch(() => setIsLoadingQueue(false));
+  }, []);
+
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !selected) return;
     const file = e.target.files[0];

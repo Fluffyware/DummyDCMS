@@ -311,29 +311,14 @@ export interface DistributionDoc {
 export const DISTRIBUTIONS_STORAGE_KEY = 'thi_distributions_v2';
 
 export function loadDistributions(): DistributionDoc[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(DISTRIBUTIONS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error('Failed to load distributions from localStorage:', err);
-  }
+  // Distributions are now served exclusively from Supabase via /api/distribution
+  // This function returns empty array — use fetchDistributionsFromServer() instead
   return [];
 }
 
-export function saveDistributions(data: DistributionDoc[]) {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(DISTRIBUTIONS_STORAGE_KEY, JSON.stringify(data));
-    window.dispatchEvent(new Event('thi_distributions_updated'));
-  } catch (err) {
-    console.error('Failed to save distributions to localStorage:', err);
-  }
+export function saveDistributions(_data: DistributionDoc[]) {
+  // No-op: distributions are persisted via POST /api/distribution to Supabase
+  // localStorage is no longer used for distribution data
 }
 
 /**
@@ -345,18 +330,15 @@ export async function fetchDistributionsFromServer(): Promise<DistributionDoc[]>
     if (res.ok) {
       const data = await res.json();
       if (data.success && Array.isArray(data.distributions)) {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(DISTRIBUTIONS_STORAGE_KEY, JSON.stringify(data.distributions));
-          window.dispatchEvent(new Event('thi_distributions_updated'));
-        }
         return data.distributions;
       }
     }
   } catch (err) {
-    console.warn('Gagal memuat distribusi dari server, beralih ke cache:', err);
+    console.warn('Gagal memuat distribusi dari server:', err);
   }
-  return loadDistributions();
+  return [];
 }
+
 
 /**
  * Saves a new distribution record to the server.

@@ -22,16 +22,20 @@ function signDocumentUrl(rawUrl: string | null | undefined): string | null {
       const token = generateSignedFileToken(key);
       parsed.searchParams.set('token', token);
       if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://')) {
-        return parsed.toString();
+        return `${parsed.toString()}#toolbar=0`;
       } else {
-        return `${parsed.pathname}?${parsed.searchParams.toString()}`;
+        return `${parsed.pathname}?${parsed.searchParams.toString()}#toolbar=0`;
       }
     }
   } catch (err) {
     console.warn('Gagal menandatangani tautan dokumen untuk email:', err);
   }
+  if (rawUrl && !rawUrl.includes('#toolbar=')) {
+    return `${rawUrl}#toolbar=0`;
+  }
   return rawUrl;
 }
+
 
 export async function POST(req: NextRequest) {
   try {

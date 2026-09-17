@@ -143,6 +143,8 @@ export default function DistributionPage() {
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   const [masterFolders, setMasterFolders] = useState<MasterFolder[]>([]);
+  const [deptOptions, setDeptOptions] = useState<string[]>(DEPT_OPTIONS_DEFAULT);
+  const [jenisOptions, setJenisOptions] = useState<string[]>(JENIS_OPTIONS_DEFAULT);
   useEffect(() => {
     // 1. Instant load from local cache
     setMasterFolders(loadMasterFolders());
@@ -158,6 +160,26 @@ export default function DistributionPage() {
     };
     window.addEventListener('thi_distributions_updated', handleUpdate);
     window.addEventListener('thi_master_folders_v3', handleUpdate);
+
+    // Fetch dept & jenis options from Supabase via settings API
+    fetch('/api/settings?key=departments')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.value) && data.value.length > 0) {
+          setDeptOptions(data.value.map((d: { name: string }) => d.name));
+        }
+      })
+      .catch(() => {/* fallback to default */});
+
+    fetch('/api/settings?key=doc_types')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.value) && data.value.length > 0) {
+          setJenisOptions(data.value.map((j: { name: string }) => j.name));
+        }
+      })
+      .catch(() => {/* fallback to default */});
+
     return () => {
       window.removeEventListener('thi_distributions_updated', handleUpdate);
       window.removeEventListener('thi_master_folders_v3', handleUpdate);
@@ -166,23 +188,8 @@ export default function DistributionPage() {
 
   const flattenedDocs = useMemo(() => getAllFlattenedDocs(masterFolders), [masterFolders]);
 
-  const DEPT_OPTIONS = useMemo(() => {
-    if (typeof window === 'undefined') return DEPT_OPTIONS_DEFAULT;
-    try {
-      const raw = localStorage.getItem('qms_departments');
-      if (raw) { const p = JSON.parse(raw); if (Array.isArray(p) && p.length > 0) return p.map((d: { name: string }) => d.name); }
-    } catch {}
-    return DEPT_OPTIONS_DEFAULT;
-  }, []);
-
-  const JENIS_OPTIONS = useMemo(() => {
-    if (typeof window === 'undefined') return JENIS_OPTIONS_DEFAULT;
-    try {
-      const raw = localStorage.getItem('qms_doc_types');
-      if (raw) { const p = JSON.parse(raw); if (Array.isArray(p) && p.length > 0) return p.map((j: { name: string }) => j.name); }
-    } catch {}
-    return JENIS_OPTIONS_DEFAULT;
-  }, []);
+  const DEPT_OPTIONS = deptOptions;
+  const JENIS_OPTIONS = jenisOptions;
 
   const [distMode, setDistMode] = useState<'NEW_DOC' | 'REVISION_UPDATE' | 'ANNOUNCEMENT'>('NEW_DOC');
   const [newDocEntries, setNewDocEntries] = useState<NewDocEntry[]>([makeEmptyNewDoc()]);

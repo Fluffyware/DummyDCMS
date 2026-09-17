@@ -1,7 +1,21 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { UserProfile, UserRole, ALL_USERS, DEMO_USERS } from './mock-data';
+
+// Only import types from mock-data — never the user arrays (would leak to client bundle)
+export type UserRole = 'staff' | 'admin';
+
+export interface UserProfile {
+  id: string;
+  username: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  roleName?: string;
+  department: string;
+  position: string;
+  avatar: string;
+}
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -20,7 +34,7 @@ const AuthContext = createContext<AuthContextType>({
   loginAsUser: async () => false,
   loginWithCredentials: async () => ({ success: false }),
   logout: () => {},
-  availableUsers: ALL_USERS,
+  availableUsers: [],
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -28,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check real server session on mount
+    // Verify server session on mount — this is the single source of truth
     const verifyServerSession = async () => {
       try {
         const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
@@ -36,15 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const data = await res.json();
           if (data.authenticated && data.user) {
             setUser(data.user);
-            localStorage.setItem('qhsse_demo_user', JSON.stringify(data.user));
             setIsLoading(false);
             return;
           }
         }
-
-        // If server session is not authenticated, clear any stale client state
         setUser(null);
-        localStorage.removeItem('qhsse_demo_user');
       } catch (err) {
         console.warn('Session verification error:', err);
         setUser(null);
@@ -57,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const loginAsUser = async (_userId: string): Promise<boolean> => {
-    // In production, switching accounts directly without password is disabled for security
+    // Direct account switching without password is disabled in production
     return false;
   };
 
@@ -80,7 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (res.ok && data.success && data.user) {
         setUser(data.user);
-        localStorage.setItem('qhsse_demo_user', JSON.stringify(data.user));
         return { success: true };
       }
 
@@ -97,16 +106,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (role: UserRole, _email?: string, _password?: string, userId?: string): Promise<boolean> => {
-    let target = userId ? ALL_USERS.find(u => u.id === userId) : null;
-    if (!target) {
-      target = DEMO_USERS[role] || ALL_USERS[0];
-    }
-    if (target) {
-      const res = await loginWithCredentials(target.username, '12345');
-      return res.success;
-    }
-    return false;
+  const login = async (role: UserRole, _email?: string, _password?: string, _userId?: string): Promise<boolean> => {
+    // In production, use loginWithCredentials with real credentials
+    // This fallback only for backward compat
+    const defaultCreds: Record<UserRole, string> = { admin: 'rizal', staff: 'GT' };
+    const res = await loginWithCredentials(defaultCreds[role] || 'rizal', '12345');
+    return res.success;
   };
 
   const logout = async () => {
@@ -116,11 +121,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.warn('Logout API error:', err);
     }
     setUser(null);
-    localStorage.removeItem('qhsse_demo_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, loginAsUser, loginWithCredentials, logout, availableUsers: ALL_USERS }}>
+    <AuthContext.Provider value={{ user, isLoading, login, loginAsUser, loginWithCredentials, logout, availableUsers: [] }}>
       {children}
     </AuthContext.Provider>
   );

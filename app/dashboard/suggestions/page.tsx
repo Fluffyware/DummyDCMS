@@ -25,14 +25,22 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import {
-  Suggestion,
-  loadSuggestions,
-  addSuggestion,
-  updateSuggestionStatus,
-  deleteSuggestion,
-  syncWithSupabase,
-} from '@/lib/suggestions-data';
+
+/* Suggestion type (server response shape) */
+export interface Suggestion {
+  id: string;
+  supabaseId?: string;
+  nama: string;
+  dept: string;
+  judul: string;
+  masalah: string;
+  idePerbaikan: string;
+  foto: string | null;
+  fotoName: string | null;
+  status: 'Baru' | 'Ditinjau' | 'Diterima' | 'Ditolak';
+  createdAt: string;
+  userId?: string;
+}
 
 /* ─── Department options ─────────────────────────────────────── */
 const DEPT_OPTIONS = [
@@ -84,25 +92,22 @@ export default function SuggestionsPage() {
   const [filterStatus, setFilterStatus] = useState('Semua');
   const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null);
 
-  // ── Initial Load & Synchronization ──
+  // ── Initial Load: fetch from API (Supabase as source of truth) ──
   useEffect(() => {
-    // 1. Immediate load from localStorage
-    const local = loadSuggestions();
-    setSuggestions(local);
-
-    // 2. Background sync with Supabase
-    syncWithSupabase().then(synced => {
-      if (synced && synced.length > 0) {
-        setSuggestions(synced);
+    const fetchSuggestions = async () => {
+      try {
+        const res = await fetch('/api/suggestions', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.suggestions)) {
+            setSuggestions(data.suggestions);
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch suggestions:', err);
       }
-    });
-
-    // 3. Listen for changes from other tabs/actions
-    const handleUpdate = () => {
-      setSuggestions(loadSuggestions());
     };
-    window.addEventListener('thi_suggestions_updated', handleUpdate);
-    return () => window.removeEventListener('thi_suggestions_updated', handleUpdate);
+    fetchSuggestions();
   }, []);
 
   // ── Auto-fill user dept when user is logged in ──
@@ -141,20 +146,27 @@ export default function SuggestionsPage() {
     setIsSubmitting(true);
 
     try {
-      const created = await addSuggestion({
-        nama: formNama.trim(),
-        dept: formDept,
-        judul: formJudul.trim(),
-        masalah: formMasalah.trim(),
-        idePerbaikan: formIde.trim(),
-        foto: formFoto,
-        fotoName: formFotoName,
-        status: 'Baru',
-        userId: user?.id || 'staff',
+      const res = await fetch('/api/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          nama: formNama.trim(),
+          dept: formDept,
+          judul: formJudul.trim(),
+          masalah: formMasalah.trim(),
+          idePerbaikan: formIde.trim(),
+          fotoName: formFotoName,
+          userId: user?.id || 'staff',
+        }),
       });
 
-      // Update local state immediately
-      setSuggestions(prev => [created, ...prev.filter(p => p.id !== created.id)]);
+      if (!res.ok) throw new Error('Server error');
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Failed');
+
+      // Prepend the new suggestion to local state immediately
+      setSuggestions(prev => [data.suggestion, ...prev]);
 
       // Reset form
       setFormNama('');
@@ -166,32 +178,56 @@ export default function SuggestionsPage() {
       setFormErrors({});
       setSubmitSuccess(true);
 
-      // Switch to history tab after short feedback
       setTimeout(() => {
         setSubmitSuccess(false);
         setActiveTab('history');
       }, 1200);
     } catch (err) {
       console.error('Error adding suggestion:', err);
+      alert('Gagal menyimpan saran. Coba lagi.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleStatusChange = async (id: string, newStatus: Suggestion['status']) => {
-    const updated = await updateSuggestionStatus(id, newStatus);
-    setSuggestions(updated);
-    if (selectedSuggestion?.id === id) {
-      setSelectedSuggestion(prev => prev ? { ...prev, status: newStatus } : null);
+    const item = suggestions.find(s => s.id === id);
+    if (!item?.supabaseId) return;
+
+    try {
+      const res = await fetch('/api/suggestions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ supabaseId: item.supabaseId, status: newStatus }),
+      });
+      if (res.ok) {
+        setSuggestions(prev => prev.map(s => s.id === id ? { ...s, status: newStatus } : s));
+        if (selectedSuggestion?.id === id) {
+          setSelectedSuggestion(prev => prev ? { ...prev, status: newStatus } : null);
+        }
+      }
+    } catch (err) {
+      console.warn('Status update error:', err);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Apakah Anda yakin ingin menghapus usulan saran ini?')) return;
-    const updated = await deleteSuggestion(id);
-    setSuggestions(updated);
-    if (selectedSuggestion?.id === id) {
-      setSelectedSuggestion(null);
+    const item = suggestions.find(s => s.id === id);
+    if (!item?.supabaseId) return;
+
+    try {
+      const res = await fetch(`/api/suggestions?id=${item.supabaseId}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      if (res.ok) {
+        setSuggestions(prev => prev.filter(s => s.id !== id));
+        if (selectedSuggestion?.id === id) setSelectedSuggestion(null);
+      }
+    } catch (err) {
+      console.warn('Delete error:', err);
     }
   };
 
