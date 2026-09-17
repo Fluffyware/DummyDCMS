@@ -148,31 +148,71 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#071c2c',
-          color: '#ffffff',
-          gap: '14px',
+          background: '#ffffff',
+          gap: 0,
         }}
       >
+        <style suppressHydrationWarning>{`
+          @keyframes taka-spin {
+            0%   { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes taka-fade-in {
+            0%   { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+          }
+        `}</style>
+
         <div
           suppressHydrationWarning
           style={{
-            width: '36px',
-            height: '36px',
-            border: '3px solid rgba(255,255,255,0.15)',
-            borderTopColor: '#38bdf8',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
+            animation: 'taka-fade-in 0.5s ease both',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 28,
           }}
-        />
-        <p
-          suppressHydrationWarning
-          style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: 500, margin: 0 }}
         >
-          Memverifikasi sesi &amp; hak akses...
-        </p>
+          {/* Logo Taka */}
+          <div style={{ position: 'relative', width: 200, height: 80 }}>
+            <img
+              src="/thi-center-logo.png"
+              alt="Taka Hydrocore Indonesia"
+              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+            />
+          </div>
+
+          {/* Spinner ring */}
+          <div suppressHydrationWarning style={{ position: 'relative', width: 44, height: 44 }}>
+            {/* Track */}
+            <div
+              suppressHydrationWarning
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '3px solid rgba(7, 28, 44, 0.10)',
+              }}
+            />
+            {/* Spinner aktif */}
+            <div
+              suppressHydrationWarning
+              style={{
+                position: 'absolute',
+                inset: 0,
+                borderRadius: '50%',
+                border: '3px solid transparent',
+                borderTopColor: '#30256f',
+                borderRightColor: 'rgba(48, 37, 111, 0.35)',
+                animation: 'taka-spin 0.85s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite',
+              }}
+            />
+          </div>
+        </div>
       </div>
     );
   }
+
 
   const activeUser = user;
   const navKeys  = ROLE_NAV[activeUser?.role] || ROLE_NAV.admin;
