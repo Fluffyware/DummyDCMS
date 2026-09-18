@@ -54,12 +54,13 @@ export default function HomePage() {
           }}
         >
           {/* Logo Taka */}
-          <div style={{ position: 'relative', width: 200, height: 80 }}>
+          <div style={{ position: 'relative', width: 260, display: 'flex', justifyContent: 'center' }}>
             <Image
               src="/thi-center-logo.png"
               alt="Taka Hydrocore Indonesia"
-              fill
-              style={{ objectFit: 'contain' }}
+              width={380}
+              height={108}
+              style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
               priority
             />
           </div>

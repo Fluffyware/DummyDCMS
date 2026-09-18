@@ -173,11 +173,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           }}
         >
           {/* Logo Taka */}
-          <div style={{ position: 'relative', width: 200, height: 80 }}>
+          <div style={{ position: 'relative', width: 260, display: 'flex', justifyContent: 'center' }}>
             <img
               src="/thi-center-logo.png"
               alt="Taka Hydrocore Indonesia"
-              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              style={{ width: '100%', height: 'auto', objectFit: 'contain' }}
             />
           </div>
 

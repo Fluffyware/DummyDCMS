@@ -209,19 +209,19 @@ export const INITIAL_MASTER_FOLDERS: MasterFolder[] = [
 const STORAGE_KEY = 'thi_master_folders_v3';
 
 export function loadMasterFolders(): MasterFolder[] {
-  if (typeof window === 'undefined') return INITIAL_MASTER_FOLDERS;
+  if (typeof window === 'undefined') return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
+      if (Array.isArray(parsed)) {
         return parsed;
       }
     }
   } catch (err) {
     console.error('Failed to load master folders from localStorage:', err);
   }
-  return INITIAL_MASTER_FOLDERS;
+  return [];
 }
 
 export function saveMasterFolders(folders: MasterFolder[]) {
@@ -243,7 +243,7 @@ export async function fetchMasterFoldersFromServer(): Promise<MasterFolder[]> {
     const res = await fetch('/api/masterlist', { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      if (data.success && Array.isArray(data.folders) && data.folders.length > 0) {
+      if (data.success && Array.isArray(data.folders)) {
         if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data.folders));
           window.dispatchEvent(new Event('thi_master_folders_v3'));
