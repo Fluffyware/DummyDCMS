@@ -404,7 +404,8 @@ export default function DistributionPage() {
                 if (uploadData.document.file_size) fileSizeFormatted = uploadData.document.file_size;
               }
             } else {
-              console.warn('R2 upload warning:', await uploadRes.text());
+              const errorData = await uploadRes.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Gagal mengunggah berkas dokumen ke server.');
             }
           }
 
@@ -422,7 +423,7 @@ export default function DistributionPage() {
             revision: `Rev.${entry.revisiKe.trim() || '00'}`, effectiveDate: dateStr, reviewDate: '01 Jan 2027',
             status: 'CURRENT', classification: 'INTERNAL', type: entry.jenis,
             size: entry.selectedFile ? `${(entry.selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : '—',
-            fileExt: entry.selectedFile ? entry.selectedFile.name.split('.').pop()?.toLowerCase() || 'pdf' : 'pdf',
+            fileExt: (entry.selectedFile ? entry.selectedFile.name.split('.').pop()?.toLowerCase() || 'pdf' : 'pdf') as 'pdf' | 'docx' | 'xlsx',
             r2Key: uploadedR2Key,
             r2Url: uploadedR2Url,
           };
@@ -507,6 +508,9 @@ export default function DistributionPage() {
             formData.append('docType', existingDoc.type || 'SOP');
             formData.append('docRevision', revDisplay);
             formData.append('docClassification', existingDoc.classification || 'INTERNAL');
+            if (existingDoc.folderId) formData.append('folderId', String(existingDoc.folderId));
+            if (existingDoc.subFolderId) formData.append('subFolderId', existingDoc.subFolderId);
+            if (existingDoc.subFolderName) formData.append('subFolderName', existingDoc.subFolderName);
             formData.append('uploader', user?.name || 'QMS');
 
             const uploadRes = await fetch('/api/r2/upload', {
@@ -520,6 +524,9 @@ export default function DistributionPage() {
                 uploadedR2Url = uploadData.document.r2_url || undefined;
                 if (uploadData.document.file_size) fileSizeFormatted = uploadData.document.file_size;
               }
+            } else {
+              const errorData = await uploadRes.json().catch(() => ({}));
+              throw new Error(errorData.error || 'Gagal mengunggah berkas revisi ke server.');
             }
           }
 

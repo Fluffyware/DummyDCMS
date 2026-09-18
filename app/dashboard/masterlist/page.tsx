@@ -106,6 +106,11 @@ export default function MasterlistPage() {
   const [newFolderCategory, setNewFolderCategory] = useState<'HEAD_OFFICE' | 'OFFSHORE' | 'PROJECT_SITE'>('HEAD_OFFICE');
   const [newFolderDesc, setNewFolderDesc] = useState('');
 
+  // Modal Tambah Sub-folder
+  const [isAddSubFolderOpen, setIsAddSubFolderOpen] = useState(false);
+  const [subFolderTargetFolder, setSubFolderTargetFolder] = useState<MasterFolder | null>(null);
+  const [newSubFolderName, setNewSubFolderName] = useState('');
+
   // Modal Tambah Dokumen Langsung (Admin Only)
   const [isAddDocOpen, setIsAddDocOpen] = useState(false);
   const [docTargetFolder, setDocTargetFolder] = useState<MasterFolder | null>(null);
@@ -184,15 +189,23 @@ export default function MasterlistPage() {
         body: formData,
       });
 
-      if (uploadRes.ok) {
-        const uploadData = await uploadRes.json();
-        if (uploadData.document) {
-          uploadedR2Key = uploadData.document.r2_key || undefined;
-          uploadedR2Url = uploadData.document.r2_url || undefined;
-        }
+      if (!uploadRes.ok) {
+        const errorData = await uploadRes.json().catch(() => ({}));
+        showToast(errorData.error || 'Gagal mengunggah dokumen ke server. Pastikan Anda telah login.', 'error');
+        setIsUploading(false);
+        return;
       }
-    } catch (err) {
-      console.warn('R2/Supabase upload skipped (running in offline/demo mode):', err);
+
+      const uploadData = await uploadRes.json();
+      if (uploadData.document) {
+        uploadedR2Key = uploadData.document.r2_key || undefined;
+        uploadedR2Url = uploadData.document.r2_url || undefined;
+      }
+    } catch (err: any) {
+      console.error('Upload handler error:', err);
+      showToast(err?.message || 'Gagal mengunggah berkas ke server.', 'error');
+      setIsUploading(false);
+      return;
     } finally {
       setIsUploading(false);
     }
@@ -272,9 +285,11 @@ export default function MasterlistPage() {
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (msg: string) => {
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+    setToastType(type);
+    setTimeout(() => setToastMessage(null), 4000);
   };
 
   // ─── Real Download Handler ───
@@ -638,6 +653,58 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
     showToast(`Folder "${newFolder.name}" berhasil dibuat!`);
   };
 
+  // Open create subfolder modal
+  const openAddSubFolderModal = (folder: MasterFolder) => {
+    setSubFolderTargetFolder(folder);
+    setNewSubFolderName('');
+    setIsAddSubFolderOpen(true);
+  };
+
+  // Handle create subfolder
+  const handleCreateSubFolder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSubFolderName.trim() || !subFolderTargetFolder) return;
+
+    const subId = `sub-${subFolderTargetFolder.id}-${Date.now().toString().slice(-4)}`;
+    const newSub: MasterSubFolder = {
+      id: subId,
+      name: newSubFolderName.trim(),
+      docs: [],
+      subfolders: [],
+    };
+
+    const updated = folders.map(f => {
+      if (f.id === subFolderTargetFolder.id) {
+        return {
+          ...f,
+          subfolders: [...(f.subfolders || []), newSub],
+        };
+      }
+      return f;
+    });
+
+    setFolders(updated);
+    saveMasterFolders(updated);
+    setExpandedFolderIds(prev => prev.includes(subFolderTargetFolder.id) ? prev : [...prev, subFolderTargetFolder.id]);
+    setExpandedSubFolderIds(prev => [...prev, subId]);
+
+    try {
+      await fetch('/api/masterlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_subfolder', subfolder: newSub, folderId: subFolderTargetFolder.id }),
+      });
+      refreshFoldersFromServer();
+    } catch (apiErr) {
+      console.warn('Gagal menyimpan subfolder ke server:', apiErr);
+    }
+
+    setNewSubFolderName('');
+    setIsAddSubFolderOpen(false);
+    setSubFolderTargetFolder(null);
+    showToast(`Sub-folder "${newSub.name}" berhasil ditambahkan ke "${subFolderTargetFolder.name}"!`);
+  };
+
 
 
   return (
@@ -653,7 +720,7 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
             top: '74px',
             right: '24px',
             zIndex: 9999,
-            background: '#071c2c',
+            background: toastType === 'error' ? '#7f1d1d' : '#071c2c',
             color: '#ffffff',
             padding: '12px 20px',
             borderRadius: '8px',
@@ -663,11 +730,15 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
             gap: '10px',
             fontSize: '13px',
             fontWeight: 500,
-            borderLeft: '4px solid #0284c7',
+            borderLeft: toastType === 'error' ? '4px solid #ef4444' : '4px solid #0284c7',
             animation: 'fadeIn 0.2s ease-out',
           }}
         >
-          <CheckCircle2 size={16} color="#38bdf8" />
+          {toastType === 'error' ? (
+            <AlertCircle size={16} color="#fca5a5" />
+          ) : (
+            <CheckCircle2 size={16} color="#38bdf8" />
+          )}
           <span>{toastMessage}</span>
         </div>
       )}
@@ -1081,6 +1152,40 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                           }}
                         >
                           <FilePlus size={14} strokeWidth={2.2} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openAddSubFolderModal(folder);
+                          }}
+                          title={`Tambah Sub-folder ke "${folder.name}"`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '28px',
+                            height: '28px',
+                            background: '#f8fafc',
+                            color: '#475569',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = '#0284c7';
+                            e.currentTarget.style.color = '#ffffff';
+                            e.currentTarget.style.borderColor = '#0284c7';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = '#f8fafc';
+                            e.currentTarget.style.color = '#475569';
+                            e.currentTarget.style.borderColor = '#cbd5e1';
+                          }}
+                        >
+                          <FolderPlus size={14} strokeWidth={2.2} />
                         </button>
 
                         <button
@@ -1972,6 +2077,122 @@ Segala perubahan tanpa otorisasi Document Controller dilarang keras.
                   }}
                 >
                   Simpan Folder
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: TAMBAH SUB-FOLDER BARU ─── */}
+      {isAddSubFolderOpen && subFolderTargetFolder && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(7, 28, 44, 0.45)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setIsAddSubFolderOpen(false)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0',
+              width: '100%',
+              maxWidth: '480px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.15)',
+              overflow: 'hidden',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '16px 20px',
+                borderBottom: '1px solid #f1f5f9',
+                background: '#fafafa',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FolderPlus size={18} color="#0284c7" />
+                <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#071c2c' }}>
+                  Tambah Sub-folder Baru
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsAddSubFolderOpen(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ padding: '10px 20px', background: '#f0f9ff', borderBottom: '1px solid #e0f2fe', fontSize: '12px', color: '#0369a1', fontWeight: 500 }}>
+              Folder Induk: <strong>{subFolderTargetFolder.name}</strong>
+            </div>
+
+            <form onSubmit={handleCreateSubFolder} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Nama Sub-folder <span style={{ color: '#dc2626' }}>*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: 1.1 Standar K3LH & Mutu Internasional"
+                  value={newSubFolderName}
+                  onChange={e => setNewSubFolderName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsAddSubFolderOpen(false)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '12.5px',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: '#0284c7',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    color: '#ffffff',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Simpan Sub-folder
                 </button>
               </div>
             </form>

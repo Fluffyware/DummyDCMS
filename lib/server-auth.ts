@@ -243,6 +243,7 @@ export function verifySessionToken(token: string | null | undefined): UserProfil
       name: payload.name,
       email: payload.email,
       role: payload.role as UserRole,
+      roleName: payload.roleName || (payload.role === 'admin' ? 'QMS' : 'Staff'),
       department: payload.department,
       position: payload.position || 'Staff',
       avatar: payload.avatar || 'TH',

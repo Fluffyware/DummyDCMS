@@ -61,6 +61,29 @@ export async function GET(_req: NextRequest) {
       };
     });
 
+    // 2b. Repair orphaned documents that lost folderId/subFolderId due to previous foreign key bugs
+    allDocs.forEach(doc => {
+      // If folderId is missing but subFolderName exists, infer folder & subfolder from INITIAL_MASTER_FOLDERS
+      if (!doc.folderId && doc.subFolderName) {
+        for (const initFolder of INITIAL_MASTER_FOLDERS) {
+          const matchSub = (initFolder.subfolders || []).find(
+            s => s.name.toLowerCase().trim() === doc.subFolderName?.toLowerCase().trim() ||
+                 (doc.subFolderId && s.id === doc.subFolderId)
+          );
+          if (matchSub) {
+            doc.folderId = String(initFolder.id);
+            doc.subFolderId = matchSub.id;
+            break;
+          }
+        }
+      }
+
+      // If still missing folderId, default to the first folder (or '1') so it is NEVER lost/hidden
+      if (!doc.folderId && dbFolders.length > 0) {
+        doc.folderId = String(dbFolders[0].id);
+      }
+    });
+
     // 3. Build subfolders map grouped by folder_id
     const subfolderMap = new Map<string, MasterSubFolder[]>();
     dbSubfolders.forEach(sf => {
@@ -71,7 +94,7 @@ export async function GET(_req: NextRequest) {
 
       // Filter documents belonging to this subfolder
       const sfDocs = allDocs
-        .filter(doc => doc.subFolderId === sf.id || (doc.subFolderName && doc.subFolderName.trim() === sf.name.trim()))
+        .filter(doc => doc.subFolderId === sf.id || (doc.subFolderName && doc.subFolderName.trim().toLowerCase() === sf.name.trim().toLowerCase()))
         .map(({ folderId: _, ...cleanDoc }) => cleanDoc);
 
       subfolderMap.get(fId)!.push({
@@ -79,6 +102,38 @@ export async function GET(_req: NextRequest) {
         name: sf.name,
         docs: sfDocs,
       });
+    });
+
+    // 3b. Synthesize dynamic subfolders from documents if not yet present in master_subfolders table
+    allDocs.forEach(doc => {
+      if (doc.folderId && (doc.subFolderName || doc.subFolderId)) {
+        const fId = doc.folderId;
+        if (!subfolderMap.has(fId)) {
+          subfolderMap.set(fId, []);
+        }
+        const existingSubs = subfolderMap.get(fId)!;
+        const subName = doc.subFolderName || `Subfolder ${doc.subFolderId}`;
+        const subId = doc.subFolderId || `sub-${fId}-${encodeURIComponent(subName)}`;
+
+        const alreadyExists = existingSubs.some(
+          s => s.id === subId || s.name.trim().toLowerCase() === subName.trim().toLowerCase()
+        );
+
+        if (!alreadyExists) {
+          const matchedDocs = allDocs
+            .filter(d => d.folderId === fId && (
+              d.subFolderId === subId ||
+              (d.subFolderName && d.subFolderName.trim().toLowerCase() === subName.trim().toLowerCase())
+            ))
+            .map(({ folderId: _, ...cleanDoc }) => cleanDoc);
+
+          existingSubs.push({
+            id: subId,
+            name: subName,
+            docs: matchedDocs,
+          });
+        }
+      }
     });
 
     // 4. Build folders array
