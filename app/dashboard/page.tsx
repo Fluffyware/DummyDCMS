@@ -90,11 +90,12 @@ export default function DashboardPage() {
     });
 
     // 2. Add or update from distributions (recent releases)
-    distributions.forEach((dist, idx) => {
+    distributions.forEach((dist) => {
       const matchIdx = list.findIndex(
         l => (dist.idRegistrasi !== '-' && l.number === dist.idRegistrasi) || l.judul.toLowerCase() === dist.judul.toLowerCase()
       );
 
+      // Hanya perbarui data (seperti status "UPDATE") jika dokumennya benar-benar ADA di masterlist
       if (matchIdx >= 0) {
         list[matchIdx] = {
           ...list[matchIdx],
@@ -103,20 +104,9 @@ export default function DashboardPage() {
           r2Url: dist.fileUrl || list[matchIdx].r2Url,
           isRecent: true,
         };
-      } else {
-        list.unshift({
-          id: `dist-${dist.id || idx}`,
-          dept: dist.dept || dist.folder || 'QHSE',
-          jenis: dist.jenis || 'Dokumen',
-          number: dist.idRegistrasi !== '-' ? dist.idRegistrasi : dist.id,
-          judul: dist.judul,
-          released: dist.createdAt || '—',
-          revisi: dist.revisi.startsWith('Rev.') ? dist.revisi : `Rev.${dist.revisi}`,
-          status: 'Released',
-          r2Url: dist.fileUrl,
-          isRecent: true,
-        });
       }
+      // HAPUS blok else: Jika dokumen sudah dihapus dari masterlist, jangan munculkan lagi di Dashboard
+      // hanya karena ada riwayat distribusinya.
     });
 
     return list;
@@ -839,7 +829,7 @@ export default function DashboardPage() {
         >
           <div>
             Showing {totalEntries === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + entriesPerPage, totalEntries)} of {totalEntries} entries
-            {searchTerm && ` (filtered from ${MASTERLIST_ENTRIES.length} total entries)`}
+            {searchTerm && ` (filtered from ${allMasterEntries.length} total entries)`}
           </div>
 
           {/* Page Buttons */}

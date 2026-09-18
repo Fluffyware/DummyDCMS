@@ -64,10 +64,50 @@ export async function POST(req: NextRequest) {
       }
     } else if (type === 'folder' && folderId) {
       if (supabaseServer) {
+        // 1. Ambil semua dokumen di dalam folder ini
+        const { data: docs } = await supabaseServer.from('documents').select('id, r2_key').eq('folder_id', String(folderId));
+        
+        // 2. Hapus file fisiknya dari Cloudflare R2
+        if (docs && docs.length > 0 && isR2Configured()) {
+          for (const doc of docs) {
+            if (doc.r2_key) {
+              try {
+                await deleteObjectFromR2(doc.r2_key);
+              } catch (e) {
+                console.warn(`Gagal menghapus objek R2 dengan key ${doc.r2_key}:`, e);
+              }
+            }
+          }
+        }
+
+        // 3. Hapus rekam data dokumennya dari Supabase (agar tidak orphaned)
+        await supabaseServer.from('documents').delete().eq('folder_id', String(folderId));
+
+        // 4. Terakhir, hapus folder itu sendiri
         await supabaseServer.from('master_folders').delete().eq('id', String(folderId));
       }
     } else if (type === 'subfolder' && subFolderId) {
       if (supabaseServer) {
+        // 1. Ambil semua dokumen di dalam subfolder ini
+        const { data: docs } = await supabaseServer.from('documents').select('id, r2_key').eq('subfolder_id', String(subFolderId));
+        
+        // 2. Hapus file fisiknya dari Cloudflare R2
+        if (docs && docs.length > 0 && isR2Configured()) {
+          for (const doc of docs) {
+            if (doc.r2_key) {
+              try {
+                await deleteObjectFromR2(doc.r2_key);
+              } catch (e) {
+                console.warn(`Gagal menghapus objek R2 dengan key ${doc.r2_key}:`, e);
+              }
+            }
+          }
+        }
+
+        // 3. Hapus rekam data dokumennya dari Supabase
+        await supabaseServer.from('documents').delete().eq('subfolder_id', String(subFolderId));
+
+        // 4. Terakhir, hapus subfolder itu sendiri
         await supabaseServer.from('master_subfolders').delete().eq('id', String(subFolderId));
       }
     }

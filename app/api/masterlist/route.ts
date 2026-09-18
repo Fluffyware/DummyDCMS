@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServer } from '@/lib/supabase';
 import { getSessionUser } from '@/lib/server-auth';
+import { deleteObjectFromR2 } from '@/lib/r2';
 import { MasterFolder, MasterSubFolder, MasterDocItem, INITIAL_MASTER_FOLDERS } from '@/lib/masterlist-data';
 
 export const dynamic = 'force-dynamic';
@@ -173,12 +174,32 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'delete_folder' && folderId) {
+      // Cascading delete: find docs, delete from R2, delete docs, delete folder
+      const { data: docs } = await supabase.from('documents').select('id, r2_key').eq('folder_id', String(folderId));
+      if (docs && docs.length > 0) {
+        for (const doc of docs) {
+          if (doc.r2_key) {
+             try { await deleteObjectFromR2(doc.r2_key); } catch (e) { /* ignore */ }
+          }
+        }
+      }
+      await supabase.from('documents').delete().eq('folder_id', String(folderId));
       const { error } = await supabase.from('master_folders').delete().eq('id', String(folderId));
       if (error) throw error;
       return NextResponse.json({ success: true });
     }
 
     if (action === 'delete_subfolder' && subFolderId) {
+      // Cascading delete: find docs, delete from R2, delete docs, delete subfolder
+      const { data: docs } = await supabase.from('documents').select('id, r2_key').eq('subfolder_id', String(subFolderId));
+      if (docs && docs.length > 0) {
+        for (const doc of docs) {
+          if (doc.r2_key) {
+             try { await deleteObjectFromR2(doc.r2_key); } catch (e) { /* ignore */ }
+          }
+        }
+      }
+      await supabase.from('documents').delete().eq('subfolder_id', String(subFolderId));
       const { error } = await supabase.from('master_subfolders').delete().eq('id', String(subFolderId));
       if (error) throw error;
       return NextResponse.json({ success: true });
