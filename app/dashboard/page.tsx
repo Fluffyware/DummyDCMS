@@ -54,8 +54,8 @@ export default function DashboardPage() {
     fetchDistributionsFromServer().then(d => setDistributions(d));
 
     const handleSync = () => {
-      setMasterFolders(loadMasterFolders());
-      setDistributions(loadDistributions());
+      fetchMasterFoldersFromServer().then(f => setMasterFolders(f));
+      fetchDistributionsFromServer().then(d => setDistributions(d));
     };
 
     window.addEventListener('thi_master_folders_v3', handleSync);

@@ -153,6 +153,21 @@ export async function POST(req: NextRequest) {
             { status: 500 }
           );
         }
+
+        // 2d. Record in audit_logs
+        try {
+          await supabaseServer.from('audit_logs').insert([{
+            action: 'UPLOAD_FILE',
+            user_name: user.name || uploader,
+            user_email: user.email || null,
+            role: user.role,
+            entity: 'documents',
+            detail: `Mengunggah dokumen ${newDocRecord.number} - ${newDocRecord.title} (${newDocRecord.revision})`,
+            type: 'create',
+          }]);
+        } catch (logErr) {
+          console.warn('Audit log write skipped:', logErr);
+        }
       } catch (dbErr: any) {
         console.error('Supabase insert error:', dbErr?.message);
         return NextResponse.json(

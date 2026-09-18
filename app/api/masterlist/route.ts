@@ -84,23 +84,41 @@ export async function GET(_req: NextRequest) {
       }
     });
 
-    // 3. Build subfolders map grouped by folder_id
+    // 3. Build subfolders map grouped by folder_id with nesting support (parent_id)
     const subfolderMap = new Map<string, MasterSubFolder[]>();
-    dbSubfolders.forEach(sf => {
+    const topSubs = dbSubfolders.filter(sf => !sf.parent_id);
+    const childSubs = dbSubfolders.filter(sf => sf.parent_id);
+
+    topSubs.forEach(sf => {
       const fId = String(sf.folder_id);
       if (!subfolderMap.has(fId)) {
         subfolderMap.set(fId, []);
       }
 
-      // Filter documents belonging to this subfolder
+      // Filter documents belonging to this top-level subfolder
       const sfDocs = allDocs
         .filter(doc => doc.subFolderId === sf.id || (doc.subFolderName && doc.subFolderName.trim().toLowerCase() === sf.name.trim().toLowerCase()))
         .map(({ folderId: _, ...cleanDoc }) => cleanDoc);
+
+      // Find children for this subfolder
+      const children: MasterSubFolder[] = childSubs
+        .filter(cs => cs.parent_id === sf.id)
+        .map(cs => {
+          const cDocs = allDocs
+            .filter(doc => doc.subFolderId === cs.id || (doc.subFolderName && doc.subFolderName.trim().toLowerCase() === cs.name.trim().toLowerCase()))
+            .map(({ folderId: _, ...cleanDoc }) => cleanDoc);
+          return {
+            id: cs.id,
+            name: cs.name,
+            docs: cDocs,
+          };
+        });
 
       subfolderMap.get(fId)!.push({
         id: sf.id,
         name: sf.name,
         docs: sfDocs,
+        subfolders: children.length > 0 ? children : undefined,
       });
     });
 
@@ -221,10 +239,40 @@ export async function POST(req: NextRequest) {
       const { error } = await supabase.from('master_subfolders').insert([{
         id: subfolder.id,
         folder_id: String(folderId),
+        parent_id: body.parentId || subfolder.parentId || null,
         name: subfolder.name,
         sort_order: 99,
       }]);
       if (error) throw error;
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'update_doc_status' && body.docId && body.status) {
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          status: body.status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', body.docId);
+
+      if (error) throw error;
+
+      // Log to audit_logs
+      try {
+        await supabase.from('audit_logs').insert([{
+          action: body.status === 'CURRENT' ? 'APPROVE_DOCUMENT' : 'REJECT_DOCUMENT',
+          user_name: user.name || 'QMS Admin',
+          user_email: user.email || null,
+          role: user.role,
+          entity: 'documents',
+          detail: `Dokumen ${body.docNumber || body.docId} diubah status menjadi ${body.status}${body.notes ? ` (Catatan: ${body.notes})` : ''}`,
+          type: body.status === 'CURRENT' ? 'approve' : 'reject',
+        }]);
+      } catch (logErr) {
+        console.warn('Audit log error:', logErr);
+      }
+
       return NextResponse.json({ success: true });
     }
 

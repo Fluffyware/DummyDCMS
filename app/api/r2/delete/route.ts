@@ -57,8 +57,7 @@ export async function POST(req: NextRequest) {
       if (supabaseServer) {
         if (docId) {
           await supabaseServer.from('documents').delete().eq('id', docId);
-        }
-        if (docNumber) {
+        } else if (docNumber) {
           await supabaseServer.from('documents').delete().eq('number', docNumber);
         }
       }

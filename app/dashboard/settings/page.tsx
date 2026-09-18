@@ -478,6 +478,17 @@ export default function SettingsPage() {
         next.add(childId);
         return Array.from(next);
       });
+      fetch('/api/masterlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_subfolder',
+          subfolder: newChild,
+          folderId: targetFolder.id,
+          parentId: targetSubFolder.id,
+        }),
+      }).catch(err => console.warn('Gagal menyimpan subfolder bersarang ke server:', err));
+
       setNewSubName('');
       setIsSubFolderModalOpen(false);
       setTargetFolder(null);

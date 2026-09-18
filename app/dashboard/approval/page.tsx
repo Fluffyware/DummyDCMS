@@ -129,7 +129,7 @@ export default function ApprovalPage() {
   };
 
   // Approval Execution
-  const handleApprove = () => {
+  const handleApprove = async () => {
     if (!selected || !isAdmin) return;
     const currentUploaded = uploadedFiles[selected];
     if (!currentUploaded) {
@@ -138,22 +138,72 @@ export default function ApprovalPage() {
     }
 
     const doc = queue.find(d => d.id === selected);
-    setApproved(a => [...a, selected]);
-    setQueue(q => q.filter(d => d.id !== selected));
+    const targetId = selected;
+
+    try {
+      const res = await fetch('/api/masterlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_doc_status',
+          docId: targetId,
+          docNumber: doc?.docNumber,
+          status: 'CURRENT',
+          notes: comment.trim() || `Disetujui dengan berkas ${currentUploaded.name}`,
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.error || 'Gagal memperbarui status dokumen di database.');
+        return;
+      }
+    } catch (err: any) {
+      alert(`Terjadi kesalahan jaringan: ${err.message}`);
+      return;
+    }
+
+    setApproved(a => [...a, targetId]);
+    setQueue(q => q.filter(d => d.id !== targetId));
     setSelected(null);
     setComment('');
     setActionNotice(
-      `✓ Dokumen ${doc?.docNumber} (${doc?.title}) telah disetujui secara manual oleh QMS dengan lampiran berkas bertanda tangan '${currentUploaded.name}'. Status dokumen resmi berubah menjadi CURRENT.`
+      `✓ Dokumen ${doc?.docNumber} (${doc?.title}) telah disetujui secara resmi oleh QMS dengan lampiran berkas bertanda tangan '${currentUploaded.name}'. Status dokumen resmi berubah menjadi CURRENT di Masterlist.`
     );
     setTimeout(() => setActionNotice(null), 8000);
   };
 
   // Rejection Execution
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selected || !rejectReason.trim() || !isAdmin) return;
     const doc = queue.find(d => d.id === selected);
-    setRejected(r => [...r, selected]);
-    setQueue(q => q.filter(d => d.id !== selected));
+    const targetId = selected;
+
+    try {
+      const res = await fetch('/api/masterlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_doc_status',
+          docId: targetId,
+          docNumber: doc?.docNumber,
+          status: 'REJECTED',
+          notes: rejectReason.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        alert(errJson.error || 'Gagal memperbarui status dokumen di database.');
+        return;
+      }
+    } catch (err: any) {
+      alert(`Terjadi kesalahan jaringan: ${err.message}`);
+      return;
+    }
+
+    setRejected(r => [...r, targetId]);
+    setQueue(q => q.filter(d => d.id !== targetId));
     setSelected(null);
     setShowReject(false);
     setRejectReason('');

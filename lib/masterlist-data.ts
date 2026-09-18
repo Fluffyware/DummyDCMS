@@ -351,6 +351,9 @@ export async function saveDistributionToServer(item: DistributionDoc | Distribut
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (res.ok && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('thi_distributions_updated'));
+    }
     return res.ok;
   } catch (err) {
     console.warn('Gagal mengirim catatan distribusi ke server:', err);
